@@ -1,0 +1,399 @@
+/* Estilos globales tema empresa - Verde Esmeralda */
+
+:root {
+  --color-verde: #1a8f5e;
+  --color-verde-oscuro: #0d6a47;
+  --color-negro: #1a1a1a;
+  --color-blanco: #f7f2f2;
+  --color-amarillo: #ffc107;
+  --color-plateado: #c0c0c0;
+  --color-gris-claro: #f8f9fa;
+  --color-gris-oscuro: #2d2d2d;
+  --color-texto-oscuro: #e9ecef;
+}
+
+/* ===== NAVBAR CON GRADIENTE VERDE ===== */
+.navbar {
+  background: linear-gradient(135deg, #1a8f5e 0%, #0d6a47 100%) !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+}
+
+.navbar-brand {
+  color: var(--color-blanco) !important;
+  font-weight: 600;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+}
+
+.navbar-brand i {
+  margin-right: 8px;
+}
+
+.navbar-brand:hover {
+  color: var(--color-amarillo) !important;
+}
+
+.navbar-nav .nav-link {
+  color: rgba(255, 255, 255, 0.9) !important;
+  margin: 0 5px;
+  transition: all 0.3s ease;
+}
+
+.navbar-nav .nav-link:hover,
+.navbar-nav .nav-link.active {
+  color: var(--color-amarillo) !important;
+  border-bottom: 2px solid var(--color-amarillo);
+}
+
+.navbar-text {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.btn-outline-light {
+  color: var(--color-blanco) !important;
+  border-color: var(--color-blanco) !important;
+  transition: all 0.3s ease;
+}
+
+.btn-outline-light:hover {
+  background-color: var(--color-amarillo) !important;
+  border-color: var(--color-amarillo) !important;
+  color: #000 !important;
+}
+
+/* ===== DARK MODE COMPLETO ===== */
+html[data-bs-theme="dark"] {
+  background-color: var(--color-negro);
+  color: var(--color-texto-oscuro);
+}
+
+html[data-bs-theme="dark"] body {
+  background-color: var(--color-negro);
+  color: var(--color-texto-oscuro);
+}
+
+html[data-bs-theme="dark"] .card,
+html[data-bs-theme="dark"] .form-control,
+html[data-bs-theme="dark"] .form-select,
+html[data-bs-theme="dark"] input,
+html[data-bs-theme="dark"] textarea,
+html[data-bs-theme="dark"] select {
+  background-color: var(--color-gris-oscuro);
+  border-color: #495057;
+  color: var(--color-texto-oscuro);
+}
+
+html[data-bs-theme="dark"] .table {
+  color: var(--color-texto-oscuro);
+  border-color: #495057;
+}
+
+html[data-bs-theme="dark"] .table thead th {
+  background-color: var(--color-verde);
+  color: var(--color-blanco);
+  border-color: #495057;
+}
+
+html[data-bs-theme="dark"] .table tbody tr {
+  border-color: #495057;
+}
+
+html[data-bs-theme="dark"] .modal-content,
+html[data-bs-theme="dark"] .btn-close {
+  background-color: var(--color-gris-oscuro);
+  color: var(--color-texto-oscuro);
+}
+
+/* ===== BOTONES VERDE ===== */
+.btn-primary {
+  background-color: var(--color-verde) !important;
+  border-color: var(--color-verde) !important;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  background-color: var(--color-verde-oscuro) !important;
+  border-color: var(--color-verde-oscuro) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(26, 143, 94, 0.3);
+}
+
+.btn-success {
+  background-color: var(--color-verde) !important;
+  border-color: var(--color-verde) !important;
+}
+
+.btn-success:hover {
+  background-color: var(--color-verde-oscuro) !important;
+  border-color: var(--color-verde-oscuro) !important;
+}
+
+/* ===== BADGES Y ALERTS ===== */
+.badge {
+  background-color: var(--color-verde) !important;
+}
+
+.badge-success {
+  background-color: var(--color-verde) !important;
+}
+
+.alert-success {
+  background-color: rgba(26, 143, 94, 0.2) !important;
+  border-color: var(--color-verde) !important;
+  color: var(--color-verde) !important;
+}
+
+html[data-bs-theme="dark"] .alert-success {
+  color: var(--color-amarillo) !important;
+}
+
+/* ===== CARD HEADERS VERDE ===== */
+.card-header {
+  background-color: var(--color-verde) !important;
+  color: var(--color-blanco) !important;
+  border-bottom: 2px solid var(--color-plateado) !important;
+}
+
+html[data-bs-theme="dark"] .card-header {
+  background-color: var(--color-verde) !important;
+}
+
+/* ===== FORM FOCUS ESTADOS ===== */
+.form-control:focus,
+.form-select:focus,
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--color-verde) !important;
+  box-shadow: 0 0 0 0.2rem rgba(26, 143, 94, 0.25) !important;
+}
+
+/* ===== PROGRESS BARS ===== */
+.progress-bar {
+  background-color: var(--color-verde) !important;
+}
+
+/* ===== LINKS ===== */
+a {
+  color: var(--color-verde);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--color-verde-oscuro);
+  text-decoration: underline;
+}
+
+html[data-bs-theme="dark"] a {
+  color: var(--color-amarillo);
+}
+
+html[data-bs-theme="dark"] a:hover {
+  color: var(--color-blanco);
+}
+
+html[data-bs-theme="dark"] .table tbody tr:hover {
+  background-color: #333 !important;
+}
+
+/* ===== OVERRIDE BOOTSTRAP COLORS ===== */
+/* Cambiar bg-primary de morado a verde */
+.bg-primary {
+  background: linear-gradient(135deg, #1a8f5e 0%, #0d6a47 100%) !important;
+}
+
+/* Asegurar que navbar siempre sea verde */
+.navbar-dark.bg-primary {
+  background: linear-gradient(135deg, #1a8f5e 0%, #0d6a47 100%) !important;
+}
+
+/* Cambiar colores de texto info/primary a verde */
+.text-primary {
+  color: var(--color-verde) !important;
+}
+
+.text-info {
+  color: var(--color-verde) !important;
+}
+
+/* Bordes verdes */
+.border-primary {
+  border-color: var(--color-verde) !important;
+}
+
+.border-info {
+  border-color: var(--color-verde) !important;
+}
+
+/* Colores hover dinámicos */
+.table-hover tbody tr:hover {
+  background-color: rgba(26, 143, 94, 0.1) !important;
+}
+
+html[data-bs-theme="dark"] .table-hover tbody tr:hover {
+  background-color: rgba(26, 143, 94, 0.2) !important;
+}
+
+html[data-bs-theme="dark"] .modal-content {
+  background-color: var(--color-gris-oscuro);
+  color: var(--color-texto-oscuro);
+}
+
+html[data-bs-theme="dark"] .modal-header {
+  border-color: #495057;
+  background-color: var(--color-verde);
+  color: var(--color-blanco);
+}
+
+html[data-bs-theme="dark"] .btn-close {
+  background-color: transparent;
+  filter: brightness(1.2);
+}
+
+html[data-bs-theme="dark"] .nav-tabs {
+  border-color: #495057;
+}
+
+html[data-bs-theme="dark"] .nav-tabs .nav-link {
+  color: var(--color-texto-oscuro);
+}
+
+html[data-bs-theme="dark"] .nav-tabs .nav-link.active {
+  background-color: var(--color-verde);
+  border-color: var(--color-verde);
+  color: var(--color-blanco);
+}
+
+html[data-bs-theme="dark"] .list-group {
+  border-color: #495057;
+}
+
+html[data-bs-theme="dark"] .list-group-item {
+  background-color: var(--color-gris-oscuro);
+  border-color: #495057;
+  color: var(--color-texto-oscuro);
+}
+
+/* Barra de navegación - Verde Esmeralda */
+.navbar {
+  background: linear-gradient(135deg, var(--color-verde) 0%, var(--color-verde-oscuro) 100%) !important;
+}
+
+.navbar .navbar-brand {
+  color: var(--color-blanco) !important;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.navbar .navbar-brand img {
+  max-height: 30px;
+  width: auto;
+}
+
+.navbar .nav-link {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.navbar .nav-link:hover {
+  color: var(--color-amarillo) !important;
+}
+
+.navbar .nav-link.active {
+  color: var(--color-amarillo) !important;
+}
+
+/* Cambiar gradientes morados a verde */
+.btn-primary,
+.btn-success,
+.bg-primary {
+  background: linear-gradient(135deg, var(--color-verde) 0%, var(--color-verde-oscuro) 100%) !important;
+  border: none;
+}
+
+.btn-primary:hover,
+.btn-success:hover {
+  background: linear-gradient(135deg, var(--color-verde-oscuro) 0%, #0a4c2f 100%) !important;
+}
+
+/* Headers y puntos destacados */
+.card-header {
+  background-color: var(--color-verde);
+  color: var(--color-blanco);
+  border-bottom: 2px solid var(--color-plateado);
+}
+
+html[data-bs-theme="dark"] .card-header {
+  background-color: var(--color-verde);
+  color: var(--color-blanco);
+}
+
+/* Inputs y formularios */
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--color-verde);
+  box-shadow: 0 0 0 0.2rem rgba(26, 143, 94, 0.25);
+}
+
+/* Badge y destacados */
+.badge-success,
+.badge-primary {
+  background-color: var(--color-verde);
+}
+
+/* Botones */
+.btn-success {
+  background-color: var(--color-verde);
+  border-color: var(--color-verde);
+}
+
+.btn-success:hover {
+  background-color: var(--color-verde-oscuro);
+  border-color: var(--color-verde-oscuro);
+}
+
+/* Pagination */
+.pagination .page-link.active {
+  background-color: var(--color-verde);
+  border-color: var(--color-verde);
+}
+
+/* Progress bar */
+.progress-bar {
+  background-color: var(--color-verde);
+}
+
+/* Alerts */
+.alert-success {
+  background-color: rgba(26, 143, 94, 0.1);
+  border-color: var(--color-verde);
+  color: var(--color-verde);
+}
+
+html[data-bs-theme="dark"] .alert-success {
+  background-color: rgba(26, 143, 94, 0.2);
+  color: var(--color-amarillo);
+}
+
+/* Asegurar que los modales queden por encima de la navbar sticky */
+.modal-backdrop {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10050 !important;
+}
+.modal {
+  position: fixed !important;
+  z-index: 10060 !important;
+}
+.modal.show {
+  z-index: 10060 !important;
+}
+/* Separación superior para evitar que el modal quede justo debajo del header */
+.modal-dialog:not(.modal-dialog-centered) {
+  margin-top: 2.5rem;
+}

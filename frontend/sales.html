@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ventas</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- Tema global empresa -->
+  <link rel="stylesheet" href="assets/css/theme-global.css">
+  <!-- Estilos para módulos -->
+  <link rel="stylesheet" href="assets/css/modules-styles.css">
+</head>
+<body>
+  <!-- Barra de navegación -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="dashboard.html"><i class="bi bi-boxes me-2"></i>SISTEMA CSM</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item"><a class="nav-link" href="products.html">Productos</a></li>
+          <li class="nav-item"><a class="nav-link" href="suppliers.html">Proveedores</a></li>
+          <li class="nav-item"><a class="nav-link" href="quotes.html">Cotizaciones</a></li>
+          <li class="nav-item"><a class="nav-link active" href="sales.html">Ventas</a></li>
+          <li class="nav-item"><a class="nav-link" href="reports.html">Reportes</a></li>
+          <li class="nav-item" id="nav-accounting" style="display:none;"><a class="nav-link" href="accounting.html">Contabilidad</a></li>
+          <li class="nav-item"><a class="nav-link" href="fuel.html">Combustible</a></li>
+          <li class="nav-item" id="nav-users" style="display:none;"><a class="nav-link" href="users.html">Usuarios</a></li>
+        </ul>
+        <span class="navbar-text me-3" id="nav-user"></span>
+        <button class="btn btn-outline-light me-2" id="themeToggleBtn">Modo oscuro</button>
+        <button class="btn btn-outline-light" onclick="logout()">Salir</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container my-4">
+    <h3 class="mb-3">Ventas</h3>
+
+    <!-- Información del vendedor y total -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div id="ventaUsuario" class="fw-bold"></div>
+      <div id="ventaTotal" class="fw-bold fs-4"></div>
+    </div>
+
+    <!-- Datos del cliente -->
+    <div class="row g-3 mb-3">
+      <div class="col-md-4">
+        <label class="form-label">Nombre del cliente</label>
+        <input type="text" id="clienteNombre" class="form-control" placeholder="Nombre del cliente" list="clientsList">
+        <datalist id="clientsList"></datalist>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Dirección</label>
+        <input type="text" id="clienteDireccion" class="form-control" placeholder="Dirección">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Teléfono</label>
+        <input type="text" id="clienteTelefono" class="form-control" placeholder="Teléfono de contacto">
+      </div>
+    </div>
+
+    <!-- Búsqueda de productos -->
+    <div class="row g-3 mb-3">
+      <div class="col-md-3">
+        <input type="text" id="buscarCodigo" class="form-control" placeholder="Código" list="codigoList">
+        <datalist id="codigoList"></datalist>
+      </div>
+      <div class="col-md-3">
+        <input type="text" id="buscarClave" class="form-control" placeholder="Clave" list="claveList">
+        <datalist id="claveList"></datalist>
+      </div>
+      <div class="col-md-3">
+        <input type="text" id="buscarBarcode" class="form-control" placeholder="Código de barras" list="barcodeList">
+        <datalist id="barcodeList"></datalist>
+      </div>
+      <div class="col-md-3">
+        <input type="text" id="buscarNombre" class="form-control" placeholder="Nombre del producto" list="nameList">
+        <datalist id="nameList"></datalist>
+      </div>
+      <div class="col-12 d-flex align-items-center">
+        <button class="btn btn-secondary me-2" id="btnScanBarcode">Escanear</button>
+        <button class="btn btn-primary" id="btnBuscarProducto">Buscar</button>
+      </div>
+    </div> 
+
+    <!-- Tabla de productos -->
+    <table class="table table-bordered" id="saleTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Cant.</th>
+          <th>Descripción</th>
+          <th>Empaque</th>
+          <th>Precio unitario</th>
+          <th>Importe</th>
+          <th>IVA / Acción</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+      <tfoot>
+        <tr>
+          <th colspan="5" class="text-end">Subtotal</th>
+          <th id="saleSubtotalCell">$0.00</th>
+          <th></th>
+        </tr>
+        <tr>
+          <th colspan="5" class="text-end">IVA 16%</th>
+          <th id="saleIvaCell">$0.00</th>
+          <th></th>
+        </tr>
+        <tr>
+          <th colspan="5" class="text-end">Total</th>
+          <th id="saleTotalCell">$0.00</th>
+          <th></th>
+        </tr>
+      </tfoot>
+    </table>
+
+    <!-- Checkbox para IVA opcional -->
+    <div class="form-check mb-3">
+      <input class="form-check-input" type="checkbox" id="applyIvaSale" checked>
+      <label class="form-check-label" for="applyIvaSale">Aplicar IVA</label>
+    </div>
+
+    <!-- Botones de acciones -->
+    <div class="d-flex justify-content-between">
+      <div>
+        <button class="btn btn-success" id="btnAddSaleRow" style="display:none;">Agregar fila</button>
+      </div>
+      <div>
+        <button class="btn btn-primary" id="btnCobrar">Cobrar</button>
+        <button class="btn btn-warning ms-2" id="btnReturn">Devolución / Cambio</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de escaneo de código de barras -->
+
+  <!-- Modal Devolución / Cambio -->
+  <div class="modal fade" id="returnModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Devolución / Cambio</h5>
+          <div class="ms-auto d-flex gap-2">
+            <button class="btn btn-sm btn-outline-secondary" id="btnViewRequests" style="display:none;">Solicitudes pendientes</button>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          </div>
+        </div>
+        <div class="modal-body">
+          <div class="row g-2 mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Folio o ID de venta</label>
+              <input type="text" id="returnSaleId" class="form-control" placeholder="Ej. 123 o EFEC0123">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Tipo</label>
+              <select id="returnType" class="form-select">
+                <option value="REMB">Reembolso</option>
+                <option value="CAMB">Cambio</option>
+              </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+              <button class="btn btn-secondary" id="btnLoadReturnSale">Cargar venta</button>
+            </div>
+          </div>
+
+          <div id="returnSaleInfo" style="display:none;">
+            <div class="mb-2"><strong>Venta:</strong> <span id="returnSaleFolio"></span> &nbsp; <strong>Cliente:</strong> <span id="returnSaleClient"></span></div>
+            <table class="table table-sm table-bordered" id="returnItemsTable">
+              <thead><tr><th>Producto</th><th>Vendidos</th><th>A devolver</th><th>Precio U.</th><th>Subtotal</th></tr></thead>
+              <tbody></tbody>
+            </table>
+
+            <div id="returnNewItems" style="display:none;">
+              <h6>Productos a entregar al cliente (cambio)</h6>
+
+              <div class="row g-2 mb-2 align-items-end">
+                <div class="col-md-6">
+                  <label class="form-label">Producto</label>
+                  <select id="returnProductSelect" class="form-select"></select>
+                </div>
+                <div class="col-md-2">
+                  <label class="form-label">Cantidad</label>
+                  <input type="number" id="returnProductQty" min="0.01" step="0.01" class="form-control" value="1">
+                </div>
+                <div class="col-md-2">
+                  <label class="form-label">Precio U.</label>
+                  <input type="number" id="returnProductPrice" step="0.01" class="form-control" value="0.00">
+                </div>
+                <div class="col-md-2">
+                  <button class="btn btn-sm btn-outline-primary" id="btnAddReturnNewItem">Agregar</button>
+                </div>
+              </div>
+
+              <div id="returnNewItemsList" class="mb-2"></div>
+              <small class="text-muted">Agrega productos para entregar al cliente cuando realices un cambio.</small>
+            </div>
+
+            <div class="row g-2 mt-2">
+              <div class="col-md-6">
+                <label class="form-label">Método para liquidar diferencia</label>
+                <select id="returnPaymentMethod" class="form-select">
+                  <option value="efectivo">Efectivo</option>
+                  <option value="transferencia">Transferencia</option>
+                  <option value="cuenta">Cuenta</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Caja / Cuenta (si aplica)</label>
+                <select id="returnCashSelect" class="form-select"></select>
+              </div>
+            </div>
+
+            <div class="mt-3 text-end">
+              <div id="returnSummary" class="mb-2">Total a devolver: <strong id="returnAmount">$0.00</strong></div>
+              <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+              <button class="btn btn-primary" id="btnConfirmReturn">Confirmar</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Solicitudes de Devolución (ADMIN) -->
+  <div class="modal fade" id="returnRequestsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Solicitudes de Devolución Pendientes</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <table class="table table-sm" id="requestsTable">
+            <thead><tr><th>ID</th><th>Venta</th><th>Tipo</th><th>Solicitante</th><th>Monto</th><th>Creado</th><th>Acciones</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="scannerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Escanear código de barras</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <div id="scannerContainer" style="width:100%; height:300px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de cobro -->
+  <div class="modal fade" id="cobroModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Cobrar</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Método de pago</label>
+            <select id="metodoPago" class="form-select">
+              <option value="Efectivo">Efectivo</option>
+              <option value="Transferencia">Transferencia</option>
+              <option value="Cuenta">Cuenta</option>
+            </select>
+          </div>
+          <div id="fieldMontoRecibido" class="mb-3">
+            <label class="form-label">Monto recibido</label>
+            <input type="number" step="0.01" class="form-control" id="montoRecibido" placeholder="Monto en efectivo">
+          </div>
+          <div id="fieldReferencia" class="mb-3" style="display:none;">
+            <label class="form-label">Referencia bancaria</label>
+            <input type="text" class="form-control" id="referenciaBancaria" placeholder="Número de operación">
+          </div>
+          <div id="fieldCaja" class="mb-3">
+            <label class="form-label">Caja</label>
+            <select id="cajaSelect" class="form-select"></select>
+          </div>
+          <div id="cambioInfo" class="mb-3" style="display:none;">
+            <label class="form-label">Cambio</label>
+            <input type="text" class="form-control" id="cambioMostrar" readonly>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="confirmarCobro">Confirmar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/js/main.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="assets/js/theme-handler.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+  <script src="assets/js/sales.js"></script>
+</body>
+</html>

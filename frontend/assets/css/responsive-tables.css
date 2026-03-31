@@ -1,0 +1,214 @@
+/* Estilos mejorados para tablas responsivas */
+
+/* Móvil - Menos de 768px */
+@media (max-width: 767.98px) {
+  .table-responsive {
+    border-radius: 8px;
+    overflow: visible;
+    display: block;
+    width: 100%;
+  }
+
+  .table-responsive > .table {
+    width: 100%;
+    margin-bottom: 0;
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    min-width: 100%;
+  }
+
+  /* Scroll horizontal con indicador visual */
+  .table-wrapper {
+    position: relative;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 8px;
+  }
+
+  .table-wrapper::after {
+    content: '→ Desliza →';
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    font-size: 0.75rem;
+    background: rgba(0, 0, 0, 0.1);
+    color: #666;
+    padding: 4px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    animation: slideIndicator 2s infinite;
+    z-index: 10;
+  }
+
+  [data-bs-theme="dark"] .table-wrapper::after {
+    background: rgba(255, 255, 255, 0.1);
+    color: #aaa;
+  }
+
+  @keyframes slideIndicator {
+    0%, 100% {
+      opacity: 0.6;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  /* Filas y columnas optimizadas */
+  .table tbody tr {
+    display: table;
+    width: 100%;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  }
+
+  .table tbody td {
+    padding: 12px 8px;
+    min-height: 30px;
+  }
+
+  /* Colores alternados para mejor legibilidad */
+  .table tbody tr:nth-child(odd) {
+    background-color: rgba(0, 0, 0, 0.01);
+  }
+
+  [data-bs-theme="dark"] .table tbody tr:nth-child(odd) {
+    background-color: rgba(255, 255, 255, 0.03);
+  }
+
+  .table tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  [data-bs-theme="dark"] .table tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 2px 6px rgba(255, 255, 255, 0.1);
+  }
+
+  /* Acciones compactas en móvil */
+  .table .btn-group,
+  .table .action-buttons {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .table .btn-sm,
+  .table .action-buttons .btn {
+    width: 100%;
+    padding: 6px 8px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+
+  /* Badges compactos */
+  .table .badge {
+    display: inline-block;
+    padding: 3px 8px;
+    font-size: 0.75rem;
+  }
+}
+
+/* Tablet - 768px a 1024px */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .table {
+    font-size: 0.9rem;
+  }
+
+  .table thead th {
+    padding: 12px;
+  }
+
+  .table tbody td {
+    padding: 10px 12px;
+  }
+
+  .table .btn-sm {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+  }
+}
+
+/* Desktop - Más de 1024px */
+@media (min-width: 1025px) {
+  .table {
+    font-size: 1rem;
+  }
+
+  .table thead th {
+    padding: 15px;
+    font-weight: 600;
+  }
+
+  .table tbody td {
+    padding: 12px 15px;
+  }
+
+  .table tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+  }
+
+  [data-bs-theme="dark"] .table tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+}
+
+/* Soporte para tema oscuro global */
+[data-bs-theme="dark"] .table {
+  --bs-table-bg: transparent;
+  --bs-table-border-color: #495057;
+  color: #e9ecef;
+}
+
+[data-bs-theme="dark"] .table thead th {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: #495057;
+  color: #e9ecef;
+  font-weight: 600;
+}
+
+[data-bs-theme="dark"] .table thead th:first-child {
+  border-top-left-radius: 6px;
+}
+
+[data-bs-theme="dark"] .table thead th:last-child {
+  border-top-right-radius: 6px;
+}
+
+[data-bs-theme="dark"] .table tbody td {
+  border-color: #495057;
+}
+
+/* Scrollbar personalizada para navegadores Webkit */
+.table-responsive::-webkit-scrollbar {
+  height: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+  background: rgba(102, 126, 234, 0.3);
+  border-radius: 10px;
+  transition: background 0.3s;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+  background: rgba(102, 126, 234, 0.5);
+}
+
+[data-bs-theme="dark"] .table-responsive::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+[data-bs-theme="dark"] .table-responsive::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+[data-bs-theme="dark"] .table-responsive::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}

@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Consultar Precios</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+
+  <!-- Tema global empresa -->
+  <link rel="stylesheet" href="assets/css/theme-global.css">
+  <!-- Estilos para módulos -->
+  <link rel="stylesheet" href="assets/css/modules-styles.css">
+
+  <style>
+    body {
+      background: linear-gradient(135deg, #1a8f5e 0%, #0d6a47 100%);
+      min-height: 100vh;
+      padding: 20px 0;
+    }
+    .container { max-width: 900px; }
+
+    /* Header superior izquierda */
+    .brand-top{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      margin-bottom: 15px;
+    }
+    .brand-logo{
+      width: 120px;
+      height: 120px;
+      object-fit: contain;
+     
+      
+      padding: 2px;
+      
+    }
+    .brand-text{
+      color: #fff;
+      font-weight: 800;
+      letter-spacing: .5px;
+      text-transform: uppercase;
+      line-height: 1.1;
+    }
+
+    .header {
+      text-align: center;
+      color: white;
+      margin-bottom: 30px;
+    }
+    .header h1 {
+      font-size: 2.5rem;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    .header p {
+      font-size: 1.1rem;
+      opacity: 0.9;
+    }
+
+    .search-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      padding: 30px;
+      margin-bottom: 30px;
+    }
+    .search-box { position: relative; }
+
+    /*  input blanco texto negro */
+    #searchInput{
+      border-radius: 8px;
+      border: 2px solid #e9ecef;
+      padding: 12px 15px;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      background: #ffffff !important;
+      color: #000000 !important;
+    }
+    #searchInput::placeholder{ color:#9b9999 !important; }
+
+    #searchInput:focus {
+      border-color: #66ea9b;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .autocomplete-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e9ecef;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 100;
+  display: none;
+
+  /*  Ocultar scrollbar pero mantener scroll */
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* IE / Edge */
+}
+
+.autocomplete-list::-webkit-scrollbar {
+  display: none;                /* Chrome / Safari */
+}
+
+.autocomplete-list.active {
+  display: block;
+}
+
+    .autocomplete-item {
+      padding: 12px 15px;
+      cursor: pointer;
+      border-bottom: 1px solid #a04747;
+      transition: background-color 0.2s;
+    }
+    .autocomplete-item:hover { background-color: #caefba; }
+    .autocomplete-item.selected {
+      background-color: #66ea99;
+      color: white;
+    }
+
+    .product-result {
+      background: rgb(255, 255, 255);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(255, 255, 255, 0.2);
+      margin-bottom: 20px;
+      animation: slideIn 0.3s ease;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    
+
+    .product-header {
+      background: linear-gradient(135deg, #0e0e0e 0%, #424443 100%);
+      color: rgb(245, 247, 248);
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .product-body {
+      padding: 30px;
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 30px;
+    }
+    .product-image-container { text-align: center; }
+    .product-image {
+      max-width: 100%;
+      max-height: 300px;
+      border-radius: 8px;
+      object-fit: contain;
+      background: #f8f9fa;
+      padding: 10px;
+      transition: transform 0.2s ease;
+    }
+    .product-image:hover {
+      transform: scale(1.3);
+      cursor: zoom-in;
+    }
+    .product-image.empty {
+      width: 200px;
+      height: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f8f9fa;
+      border-radius: 8px;
+      font-size: 3rem;
+      color: #ccc;
+    }
+
+    .product-details {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid #e9ecef;
+    }
+    .detail-row:last-child { border-bottom: none; }
+
+    .detail-label {
+      font-weight: 600;
+      color: #000000;
+      font-size: 0.95rem;
+    }
+    .detail-value { color: #212529; font-size: 1rem; }
+
+    .price-highlight {
+      background: linear-gradient(135deg, #61a465 0%, #60c465 100%);
+      color: rgb(255, 255, 255);
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+      margin-top: 10px;
+    }
+    .price-highlight .label { font-size: 0.9rem; opacity: 0.9; }
+    .price-highlight .value { font-size: 2rem; font-weight: bold; }
+
+    .btn-print {
+      background: linear-gradient(135deg, #eab566 0%, #a2914b 100%);
+      border: none;
+      color: white;
+      padding: 12px 30px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-print:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+      color: white;
+      text-decoration: none;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .back-btn {
+      background: #2f3030;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    .back-btn:hover { background: #5a6268; color: white; }
+
+    .error-message {
+      background: #f8d7da;
+      color: #721c24;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border-left: 4px solid #f5c6cb;
+      display: none;
+    }
+
+    @media (min-width: 768px) {
+      .product-body { grid-template-columns: 250px 1fr; }
+    }
+    @media (max-width: 600px) {
+      .header h1 { font-size: 1.8rem; }
+      .search-card { padding: 20px; }
+      .product-body { grid-template-columns: 1fr; padding: 20px; }
+      .price-highlight .value { font-size: 1.5rem; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+
+    <!--  Marca superior izquierda -->
+    <div class="brand-top">
+      <!-- Cambia logo_empresa.png por el nombre real del archivo en backend/uploads -->
+      <img class="brand-logo" src="../backend/uploads/logo.png" alt="Logo Empresa"
+           onerror="this.style.display='none'">
+      <div class="brand-text">CORPORATIVO SAN MARTIN</div>
+    </div>
+
+    
+
+    <div class="header">
+      <h1><i class="bi bi-tag"></i> Consultar Precios</h1>
+      <p>Busca un producto para ver su precio de venta actual</p>
+    </div>
+
+    <div class="search-card">
+      <div class="search-box">
+        <input
+          type="text"
+          id="searchInput"
+          class="form-control form-control-lg"
+          placeholder="Busca por código, nombre o código de barras..."
+          autocomplete="off"
+        >
+        <div class="autocomplete-list" id="autocompleteList"></div>
+      </div>
+      <div class="error-message" id="errorMessage"></div>
+    </div>
+
+    <div id="resultContainer"></div>
+
+    <div class="button-group">
+      <a href="login.html" class="back-btn">
+        <i class="bi bi-arrow-left"></i> Volver
+      </a>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="assets/js/main.js"></script>
+  <script src="assets/js/theme-handler.js"></script>
+
+  <!--  tu JS modificado -->
+  <script src="assets/js/price_consultation.js"></script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+{
+  "company_name": "CORPORATIVO SAN MARTIN",
+  "primary_color": "#21a630",
+  "secondary_color": "#ededed",
+  "logo_path": "uploads/logo.png",
+
+  "company_subtitle": "RENTA DE MAQUINARIA Y VENTA DE MATERIALES",
+  "tagline1": "PARA LA CONSTRUCCION.",
+  "tagline2": "",
+  "rfc": "QUSA8001193T1",
+  "email": "jpebernabe@hotmail.com",
+  "phone": "Tel. 953 55 212 53 CEL. 951 287 04 99.",
+  "contact_info": "jpebernabe@hotmail.com, Tel. 953 55 212 53 CEL. 951 287 04 99.",
+
+  "footer_address": "CARRETERA A YUCUDAA KM. 34+800; SAN MARTIN HUAMELÚLPAM; TLAXIACO, OAXACA. TEL. 953 55 212 53; CEL. 951 287 04 99.",
+
+  "signature_name": "C. HERMINIO PEREZ BERNABE",
+  "signature_path": "uploads/firma.png",
+
+  "header_right_image_path": "uploads/maquinaria.png",
+
+  "font_size": "0.85rem",
+  "dark_mode_auto": true
+}

@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Productos</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+
+  <link rel="stylesheet" href="assets/css/theme-global.css">
+  <link rel="stylesheet" href="assets/css/modules-styles.css">
+
+  <style>
+    html, body { height: 100%; }
+
+    body {
+      overflow: hidden;
+    }
+
+    .navbar {
+      position: sticky;
+      top: 0;
+      z-index: 2000;
+    }
+
+    .container.my-4 {
+      height: calc(100vh - 56px);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .table-wrapper {
+      flex: 1;
+      overflow-y: auto !important;
+      overflow-x: auto !important;
+      border-radius: 10px;
+      max-height: calc(100vh - 56px - 140px);
+      scrollbar-width: auto;
+    }
+
+    #productTable {
+      border-collapse: separate;
+      border-spacing: 0;
+      width: 100%;
+    }
+
+    #productTable thead th {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+
+    #productTable thead th,
+    #productTable tbody td {
+      border-right: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    #productTable thead th:last-child,
+    #productTable tbody td:last-child {
+      border-right: none;
+    }
+
+    #productTable thead th {
+      border-bottom: 2px solid rgba(255, 255, 255, 0.18);
+    }
+
+    #productTable tbody tr td {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    #productTable tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    #productTable td.actions-cell {
+      background-color: inherit !important;
+      background: inherit !important;
+      display: table-cell !important;
+      vertical-align: middle;
+    }
+
+    #productTable.table-striped > tbody > tr:nth-of-type(odd) > td.actions-cell,
+    #productTable.table-striped > tbody > tr:nth-of-type(even) > td.actions-cell {
+      background-color: inherit !important;
+      background: inherit !important;
+    }
+
+    #productTable td.actions-cell button {
+      display: block;
+      width: 100%;
+      margin-bottom: 6px;
+    }
+    #productTable td.actions-cell button:last-child {
+      margin-bottom: 0;
+    }
+  </style>
+</head>
+
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="dashboard.html">
+        <i class="bi bi-boxes me-2"></i>SISTEMA CSM
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item"><a class="nav-link active" href="products.html">Productos</a></li>
+          <li class="nav-item"><a class="nav-link" href="suppliers.html">Proveedores</a></li>
+          <li class="nav-item"><a class="nav-link" href="quotes.html">Cotizaciones</a></li>
+          <li class="nav-item"><a class="nav-link" href="sales.html">Ventas</a></li>
+          <li class="nav-item"><a class="nav-link" href="reports.html">Reportes</a></li>
+          <li class="nav-item" id="nav-accounting" style="display:none;"><a class="nav-link" href="accounting.html">Contabilidad</a></li>
+          <li class="nav-item"><a class="nav-link" href="fuel.html">Combustible</a></li>
+          <li class="nav-item" id="nav-users" style="display:none;"><a class="nav-link" href="users.html">Usuarios</a></li>
+        </ul>
+
+        <span class="navbar-text me-3" id="nav-user"></span>
+        <button class="btn btn-outline-light me-2" id="themeToggleBtn">Modo oscuro</button>
+        <button class="btn btn-outline-light" onclick="logout()">Salir</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+      <div class="d-flex align-items-center mb-2 flex-wrap">
+        <h3 class="me-3">Productos</h3>
+        <button class="btn btn-sm btn-outline-light me-2" id="btnViewTable">Vista Tabla</button>
+        <button class="btn btn-sm btn-outline-light" id="btnViewBoxes">Vista Cajas</button>
+      </div>
+
+      <div class="d-flex align-items-center mb-2 flex-wrap">
+        <label for="classificationFilter" class="me-2 mb-0">Clasificación:</label>
+        <select id="classificationFilter" class="form-select form-select-sm me-3" style="width:auto;min-width:180px;">
+          <option value="">Todas</option>
+          <option value="FERRETERIA">Ferretería</option>
+          <option value="ACEROS">Aceros</option>
+          <option value="MATERIALES PARA CONSTRUCCION">Materiales para construcción</option>
+          <option value="RENTA DE MAQUINARIA">Renta de maquinaria</option>
+          <option value="COMBUSTIBLE">Combustible</option>
+          <option value="PVC">PVC</option>
+          <option value="TINACOS">TINACOS</option>
+        </select>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn btn-success" id="btnAddProduct">Nuevo</button>
+        <button class="btn btn-outline-primary" id="btnImport">Importar CSV</button>
+        <a class="btn btn-outline-secondary" href="assets/plantilla_productos.csv" download>Descargar plantilla</a>
+        <button class="btn btn-outline-warning" id="btnQuickPrice">Actualizar precio</button>
+        <button class="btn btn-outline-info" id="btnSearchProduct">Buscar producto</button>
+      </div>
+
+      <input type="file" id="importFileInput" accept=".csv" style="display:none">
+    </div>
+
+    <div id="tableView">
+      <div class="table-wrapper">
+        <table class="table table-striped" id="productTable">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>FECHA DE COMPRA</th>
+              <th>CLAVE O CODIGO</th>
+              <th>NOMBRE DEL PRODUCTO</th>
+              <th>DESCRIPCION DEL PRODUCTO</th>
+              <th>UNIDAD</th>
+              <th>PRECIO DE COMPRA</th>
+              <th>PRECIO MINIMO DE VENTA</th>
+              <th>MARGEN DE GANANCIA</th>
+              <th>PRECIO DE VENTA</th>
+              <th>PRECIO DE COMPETENCIA</th>
+              <th>IMAGEN</th>
+              <th>STOCK EXISTENTE</th>
+              <th>ACCIONES</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="boxView" class="d-none" style="height: calc(100vh - 56px - 112px); overflow: hidden;">
+      <div class="row h-100">
+        <div class="col-12 col-lg-3 h-100" style="overflow-y: auto;">
+          <div class="card mb-3">
+            <div class="card-body">
+              <h5 class="card-title">Categorías</h5>
+              <input id="boxSearch" class="form-control form-control-sm mb-2" placeholder="Buscar..." type="text">
+              <div id="boxCategories" class="list-group" style="max-height: 55vh; overflow-y: auto;"></div>
+            </div>
+          </div>
+          <div class="card" id="costSummaryCard" style="position: sticky; top: 1rem;">
+            <div class="card-body">
+              <h6 class="card-title">Costo total stock</h6>
+              <p class="card-text mb-1" id="costSummaryCategory"><small class="text-muted">Categoría: Todas</small></p>
+              <p class="card-text mb-0" id="costSummaryValue">$0.00</p>
+              <small class="text-muted">(compra × stock)</small>
+              <hr>
+              <p class="card-text mb-0" id="costSummaryCount">Productos registrados: 0</p>
+              <small class="text-muted">(filtrado por categoría/búsqueda)</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-12 col-lg-9 h-100" style="overflow-y: auto;">
+          <div id="boxGrid" class="row row-cols-1 row-cols-sm-2 row-cols-md-2 row-cols-lg-3 g-3 p-2"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="productModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="productModalLabel">Nuevo producto</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <form id="productForm">
+              <input type="hidden" id="productId">
+              <input type="hidden" id="productImagePath">
+
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <label class="form-label">Clave / Código</label>
+                  <input id="productCode" class="form-control" type="text">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Código de barras</label>
+                  <input id="productBarcode" class="form-control" type="text">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Nombre</label>
+                  <input id="productName" class="form-control" type="text" required>
+                </div>
+
+                <div class="col-12">
+                  <label class="form-label">Descripción</label>
+                  <textarea id="productDescription" class="form-control" rows="2"></textarea>
+                </div>
+
+                <div class="col-md-3">
+                  <label class="form-label">Unidad</label>
+                  <input id="productUnit" class="form-control" type="text">
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label">Clasificación</label>
+                  <select id="productClassification" class="form-select">
+                    <option value="FERRETERIA">Ferretería</option>
+                    <option value="ACEROS">Aceros</option>
+                    <option value="MATERIALES PARA CONSTRUCCION">Materiales para construcción</option>
+                    <option value="RENTA DE MAQUINARIA">Renta de maquinaria</option>
+                    <option value="COMBUSTIBLE">Combustible</option>
+                    <option value="PVC">PVC</option>
+                    <option value="TINACOS">TINACOS</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Proveedor</label>
+                  <select id="productSupplier" class="form-select">
+                    <option value="">Seleccione proveedor</option>
+                  </select>
+                </div>
+
+                <div class="col-md-3">
+                  <label class="form-label">Última compra</label>
+                  <input id="lastPurchase" type="date" class="form-control">
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label">Stock</label>
+                  <input id="stock" type="number" step="1" class="form-control">
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label">Stock mínimo</label>
+                  <input id="minStock" type="number" step="1" class="form-control">
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label">Stock máximo</label>
+                  <input id="maxStock" type="number" step="1" class="form-control">
+                </div>
+
+                <div class="col-md-3">
+                  <label class="form-label">Precio compra</label>
+                  <input id="purchasePrice" class="form-control" type="text">
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label">Precio mínimo</label>
+                  <input id="minPrice" class="form-control" type="text">
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label">Margen (%)</label>
+                  <input id="profitMargin" class="form-control" type="text">
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label">Precio público</label>
+                  <input id="publicPrice" class="form-control" type="text">
+                </div>
+
+                <div class="col-md-4">
+                  <label class="form-label">Precio competencia</label>
+                  <input id="competitorPrice" class="form-control" type="text">
+                </div>
+
+                <div class="col-md-8 d-flex align-items-end">
+                  <div class="me-3">
+                    <input id="fileUploadHidden" type="file" accept="image/*" style="display:none">
+                    <label id="btnUploadLabel" class="btn btn-outline-secondary me-2" for="fileUploadHidden">Subir imagen</label>
+                    <button type="button" class="btn btn-outline-secondary me-2" id="btnCaptureImage">Tomar foto</button>
+                    <button type="button" class="btn btn-outline-danger me-2 d-none" id="btnClearImage">Quitar</button>
+                  </div>
+                  <div>
+                    <img id="productImagePreview" src="" alt="Vista" class="img-thumbnail d-none" style="max-height:80px;">
+                  </div>
+                </div>
+
+              </div>
+
+              <div class="mt-3 text-end">
+                <button type="submit" class="btn btn-primary">Guardar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="cameraModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-md modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Tomar foto</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="video-holder">
+              <video id="cameraVideo" autoplay playsinline></video>
+              <div class="snap-overlay">
+                <button class="btn btn-success" id="btnTakeSnapshot" type="button">
+                  <i class="bi bi-camera"></i> Capturar
+                </button>
+              </div>
+            </div>
+            <canvas id="cameraCanvas" class="d-none"></canvas>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button class="btn btn-primary" id="btnUseSnapshot" type="button" disabled>Usar foto</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="assets/js/main.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="assets/js/theme-handler.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+  <script src="assets/js/products.js"></script>
+</body>
+</html>

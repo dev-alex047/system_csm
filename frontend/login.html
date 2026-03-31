@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Inventario</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+
+  <!-- Tema global empresa -->
+  <link rel="stylesheet" href="assets/css/theme-global.css">
+
+  <style>
+    body {
+      background: linear-gradient(135deg, #1a8f5e 0%, #0d6a47 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .login-container {
+      width: 100%;
+      max-width: 400px;
+      padding: 20px;
+    }
+
+    .login-card {
+      border: none;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+    }
+
+    .login-card .card-header {
+      background: linear-gradient(135deg, #1a8f5e 0%, #0d6a47 100%);
+      color: white;
+      border: none;
+      padding: 30px;
+      text-align: center;
+    }
+
+    /*  LOGO + TEXTO */
+    .login-brand {
+      display: flex;
+      
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+
+    .login-brand-logo {
+      max-width: 48px;
+      max-height: 48px;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+    }
+
+    .login-brand-text {
+      font-size: 1.8rem;
+      font-weight: bold;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .login-card .card-body {
+      padding: 30px;
+    }
+
+    .form-control {
+      border-radius: 8px;
+      border: 2px solid #e9ecef;
+      padding: 12px 15px;
+    }
+
+    .form-control:focus {
+      border-color: #1a8f5e;
+      box-shadow: 0 0 0 3px rgba(26, 143, 94, 0.1);
+    }
+
+    .btn-login {
+      background: linear-gradient(135deg, #1a8f5e 0%, #0d6a47 100%);
+      border: none;
+      color: white;
+      padding: 12px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 1rem;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .btn-login:hover {
+      background: linear-gradient(135deg, #0d6a47 0%, #084c33 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(26, 143, 94, 0.4);
+      color: white;
+    }
+
+    .btn-price-check {
+      background: white;
+      color: #1a8f5e;
+      border: 2px solid #1a8f5e;
+      padding: 12px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 1rem;
+      transition: all 0.2s;
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+
+    .btn-price-check:hover {
+      background: #1a8f5e;
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(26, 143, 94, 0.4);
+    }
+
+    .alert {
+      border-radius: 8px;
+      border-left: 4px solid #f5c6cb;
+    }
+
+    /*  Responsive */
+    @media (max-width: 480px) {
+      .login-brand {
+        flex-direction: column;
+        gap: 8px;
+      }
+      .login-brand-text {
+        font-size: 1.5rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="login-container">
+    <div class="card login-card">
+
+      <!--  HEADER CON LOGO REAL -->
+      <div class="card-header">
+        <div class="login-brand">
+          <img
+            src="../backend/uploads/logo.png"
+            alt="Logo CSM"
+            class="login-brand-logo"
+            onerror="this.style.display='none'"
+          >
+          <span class="login-brand-text">SISTEMA CSM</span>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <form id="loginForm">
+          <div class="mb-3">
+            <label class="form-label">Usuario</label>
+            <input type="text" class="form-control" id="username" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Contraseña</label>
+            <input type="password" class="form-control" id="password" required>
+          </div>
+
+          <button type="submit" class="btn btn-login w-100">Entrar</button>
+        </form>
+
+        <a href="price_consultation.html" class="btn btn-price-check w-100">
+          <i class="bi bi-tag"></i> Consultar Precios
+        </a>
+
+        <div class="alert alert-danger mt-3 d-none" id="errorMsg"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/js/main.js"></script>
+  <script>
+    // Cambia este valor por el usuario que debe ver el huevo de pascua
+    const EASTER_EGG_USER = 'IYCL';
+
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+
+      apiRequest('login.php', 'POST', { username, password })
+        .then(data => {
+          localStorage.setItem('user', JSON.stringify(data.user));
+
+          // Solo el usuario especial ve el huevo de pascua.
+          if (data.user && data.user.username && data.user.username.toLowerCase() === EASTER_EGG_USER.toLowerCase()) {
+            window.location.href = '../index_mylove';
+          } else {
+            window.location.href = 'dashboard.html';
+          }
+        })
+        .catch(err => {
+          const msg = err.error || 'Credenciales incorrectas';
+          const div = document.getElementById('errorMsg');
+          div.textContent = msg;
+          div.classList.remove('d-none');
+        });
+    });
+  </script>
+</body>
+</html>

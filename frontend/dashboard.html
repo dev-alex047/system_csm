@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Inventario</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <!-- Tema global empresa -->
+  <link rel="stylesheet" href="assets/css/theme-global.css">
+  <!-- Estilos para módulos -->
+  <link rel="stylesheet" href="assets/css/modules-styles.css">
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#"><i class="bi bi-boxes me-2"></i>SISTEMA CSM</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <!-- Navegación unificada con módulos adicionales -->
+          <li class="nav-item"><a class="nav-link" href="products.html">Productos</a></li>
+          <li class="nav-item"><a class="nav-link" href="suppliers.html">Proveedores</a></li>
+          <li class="nav-item"><a class="nav-link" href="quotes.html">Cotizaciones</a></li>
+          <li class="nav-item"><a class="nav-link" href="sales.html">Ventas</a></li>
+          <li class="nav-item"><a class="nav-link" href="reports.html">Reportes</a></li>
+          <!-- Ajustes eliminado -->
+          <li class="nav-item" id="nav-accounting" style="display:none;"><a class="nav-link" href="accounting.html">Contabilidad</a></li>
+          <li class="nav-item"><a class="nav-link" href="fuel.html">Combustible</a></li>
+          <li class="nav-item" id="nav-users" style="display:none;"><a class="nav-link" href="users.html">Usuarios</a></li>
+        </ul>
+        <span class="navbar-text me-3" id="nav-user"></span>
+        <!-- Botón de alternancia de tema -->
+        <button class="btn btn-outline-light me-2" id="themeToggleBtn">Modo oscuro</button>
+        <button class="btn btn-outline-light" onclick="logout()">Salir</button>
+      </div>
+    </div>
+  </nav>
+  <div class="container mt-4">
+    <h1 class="mb-4">Sistema CSM</h1>
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-4">
+      <div class="col">
+        <a href="products.html" class="text-decoration-none">
+          <div class="card text-center h-100">
+            <div class="card-body">
+              <i class="bi bi-box-seam" style="font-size: 2rem;"></i>
+              <h5 class="card-title mt-2">Productos</h5>
+            </div>
+          </div>
+        </a>
+      </div>
+      <div class="col">
+        <a href="suppliers.html" class="text-decoration-none">
+          <div class="card text-center h-100">
+            <div class="card-body">
+              <i class="bi bi-truck" style="font-size: 2rem;"></i>
+              <h5 class="card-title mt-2">Proveedores</h5>
+            </div>
+          </div>
+        </a>
+      </div>
+      <div class="col">
+        <a href="quotes.html" class="text-decoration-none">
+          <div class="card text-center h-100">
+            <div class="card-body">
+              <i class="bi bi-file-earmark-text" style="font-size: 2rem;"></i>
+              <h5 class="card-title mt-2">Cotizaciones</h5>
+            </div>
+          </div>
+        </a>
+      </div>
+      <div class="col">
+        <a href="sales.html" class="text-decoration-none">
+          <div class="card text-center h-100">
+            <div class="card-body">
+              <i class="bi bi-receipt-cutoff" style="font-size: 2rem;"></i>
+              <h5 class="card-title mt-2">Ventas</h5>
+            </div>
+          </div>
+        </a>
+      </div>
+      <div class="col">
+        <a href="reports.html" class="text-decoration-none">
+          <div class="card text-center h-100">
+            <div class="card-body">
+              <i class="bi bi-bar-chart" style="font-size: 2rem;"></i>
+              <h5 class="card-title mt-2">Reportes</h5>
+            </div>
+          </div>
+        </a>
+      </div>
+      <!-- Tile de Ajustes eliminado -->
+      <!-- Tile for Accounting (solo admin) -->
+      <div class="col" id="tile-accounting" style="display:none;">
+        <a href="accounting.html" class="text-decoration-none">
+          <div class="card text-center h-100">
+            <div class="card-body">
+              <i class="bi bi-cash-stack" style="font-size: 2rem;"></i>
+              <h5 class="card-title mt-2">Contabilidad</h5>
+            </div>
+          </div>
+        </a>
+      </div>
+      <!-- Tile for Fuel (todos los roles) -->
+      <div class="col">
+        <a href="fuel.html" class="text-decoration-none">
+          <div class="card text-center h-100">
+            <div class="card-body">
+              <i class="bi bi-fuel-pump" style="font-size: 2rem;"></i>
+              <h5 class="card-title mt-2">Combustible</h5>
+            </div>
+          </div>
+        </a>
+      </div>
+      <!-- Tile for Users, shown only to admin -->
+      <div class="col" id="tile-users" style="display:none;">
+        <a href="users.html" class="text-decoration-none">
+          <div class="card text-center h-100">
+            <div class="card-body">
+              <i class="bi bi-people" style="font-size: 2rem;"></i>
+              <h5 class="card-title mt-2">Usuarios</h5>
+            </div>
+          </div>
+        </a>
+      </div>
+    </div>
+  </div>
+  <script src="assets/js/main.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="assets/js/theme-handler.js"></script>
+  <script>
+    const user = requireAuth();
+    populateNav();
+  </script>
+</body>
+</html>

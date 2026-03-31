@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Árbol de Amor Animado</title>
+
+  <!-- Autoría y derechos -->
+  <meta name="author" content="Zero">
+  <meta name="copyright" content="Zero - Código libre no comercial">
+  <meta name="description" content="Árbol de Amor Animado: una sorpresa interactiva y romántica para dedicar a tu pareja o ser querido. Código libre para uso personal, educativo o de inspiración.">
+  <meta name="keywords" content="amor, sorpresa, romántico, dedicatoria, animación, árbol, corazones, pareja, aniversario, regalo digital">
+  <meta name="robots" content="index, follow">
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="Css/style.css">
+  <link rel="stylesheet" href="Css/style.mobile.css" media="only screen and (max-width: 600px)">
+
+  <style>
+    /*  Contenedor del árbol */
+    .tree-container {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 400px;
+      height: 400px;
+      z-index: 2;
+    }
+
+    /*  Contenedor de las cuentas */
+    .countdown-wrapper {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.92);
+      padding: 14px 20px;
+      border-radius: 16px;
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.15);
+      font-family: "Segoe UI", sans-serif;
+      font-size: 1.1rem;
+      line-height: 1.5em;
+      color: #000000; /* ← Texto negro */
+      z-index: 8;
+      max-width: 300px;
+    }
+
+    .countdown-wrapper b {
+      color: #e60026;
+    }
+
+    /*  Botón de cita */
+    #heart-btn {
+      position: fixed;
+      bottom: 40px;
+      right: 40px;
+      background: rgba(255, 255, 255, 0.95);
+      border: none;
+      border-radius: 50%;
+      font-size: 2rem;
+      padding: 12px 15px;
+      cursor: pointer;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+      animation: beat 1.4s infinite;
+      z-index: 9;
+      transition: transform 0.25s ease-in-out;
+    }
+
+    #heart-btn:hover {
+      transform: scale(1.15);
+    }
+
+    /*  Botón de música */
+    #music-btn {
+      position: fixed;
+      bottom: 40px;
+      left: 40px;
+      background: rgba(255, 255, 255, 0.95);
+      border: none;
+      border-radius: 50%;
+      font-size: 2rem;
+      padding: 12px 15px;
+      cursor: pointer;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+      animation: beat 1.4s infinite;
+      z-index: 9;
+      transition: transform 0.25s ease-in-out;
+    }
+
+    #music-btn:hover {
+      transform: scale(1.15);
+    }
+
+    /*  Animación de latido */
+    @keyframes beat {
+      0%, 100% { transform: scale(1); }
+      25% { transform: scale(1.1); }
+      50% { transform: scale(0.95); }
+      75% { transform: scale(1.1); }
+    }
+
+    /*  Ajustes móviles */
+    @media (max-width: 700px) {
+      .countdown-wrapper {
+        position: relative;
+        margin: 20px auto;
+        right: auto;
+        left: auto;
+        top: auto;
+        text-align: center;
+        max-width: 90%;
+        font-size: 1rem;
+      }
+
+      #heart-btn, #music-btn {
+        bottom: 25px;
+        font-size: 1.8rem;
+        padding: 10px 12px;
+      }
+
+      #heart-btn {
+        right: 20px;
+      }
+
+      #music-btn {
+        left: 20px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!--  Efectos flotantes -->
+  <div id="floating-objects"></div>
+
+  <!--  Dedicatoria -->
+  <div class="dedication-text" id="dedication-text">
+    <div class="signature" id="signature"></div>
+  </div>
+
+  <!--  Contenedor de cuentas -->
+  <div class="countdown-wrapper">
+    <div id="countdown" class="countdown"></div>
+    <div id="nosee-countdown"></div>
+    <div id="meeting-countdown"></div>
+  </div>
+
+  <!--  Árbol animado -->
+  <div class="tree-container" id="tree-container"></div>
+
+  <!--  Música local -->
+  <audio src="Music/loco.mp3" id="bg-music" preload="auto"></audio>
+
+  <!--  Botón para registrar cita -->
+  <button id="heart-btn" title="Registrar próxima vez que se verán">❤️</button>
+
+  <!--  Botón para música -->
+  <button id="music-btn" title="Reproducir música">🎵</button>
+
+  <!--  Script principal -->
+  <script src="Js/script.js"></script>
+
+  <script>
+    //  Control de música
+    const music = document.getElementById("bg-music");
+    const musicBtn = document.getElementById("music-btn");
+
+    musicBtn.addEventListener("click", () => {
+      if (music.paused) {
+        music.play();
+        musicBtn.textContent = "⏸️";
+      } else {
+        music.pause();
+        musicBtn.textContent = "🎵";
+      }
+    });
+  </script>
+</body>
+</html>

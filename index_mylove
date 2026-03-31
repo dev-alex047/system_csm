@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Huevo de Pascua</title>
+    <link rel="stylesheet" href="frontend/Css/style.css">
+    <link rel="stylesheet" href="frontend/Css/style.mobile.css">
+</head>
+<body>
+    <div id="fireworks-canvas"></div>
+
+    <button id="continue-btn" class="continue-btn action-btn" type="button" title="Seguir al sistema" onclick="location.href='frontend/login.html'">
+      ⏎
+    </button>
+
+    <img id="sticker" class="sticker" src="" alt="Sticker" />
+
+    <div id="tree-container" class="tree-container"></div>
+    <div id="dedication-text" class="dedication-text"></div>
+    <div id="floating-objects"></div>
+
+    <div id="mobile-actions" class="mobile-actions"></div>
+
+    <div id="countdown" class="countdown"></div>
+    <div id="nosee-countdown" class="countdown"></div>
+
+    <button id="heart-btn" class="action-btn" type="button">❤️</button>
+    <button id="music-btn" class="action-btn" type="button">🔊</button>
+
+    <audio id="bg-music" src="frontend/Music/loco.mp3" preload="auto"></audio>
+
+    <script src="frontend/Js/script.js"></script>
+</body>
+</html>

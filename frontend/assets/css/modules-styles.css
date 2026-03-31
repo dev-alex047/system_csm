@@ -1,0 +1,329 @@
+/* Estilos para todos los módulos */
+
+/* Colores de la empresa */
+:root {
+  --color-verde: #1a8f5e;
+  --color-negro: #1a1a1a;
+  --color-blanco: #ffffff;
+  --color-amarillo: #ffc107;
+  --color-plateado: #c0c0c0;
+  --color-gris-claro: #f8f9fa;
+  --color-gris-oscuro: #2d2d2d;
+  --color-texto-oscuro: #e9ecef;
+}
+
+/* ===== ESTRUCTURA GENERAL ===== */
+body {
+  background-color: var(--color-blanco);
+  color: #333;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* ===== DARK MODE COMPLETO ===== */
+html[data-bs-theme="dark"] {
+  background-color: var(--color-negro);
+  color: var(--color-texto-oscuro);
+}
+
+html[data-bs-theme="dark"] body {
+  background-color: var(--color-negro);
+  color: var(--color-texto-oscuro);
+}
+
+/* Tarjetas, formularios y inputs */
+html[data-bs-theme="dark"] .card,
+html[data-bs-theme="dark"] .modal-content {
+  background-color: var(--color-gris-oscuro);
+  border-color: #495057;
+  color: var(--color-texto-oscuro);
+}
+
+html[data-bs-theme="dark"] .form-control,
+html[data-bs-theme="dark"] .form-select,
+html[data-bs-theme="dark"] input[type="text"],
+html[data-bs-theme="dark"] input[type="email"],
+html[data-bs-theme="dark"] input[type="number"],
+html[data-bs-theme="dark"] input[type="date"],
+html[data-bs-theme="dark"] textarea {
+  background-color: var(--color-gris-oscuro);
+  border-color: #495057;
+  color: var(--color-texto-oscuro);
+}
+
+html[data-bs-theme="dark"] .form-control:focus,
+html[data-bs-theme="dark"] .form-select:focus {
+  background-color: var(--color-gris-oscuro);
+  border-color: var(--color-verde);
+  color: var(--color-texto-oscuro);
+}
+
+/* Tablas */
+html[data-bs-theme="dark"] .table {
+  color: var(--color-texto-oscuro);
+  border-color: #495057;
+}
+
+html[data-bs-theme="dark"] .table thead th {
+  background-color: var(--color-verde);
+  color: var(--color-blanco);
+  border-color: #495057;
+}
+
+html[data-bs-theme="dark"] .table tbody tr {
+  border-color: #495057;
+}
+
+html[data-bs-theme="dark"] .table tbody tr:hover {
+  background-color: rgba(26, 143, 94, 0.1);
+}
+
+/* Modales */
+html[data-bs-theme="dark"] .modal-header {
+  background-color: var(--color-verde);
+  border-color: #495057;
+  color: var(--color-blanco);
+}
+
+html[data-bs-theme="dark"] .btn-close {
+  filter: invert(1);
+}
+
+/* Alertas */
+html[data-bs-theme="dark"] .alert {
+  background-color: var(--color-gris-oscuro);
+  border-color: #495057;
+  color: var(--color-texto-oscuro);
+}
+
+/* ===== TABLA WRAPPER Y ESTILOS ===== */
+.table-wrapper {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background-color: var(--color-blanco);
+  transition: background-color 0.3s;
+}
+
+html[data-bs-theme="dark"] .table-wrapper {
+  background-color: var(--color-gris-oscuro);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Headers fijos en tabla */
+.table-wrapper .table {
+  margin-bottom: 0;
+}
+
+.table-wrapper .table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: var(--color-verde);
+  color: var(--color-blanco);
+  height: 50px;
+  vertical-align: middle;
+  font-weight: 600;
+  border: 1px solid var(--color-verde);
+  padding: 10px;
+}
+
+html[data-bs-theme="dark"] .table-wrapper .table thead th {
+  background-color: var(--color-verde);
+  border-color: #495057;
+}
+
+/* Filas con altura uniforme */
+.table-wrapper .table tbody tr {
+  height: 50px;
+  transition: background-color 0.2s;
+}
+
+.table-wrapper .table tbody tr:hover {
+  background-color: rgba(26, 143, 94, 0.05);
+}
+
+html[data-bs-theme="dark"] .table-wrapper .table tbody tr:hover {
+  background-color: rgba(26, 143, 94, 0.15);
+}
+
+.table-wrapper .table tbody td {
+  vertical-align: middle;
+  padding: 10px 8px;
+  border-color: #dee2e6;
+}
+
+html[data-bs-theme="dark"] .table-wrapper .table tbody td {
+  border-color: #495057;
+}
+
+/* Centrado de botones de acciones */
+.table-wrapper .table td.actions-cell,
+.table-wrapper .table td.acciones,
+.table-wrapper .table td[class*="accion"] {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.table-wrapper .table td .btn {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.875rem;
+  border-radius: 6px;
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 768px) {
+  .table-wrapper {
+    border-radius: 6px;
+  }
+
+  .table-wrapper .table {
+    font-size: 0.85rem;
+  }
+
+  .table-wrapper .table thead th {
+    height: 45px;
+    padding: 8px 4px;
+    font-size: 0.85rem;
+  }
+
+  .table-wrapper .table tbody tr {
+    height: 45px;
+  }
+
+  .table-wrapper .table tbody td {
+    padding: 8px 4px;
+  }
+
+  .table-wrapper .table td .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+  }
+}
+
+html[data-bs-theme="dark"] .modal-content,
+html[data-bs-theme="dark"] .btn-close {
+  background-color: var(--color-gris-oscuro);
+  color: var(--color-texto-oscuro);
+}
+
+/* Video holder */
+.video-holder {
+  position: relative;
+  background: #000;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.video-holder video {
+  width: 100%;
+  height: auto;
+}
+
+.snap-overlay {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+}
+
+.cursor-disabled {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* Tabla con encabezado fijo y altura uniforme */
+.table-wrapper {
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  overflow-y: auto;
+}
+
+.table-wrapper.scrollable {
+  height: 500px;
+}
+
+html[data-bs-theme="dark"] .table-wrapper {
+  border-color: #495057;
+}
+
+/* Tablas generales */
+.table {
+  margin-bottom: 0;
+}
+
+.table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: var(--color-verde);
+  color: var(--color-blanco);
+  text-align: center;
+  vertical-align: middle;
+  padding: 12px 8px;
+  font-weight: 600;
+  border-bottom: 2px solid var(--color-plateado);
+}
+
+.table tbody td {
+  vertical-align: middle;
+  padding: 10px 8px;
+  font-size: 0.9rem;
+  height: 50px;
+}
+
+/* Asegurar que la altura sea uniforme incluyendo celdas con botones */
+.table tbody tr {
+  height: 50px;
+}
+
+html[data-bs-theme="dark"] .table tbody tr {
+  background-color: var(--color-negro);
+}
+
+html[data-bs-theme="dark"] .table tbody tr:hover {
+  background-color: #333;
+}
+
+html[data-bs-theme="light"] .table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.table img.product-thumbnail,
+.table img.thumbnail {
+  max-width: 60px;
+  max-height: 60px;
+  border-radius: 4px;
+}
+
+/* Celdas de acciones centradas */
+.table td.actions-cell,
+.table td.acciones {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.table .btn-sm {
+  padding: 0.4rem 0.6rem;
+  font-size: 0.75rem;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .table {
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .table {
+    font-size: 0.75rem;
+  }
+  .table-wrapper.scrollable {
+    height: 400px;
+  }
+}

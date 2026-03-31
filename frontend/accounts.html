@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestión de cuentas</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- Tema global empresa -->
+  <link rel="stylesheet" href="assets/css/theme-global.css">
+  <!-- Estilos para módulos -->
+  <link rel="stylesheet" href="assets/css/modules-styles.css">
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="dashboard.html"><i class="bi bi-boxes me-2"></i>SISTEMA CSM</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item"><a class="nav-link" href="products.html">Productos</a></li>
+          <li class="nav-item"><a class="nav-link" href="suppliers.html">Proveedores</a></li>
+          <li class="nav-item"><a class="nav-link" href="quotes.html">Cotizaciones</a></li>
+          <li class="nav-item"><a class="nav-link" href="sales.html">Ventas</a></li>
+          <li class="nav-item"><a class="nav-link" href="reports.html">Reportes</a></li>
+          <li class="nav-item"><a class="nav-link" href="settings.html">Ajustes</a></li>
+          <li class="nav-item" id="nav-accounting" style="display:none;"><a class="nav-link" href="accounting.html">Contabilidad</a></li>
+          <li class="nav-item" id="nav-accounts" style="display:none;"><a class="nav-link active" href="accounts.html">Cuentas</a></li>
+          <li class="nav-item"><a class="nav-link" href="fuel.html">Combustible</a></li>
+          <li class="nav-item" id="nav-users" style="display:none;"><a class="nav-link" href="users.html">Usuarios</a></li>
+        </ul>
+        <span class="navbar-text me-3" id="nav-user"></span>
+        <button class="btn btn-outline-light" onclick="logout()">Salir</button>
+      </div>
+    </div>
+  </nav>
+  <div class="container my-4" id="accountsContent">
+    <!-- Contenido generado por accounts.js -->
+  </div>
+  <script src="assets/js/main.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="assets/js/theme-handler.js"></script>
+  <script src="assets/js/accounts.js"></script>
+</body>
+</html>

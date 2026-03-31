@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contabilidad</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- Tema global empresa -->
+  <link rel="stylesheet" href="assets/css/theme-global.css">
+  <!-- Estilos para módulos -->
+  <link rel="stylesheet" href="assets/css/modules-styles.css">
+
+  <style>
+    :root{
+      --bg:#0b1220;
+      --panel: rgba(18, 28, 52, .55);
+      --panel2: rgba(18, 28, 52, .35);
+      --border: rgba(255,255,255,.10);
+      --border2: rgba(255,255,255,.16);
+      --text: rgba(255,255,255,.92);
+      --muted: rgba(255,255,255,.65);
+      --shadow: 0 16px 50px rgba(0,0,0,.45);
+    }
+
+    body{
+      background: radial-gradient(1200px 600px at 20% 0%, rgba(59,130,246,.18), transparent 60%),
+                  radial-gradient(900px 500px at 90% 10%, rgba(34,197,94,.10), transparent 55%),
+                  var(--bg);
+      color: var(--text);
+    }
+
+    .page-title{
+      letter-spacing:.2px;
+      font-weight:800;
+    }
+
+    .acct-panel{
+      background: linear-gradient(180deg, var(--panel), rgba(12,18,34,.55));
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    .acct-label{
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 700;
+      letter-spacing: .2px;
+      margin-bottom: 6px;
+    }
+
+    .acct-input{
+      border: 1px solid var(--border2);
+      background: rgba(0,0,0,.25);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 12px;
+      height: 42px;
+    }
+    .acct-input:focus{
+      outline:none;
+      box-shadow: 0 0 0 3px rgba(59,130,246,.20);
+      border-color: rgba(59,130,246,.55);
+      background: rgba(0,0,0,.30);
+      color: var(--text);
+    }
+
+    .acct-btn{
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      font-weight: 800;
+      padding: 10px 14px;
+      border-radius: 12px;
+      line-height: 1.1;
+      transition: transform .06s ease, background .15s ease, border-color .15s ease;
+      text-transform: uppercase;
+      letter-spacing: .3px;
+    }
+    .acct-btn:hover{
+      background: rgba(255,255,255,.10);
+      border-color: rgba(255,255,255,.26);
+      transform: translateY(-1px);
+    }
+    .acct-btn:active{ transform: translateY(0px); }
+
+    .acct-btn-sm{
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      font-weight: 800;
+      padding: 7px 10px;
+      border-radius: 10px;
+      font-size: 12px;
+      letter-spacing: .25px;
+      text-transform: uppercase;
+    }
+    .acct-btn-sm:hover{
+      background: rgba(255,255,255,.10);
+      border-color: rgba(255,255,255,.26);
+    }
+
+    .balances-head{
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 800;
+      letter-spacing: .25px;
+    }
+
+    .saldo-card{
+      border: 1px solid var(--border2);
+      background: rgba(0,0,0,.22);
+      border-radius: 14px;
+      padding: 10px 12px;
+      min-width: 170px;
+      text-align:center;
+    }
+    .saldo-name{
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 900;
+      letter-spacing: .35px;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 165px;
+    }
+    .saldo-value{
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: .2px;
+    }
+
+    .subtle{
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    /* Tabla dark pro */
+    .acct-table{
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      background: rgba(0,0,0,.18);
+    }
+
+    .acct-table table{
+      margin: 0;
+      color: var(--text);
+    }
+
+    .acct-table thead th{
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .35px;
+      color: rgba(255,255,255,.85);
+      background: rgba(0,0,0,.35) !important;
+      border-color: rgba(255,255,255,.10) !important;
+      padding-top: 12px;
+      padding-bottom: 12px;
+      white-space: nowrap;
+    }
+
+    .acct-table td{
+      border-color: rgba(255,255,255,.08) !important;
+      vertical-align: middle;
+      background: transparent !important;
+    }
+
+    .badge{
+      font-weight: 900;
+      letter-spacing: .2px;
+    }
+
+    /* Modales: que no choquen con el tema */
+    .modal-content{
+      border-radius: 16px;
+      border: 1px solid rgba(0,0,0,.10);
+    }
+
+    .btn-outline-success, .btn-outline-warning, .btn-outline-danger{
+      font-weight: 800;
+      border-radius: 10px;
+    }
+
+    /* Responsive Tables Optimizadas */
+    @media (max-width: 767.98px) {
+      .table {
+        font-size: 0.85rem;
+      }
+
+      .table thead th {
+        padding: 10px 8px;
+        font-size: 0.75rem;
+      }
+
+      .table tbody td {
+        padding: 10px 8px;
+        font-size: 0.85rem;
+      }
+
+      .table-responsive {
+        border-radius: 8px;
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .acct-btn-sm {
+        width: 100%;
+        font-size: 0.75rem;
+        padding: 6px 8px;
+      }
+    }
+
+    @media (min-width: 768px) {
+      .table-responsive {
+        border-radius: 8px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="dashboard.html"><i class="bi bi-boxes me-2"></i>SISTEMA CSM</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item"><a class="nav-link" href="products.html">Productos</a></li>
+          <li class="nav-item"><a class="nav-link" href="suppliers.html">Proveedores</a></li>
+          <li class="nav-item"><a class="nav-link" href="quotes.html">Cotizaciones</a></li>
+          <li class="nav-item"><a class="nav-link" href="sales.html">Ventas</a></li>
+          <li class="nav-item"><a class="nav-link" href="reports.html">Reportes</a></li>
+          <li class="nav-item" id="nav-accounting" style="display:none;"><a class="nav-link active" href="accounting.html">Contabilidad</a></li>
+          <li class="nav-item"><a class="nav-link" href="fuel.html">Combustible</a></li>
+          <li class="nav-item" id="nav-users" style="display:none;"><a class="nav-link" href="users.html">Usuarios</a></li>
+        </ul>
+
+        <span class="navbar-text me-3" id="nav-user"></span>
+        <button class="btn btn-outline-light me-2" id="themeToggleBtn">Modo oscuro</button>
+        <button class="btn btn-outline-light" onclick="logout()">Salir</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container my-4">
+    <h3 class="page-title mb-3">Contabilidad</h3>
+
+    <div class="acct-panel">
+      <div class="row g-3 align-items-start">
+        <!-- Filtros -->
+        <div class="col-12 col-xl-4">
+          <div class="d-flex gap-2 align-items-end flex-wrap">
+            <div class="flex-grow-1">
+              <div class="acct-label">Fecha inicio</div>
+              <input type="date" id="acctStart" class="form-control acct-input">
+            </div>
+            <div class="flex-grow-1">
+              <div class="acct-label">Fecha fin</div>
+              <input type="date" id="acctEnd" class="form-control acct-input">
+            </div>
+            <button class="acct-btn" id="btnFilterMoves">Filtrar<br>movimientos</button>
+          </div>
+        </div>
+
+        <!-- Botones centrales -->
+        <div class="col-12 col-xl-4">
+          <div class="d-flex justify-content-center gap-2 mt-1 flex-wrap">
+            <button class="acct-btn" id="btnAR">Cuentas<br>por cobrar</button>
+            <button class="acct-btn" id="btnAP">Cuentas<br>por pagar</button>
+            <button class="acct-btn" id="btnBANK">Cuentas<br>bancarias</button>
+            <button class="acct-btn" id="btnManageAccounts">Administrar<br>cuentas</button>
+            <button class="acct-btn" id="btnAddEntry" style="background: rgba(34,197,94,.15); border-color: rgba(34,197,94,.3);">➕ ENTRADA</button>
+            <button class="acct-btn" id="btnAddExit" style="background: rgba(239,68,68,.15); border-color: rgba(239,68,68,.3);">➖ SALIDA</button>
+          </div>
+        </div>
+
+        <!-- Saldos e informes -->
+        <div class="col-12 col-xl-4">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="balances-head">SALDOS EXISTENTES A: <span id="acctBalancesDate">--</span></div>
+            <div class="d-flex gap-2">
+              <button class="acct-btn-sm" id="btnDaily">Diario</button>
+              <button class="acct-btn-sm" id="btnMonthly">Mensual</button>
+              <button class="acct-btn-sm" id="btnAnnual">Anual</button>
+            </div>
+          </div>
+<!-- Modal: seleccionar fecha para reporte diario de contabilidad (fuera de .container para evitar scroll/overflow issues) -->
+<div class="modal fade" id="accountingDailyModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Reporte Diario de Contabilidad</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Fecha del reporte</label>
+          <input type="date" id="reportDate" class="form-control" value="">
+        </div>
+        <div class="text-muted small">Se generará un PDF con totales, movimientos, saldos por caja y concentrado de productos.</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-success" id="btnGenerateAccountingDaily">Generar PDF</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+          <div class="d-flex justify-content-end gap-2 mt-2 flex-wrap">
+            <div class="saldo-card">
+              <div class="saldo-name" id="saldoName1">CAJA 1</div>
+              <div class="saldo-value" id="saldoCaja1">$ -</div>
+            </div>
+            <div class="saldo-card">
+              <div class="saldo-name" id="saldoName2">CAJA 2</div>
+              <div class="saldo-value" id="saldoCaja2">$ -</div>
+            </div>
+            <div class="saldo-card">
+              <div class="saldo-name" id="saldoName3">CAJA 3</div>
+              <div class="saldo-value" id="saldoCaja3">$ -</div>
+            </div>
+            <!-- NUEVO CUADRO (4) -->
+            <div class="saldo-card">
+              <div class="saldo-name" id="saldoName4">BANAMEX</div>
+              <div class="saldo-value" id="saldoCaja4">$ -</div>
+            </div>
+          </div>
+
+          <div class="subtle text-end mt-1">Tip: usa “Administrar cuentas” para renombrar / crear / desactivar.</div>
+        </div>
+      </div>
+
+      <!-- Encabezados / filtros por actor -->
+      <div class="row mt-4 align-items-end g-2">
+        <div class="col-12 col-lg-6">
+          <div class="acct-label">A NOMBRE DE</div>
+          <input id="acctPartyInput" class="form-control acct-input" placeholder="Cliente / Proveedor (autocompletar)" list="partyList">
+          <datalist id="partyList"></datalist>
+          <div class="subtle">Filtra por cliente/proveedor detectado en notas (ej. “CLIENTE: …”).</div>
+        </div>
+        <div class="col-12 col-lg-6">
+          <div class="acct-label">REALIZADO EN</div>
+          <input id="acctPlaceInput" class="form-control acct-input" placeholder="Usuario (autocompletar)" list="userList">
+          <datalist id="userList"></datalist>
+          <div class="subtle">Filtra por usuario que registró el movimiento.</div>
+        </div>
+      </div>
+
+      <!-- Tabla -->
+      <div class="acct-table table-responsive mt-3">
+        <table class="table table-hover table-sm" id="acctTable">
+          <thead>
+            <tr>
+              <th>FECHA</th>
+              <th>TIPO</th>
+              <th>ORIGEN</th>
+              <th>CAJA</th>
+              <th>REFERENCIA</th>
+              <th>MONTO</th>
+              <th>AUTORIZADO POR</th>
+              <th>ESTADO</th>
+              <th>ULTIMA ACTUALIZACION</th>
+              <th>COMPROBANTE</th>
+              <th>ACCIONES</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="11" class="text-center">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Saldar / Pagar / Cobrar -->
+  <div class="modal fade" id="settleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="settleModalTitle">Saldar movimiento</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="small text-muted mb-2" id="settleInfo"></div>
+
+          <input type="hidden" id="settleMoveId">
+
+          <div class="mb-2">
+            <label class="form-label">Método de pago</label>
+            <select class="form-select" id="settleMethod">
+              <option value="EFECTIVO">Efectivo</option>
+              <option value="TRANSFERENCIA">Transferencia</option>
+            </select>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label">Caja / Cuenta</label>
+            <select class="form-select" id="settleAccount"></select>
+            <div class="form-text">Seleccione de dónde entra/sale el dinero.</div>
+          </div>
+
+          <div class="mb-2" id="settleRefWrap" style="display:none;">
+            <label class="form-label">Referencia bancaria (folio/operación)</label>
+            <input type="text" class="form-control" id="settleReference" placeholder="Número de operación">
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label">Nota (opcional)</label>
+            <textarea class="form-control" id="settleNote" rows="2" placeholder="Observaciones"></textarea>
+          </div>
+
+          <div class="alert alert-danger d-none" id="settleError"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btnSettleConfirm">Confirmar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Administrar cuentas -->
+  <div class="modal fade" id="accountsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Cajas y cuentas bancarias</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="d-flex gap-2 align-items-end flex-wrap">
+            <div>
+              <label class="form-label">Nombre</label>
+              <input class="form-control" id="newAcctName" placeholder="Ej. OFICINA / BANAMEX">
+            </div>
+            <div>
+              <label class="form-label">Tipo</label>
+              <select class="form-select" id="newAcctKind">
+                <option value="cash">Efectivo (Caja)</option>
+                <option value="bank">Banco</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">Saldo</label>
+              <input type="number" step="0.01" class="form-control" id="newAcctBalance" value="0">
+            </div>
+            <button class="btn btn-success" id="btnCreateAccount">Agregar</button>
+          </div>
+
+          <hr>
+
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered" id="accountsTable">
+              <thead>
+                <tr>
+                  <th style="width:70px;">ID</th>
+                  <th>Nombre</th>
+                  <th style="width:120px;">Tipo</th>
+                  <th style="width:130px;">Saldo</th>
+                  <th style="width:90px;">Activo</th>
+                  <th style="width:220px;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="6" class="text-center">Cargando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="alert alert-danger d-none" id="accountsError"></div>
+          <div class="small text-muted">
+            Nota: aquí se edita el saldo directo. En el siguiente paso hacemos “transferencias/ajustes” con historial contable.
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Agregar ENTRADA Manual -->
+  <div class="modal fade" id="addEntryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">➕ Agregar ENTRADA (Dinero que entra)</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Concepto</label>
+            <input type="text" id="entryDescription" class="form-control" placeholder="Ej: Préstamo del dueño, depósito cliente, etc.">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Monto</label>
+            <input type="number" id="entryAmount" class="form-control" placeholder="0.00" step="0.01" min="0">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Caja/Cuenta</label>
+            <select id="entryCashRegister" class="form-select">
+              <option value="">-- Seleccionar --</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Referencia (Cheque, folio, etc.)</label>
+            <input type="text" id="entryReference" class="form-control" placeholder="Ej: CHE-12345">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Nota</label>
+            <textarea id="entryNote" class="form-control" rows="2" placeholder="Observaciones..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-success" id="btnConfirmEntry">Registrar Entrada</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Agregar SALIDA Manual -->
+  <div class="modal fade" id="addExitModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">➖ Agregar SALIDA (Dinero que sale)</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Concepto</label>
+            <input type="text" id="exitDescription" class="form-control" placeholder="Ej: Gasto operativo, retiro, pago proveedor, etc.">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Monto</label>
+            <input type="number" id="exitAmount" class="form-control" placeholder="0.00" step="0.01" min="0">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Caja/Cuenta</label>
+            <select id="exitCashRegister" class="form-select">
+              <option value="">-- Seleccionar --</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Referencia (Recibo, folio, etc.)</label>
+            <input type="text" id="exitReference" class="form-control" placeholder="Ej: REC-67890">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Nota</label>
+            <textarea id="exitNote" class="form-control" rows="2" placeholder="Observaciones..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-danger" id="btnConfirmExit">Registrar Salida</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/js/main.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>  <script src="assets/js/theme-handler.js"></script>  <script src="assets/js/accounting.js?v=5"></script>
+</body>
+</html>

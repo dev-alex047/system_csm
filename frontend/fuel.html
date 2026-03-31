@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Combustible</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- Tema global empresa -->
+  <link rel="stylesheet" href="assets/css/theme-global.css">
+  <!-- Estilos para módulos -->
+  <link rel="stylesheet" href="assets/css/modules-styles.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="assets/css/styles.css" rel="stylesheet">
+  <link href="assets/css/responsive-tables.css" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #667eea;
+      --secondary: #764ba2;
+    }
+
+    body {
+      background-color: #f8f9fa;
+    }
+
+    .navbar {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%) !important;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .card {
+      border: none;
+      border-radius: 10px;
+      box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+      margin-bottom: 20px;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 25px rgba(0, 0, 0, 0.12);
+    }
+
+    .card-header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      color: white;
+      border: none;
+      font-weight: 600;
+      padding: 15px 20px;
+    }
+
+    .btn-primary, .btn-success {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .btn-primary:hover, .btn-success:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-outline-primary {
+      color: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .btn-outline-primary:hover {
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .form-control, .form-select {
+      border-radius: 8px;
+      border: 2px solid #e9ecef;
+      padding: 10px 12px;
+    }
+
+    .form-control:focus, .form-select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .tab-content {
+      padding: 20px;
+    }
+
+    .nav-tabs {
+      border-bottom: 2px solid #e9ecef;
+    }
+
+    .nav-tabs .nav-link {
+      color: #666;
+      font-weight: 600;
+      border: none;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      padding: 10px 20px;
+    }
+
+    .nav-tabs .nav-link:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .nav-tabs .nav-link.active {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: none;
+    }
+
+    .table {
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .table thead th {
+      background: #f8f9fa;
+      color: #495057;
+      font-weight: 600;
+      border: none;
+      padding: 15px;
+    }
+
+    .table tbody td {
+      padding: 12px 15px;
+      vertical-align: middle;
+    }
+
+    .badge {
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+
+    .modal-content {
+      border: none;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      color: white;
+      border: none;
+    }
+
+    .btn-close {
+      filter: brightness(0) invert(1);
+    }
+
+    .stat-card {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+      margin-bottom: 15px;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: bold;
+      color: var(--primary);
+      margin-bottom: 5px;
+    }
+
+    .stat-label {
+      color: #666;
+      font-size: 0.95rem;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn-sm {
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 0.85rem;
+    }
+
+    @media (max-width: 768px) {
+      .card-body {
+        padding: 15px;
+      }
+
+      .table {
+        font-size: 0.9rem;
+      }
+
+      .table thead th,
+      .table tbody td {
+        padding: 10px;
+      }
+
+      .action-buttons {
+        flex-direction: column;
+      }
+
+      .action-buttons .btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="dashboard.html"><i class="bi bi-boxes me-2"></i>SISTEMA CSM</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item"><a class="nav-link" href="dashboard.html"><i class="bi bi-house"></i> Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link" href="products.html"><i class="bi bi-box"></i> Productos</a></li>
+          <li class="nav-item"><a class="nav-link" href="suppliers.html"><i class="bi bi-truck"></i> Proveedores</a></li>
+        </ul>
+        <span class="navbar-text me-3" id="nav-user"></span>
+        <button class="btn btn-outline-light me-2" id="themeToggleBtn">Modo oscuro</button>
+        <button class="btn btn-outline-light" onclick="logout()">Salir</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container-fluid my-4">
+    <div class="row mb-4">
+      <div class="col-md-3">
+        <div class="stat-card">
+          <div class="stat-value" id="totalLiters">0</div>
+          <div class="stat-label">Litros totales</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="stat-card">
+          <div class="stat-value" id="totalVehicles">0</div>
+          <div class="stat-label">Vehículos registrados</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="stat-card">
+          <div class="stat-value" id="totalEntries">0</div>
+          <div class="stat-label">Entradas del mes</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="stat-card">
+          <div class="stat-value" id="totalSales">0</div>
+          <div class="stat-label">Salidas del mes</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-3" id="fuelTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="movements-tab" data-bs-toggle="tab" data-bs-target="#movements" type="button">
+          <i class="bi bi-arrow-left-right"></i> Movimientos
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="vehicles-tab" data-bs-toggle="tab" data-bs-target="#vehicles" type="button">
+          <i class="bi bi-car-front"></i> Vehículos
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="stock-tab" data-bs-toggle="tab" data-bs-target="#stock" type="button">
+          <i class="bi bi-fuel-pump"></i> Stock de combustible
+        </button>
+      </li>
+    </ul>
+
+    <div class="tab-content" id="fuelTabContent">
+      <!-- TAB: Movimientos -->
+      <div class="tab-pane fade show active" id="movements" role="tabpanel">
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <h4>Historial de movimientos</h4>
+          </div>
+          <div class="col-md-6 text-end">
+            <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#modalEntry">
+              <i class="bi bi-plus-circle"></i> Registrar entrada
+            </button>
+            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalExit">
+              <i class="bi bi-minus-circle"></i> Registrar salida
+            </button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Tipo</th>
+                  <th>Combustible</th>
+                  <th class="text-end">Litros</th>
+                  <th class="text-end">Precio (unit.)</th>
+                  <th class="text-end">Total</th>
+                  <th>Detalles</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="movementsTable">
+                <tr><td colspan="8" class="text-center text-muted">Cargando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: Vehículos -->
+      <div class="tab-pane fade" id="vehicles" role="tabpanel">
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <h4>Registro de vehículos</h4>
+          </div>
+          <div class="col-md-6 text-end">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalVehicle">
+              <i class="bi bi-plus-circle"></i> Nuevo vehículo
+            </button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Placa</th>
+                  <th>Modelo/Marca</th>
+                  <th>Tipo</th>
+                  <th>Capacidad (L)</th>
+                  <th>Estado</th>
+                  <th>Último consumo</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="vehiclesTable">
+                <tr><td colspan="7" class="text-center text-muted">Cargando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: Stock de combustible -->
+      <div class="tab-pane fade" id="stock" role="tabpanel">
+        <h4 class="mb-3">Stock actual por ubicación</h4>
+        <div id="stockContainer" class="row">
+          <div class="col text-center text-muted">Cargando...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Registrar entrada -->
+  <div class="modal fade" id="modalEntry" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-plus-circle"></i> Registrar entrada de combustible</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="formEntry">
+            <div class="mb-3">
+              <label class="form-label">Tipo de combustible *</label>
+              <select id="entryFuelType" class="form-select" required></select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Ubicación *</label>
+              <select id="entryLocation" class="form-select" required>
+                <option value="">Seleccionar...</option>
+                <option value="DEPOSITO">Depósito</option>
+                <option value="BODEGA_G">Bodega G</option>
+                <option value="BODEGA_C">Bodega C</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Proveedor *</label>
+              <input type="text" id="entrySupplier" class="form-control" required>
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Número de garrafas *</label>
+                <input type="number" id="entryJerrycans" class="form-control" min="1" value="1" required>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Litros por garrafa *</label>
+                <input type="number" id="entryLitersPerGarrafa" class="form-control" min="0" step="0.01" required>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Precio de compra (por litro) *</label>
+              <input type="number" id="entryPrice" class="form-control" min="0" step="0.01" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Fecha *</label>
+              <input type="date" id="entryDate" class="form-control" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Notas</label>
+              <textarea id="entryNotes" class="form-control" rows="2"></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btnSaveEntry">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Registrar salida -->
+  <div class="modal fade" id="modalExit" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-minus-circle"></i> Registrar salida de combustible</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="formExit">
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Tipo de combustible *</label>
+                <select id="exitFuelType" class="form-select" required></select>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Ubicación *</label>
+                <select id="exitLocation" class="form-select" required>
+                  <option value="">Seleccionar...</option>
+                  <option value="DEPOSITO">Depósito</option>
+                  <option value="BODEGA_G">Bodega G</option>
+                  <option value="BODEGA_C">Bodega C</option>
+                </select>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Litros *</label>
+                <input type="number" id="exitLiters" class="form-control" min="0" step="0.01" required>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Tipo de movimiento *</label>
+                <select id="exitDestination" class="form-select" required onchange="updateExitFields()">
+                  <option value="">Seleccionar...</option>
+                  <option value="VENTA">Venta</option>
+                  <option value="USO">Uso en vehículo</option>
+                  <option value="CAMBIO">Cambio</option>
+                </select>
+              </div>
+            </div>
+            <div id="exitVehicleField" class="mb-3" style="display:none;">
+              <label class="form-label">Vehículo *</label>
+              <select id="exitVehicle" class="form-select"></select>
+            </div>
+            <div id="exitCounterpartyField" class="mb-3" style="display:none;">
+              <label class="form-label">Contraparte *</label>
+              <input type="text" id="exitCounterparty" class="form-control">
+            </div>
+            <div id="exitPriceField" class="mb-3" style="display:none;">
+              <label class="form-label">Precio de venta (por litro) *</label>
+              <input type="number" id="exitPrice" class="form-control" min="0" step="0.01">
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Fecha *</label>
+                <input type="date" id="exitDate" class="form-control" required>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Destino contable *</label>
+                <select id="exitAccountTarget" class="form-select" required>
+                  <option value="">Seleccionar...</option>
+                  <option value="CAJA">Caja</option>
+                  <option value="BANCO">Banco</option>
+                  <option value="OTRO">Otro</option>
+                </select>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Notas</label>
+              <textarea id="exitNotes" class="form-control" rows="2"></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-success" id="btnSaveExit">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Nuevo vehículo -->
+  <div class="modal fade" id="modalVehicle" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-car-front"></i> Registrar nuevo vehículo</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="formVehicle">
+            <div class="mb-3">
+              <label class="form-label">Placa *</label>
+              <input type="text" id="vehiclePlate" class="form-control" required placeholder="Ej: ABC-123">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Modelo/Marca *</label>
+              <input type="text" id="vehicleModel" class="form-control" required placeholder="Ej: Ford Transit">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Tipo de combustible *</label>
+              <select id="vehicleFuelType" class="form-select" required></select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Capacidad del tanque (litros) *</label>
+              <input type="number" id="vehicleCapacity" class="form-control" min="0" step="0.01" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Estado *</label>
+              <select id="vehicleStatus" class="form-select" required>
+                <option value="ACTIVO">Activo</option>
+                <option value="MANTENIMIENTO">En mantenimiento</option>
+                <option value="INACTIVO">Inactivo</option>
+              </select>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btnSaveVehicle">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="assets/js/theme-handler.js"></script>
+  <script src="assets/js/main.js"></script>

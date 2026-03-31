@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reporte de Operaciones</title>
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+  <!-- Estilos globales -->
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <!-- Tema global empresa -->
+  <link rel="stylesheet" href="assets/css/theme-global.css">
+  <!-- Estilos para módulos -->
+  <link rel="stylesheet" href="assets/css/modules-styles.css">
+</head>
+<body>
+
+<!-- ===== NAVBAR ===== -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="dashboard.html"><i class="bi bi-boxes me-2"></i>SISTEMA CSM</a>
+
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item"><a class="nav-link" href="products.html">Productos</a></li>
+        <li class="nav-item"><a class="nav-link" href="suppliers.html">Proveedores</a></li>
+        <li class="nav-item"><a class="nav-link" href="sales.html">Ventas</a></li>
+        <li class="nav-item"><a class="nav-link active" href="reports.html">Reportes</a></li>
+        <li class="nav-item"><a class="nav-link" href="fuel.html">Combustible</a></li>
+      </ul>
+
+      <span class="navbar-text me-3" id="nav-user"></span>
+      <button class="btn btn-outline-light me-2" id="themeToggleBtn">Modo oscuro</button>
+      <button class="btn btn-outline-light" onclick="logout()">Salir</button>
+    </div>
+  </div>
+</nav>
+
+<!-- ===== CONTENIDO ===== -->
+<div class="container my-4">
+
+  <h3 class="mb-3">Reporte de operaciones de compra</h3>
+
+  <!-- ===== BUSCADOR ===== -->
+  <div class="row mb-3 align-items-end">
+    <div class="col-md-6 col-lg-4">
+      <label class="form-label">Buscar por código, código de barras, nombre o ID</label>
+      <input
+        type="text"
+        class="form-control"
+        id="searchInput"
+        list="barcodeList"
+        placeholder="Buscar...">
+      <datalist id="barcodeList"></datalist>
+    </div>
+    <div class="col-md-6 col-lg-4 mt-3 mt-md-0 d-flex gap-2">
+      <button type="button" id="btnPrintReport" class="btn btn-primary">Imprimir PDF</button>
+      <!-- El botón de 'Reporte diario contabilidad' se movió a la pantalla de Contabilidad -->
+    </div> 
+  </div>
+
+  <!-- ===== TABLA ===== -->
+  <div class="table-responsive">
+    <table class="table table-striped table-bordered" id="operationTable">
+      <thead class="table-dark">
+        <tr>
+          <th>Fecha operación</th>
+          <th>Registrado por</th>
+          <th>ID</th>
+          <th>Código de barras</th>
+          <th>Producto</th>
+          <th>Cantidad</th>
+          <th>Precio compra</th>
+          <th>Precio venta</th>
+          <th>Proveedor</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- ===== SCRIPTS ===== -->
+<script src="assets/js/main.js"></script>
+<script src="assets/js/reports.js?v=1"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="assets/js/theme-handler.js"></script>
+
+
+</body>
+</html>

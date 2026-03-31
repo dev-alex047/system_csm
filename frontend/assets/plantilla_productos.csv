@@ -1,0 +1,2 @@
+fecha_compra;clave;nombre;descripcion;clasificacion;unidad;precio_compra;precio_minimo;margen_ganancia;precio_publico;precio_competencia;codigo_barras;stock;stock_minimo;stock_maximo
+2025-08-07;001;Producto de ejemplo;Descripción de ejemplo;FERRETERIA;PZA;100.00;100.00;0.18;118.00;110.00;7501234567890;50;10;100

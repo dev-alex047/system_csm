@@ -1,0 +1,426 @@
+body {
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background: #fcfcfc;
+}
+
+#fireworks-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: block;
+    z-index: 1;
+    pointer-events: none;
+}
+
+#center-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 5rem;
+    color: #e60026;
+    font-family: 'Arial Black', Arial, sans-serif;
+    text-shadow: 2px 2px 8px #ffb3b3;
+    z-index: 2;
+    letter-spacing: 0.5rem;
+    user-select: none;
+    display: flex;
+    gap: 0.5rem;
+    pointer-events: none;
+}
+
+.letter {
+    opacity: 0;
+    transition: opacity 0.5s;
+}
+
+.tree-container {
+  /* Asegura que el contenedor tenga el nuevo tamaño */
+  width: 520px !important;
+  height: 520px !important;
+  /* Centrado absoluto */
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+}
+
+.tree-container svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.tree-container svg path {
+  transition: fill-opacity 0.5s, stroke-dashoffset 1.2s;
+}
+
+.tree-container svg.move-and-scale {
+  transition: transform 1.2s cubic-bezier(.77,0,.18,1);
+  transform: translateX(200px) scale(1.35);
+}
+
+.dedication-text {
+  position: absolute;
+  top: 50%;
+  left: 3%;
+  right: auto;
+  transform: translateY(-50%);
+  min-width: 320px;
+  max-width: 600px;
+  width: 60rem;
+  font-size: 1.5rem;
+  color: #050505;
+  font-family: 'Courier New', Courier, monospace;
+  white-space: pre-line;
+  z-index: 3;
+  opacity: 0;
+  pointer-events: none;
+  max-height: 90vh;
+  overflow: visible;
+  padding: 1em 1.5em 1em 1em;
+  background: rgba(255,255,255,0.92);
+  border-radius: 0.7em;
+  box-shadow: 0 2px 16px #e6002611;
+  /* Permite que la caja crezca en altura y ancho */
+  transition: max-width 0.4s, min-width 0.4s, width 0.4s;
+}
+
+.dedication-text.typing {
+  opacity: 1;
+  animation: fadeInText 0.6s;
+}
+
+@keyframes fadeInText {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+#floating-objects {
+  position: fixed;
+  left: 0; top: 0;
+  width: 100vw; height: 100vh;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.floating-petal {
+  position: absolute;
+  will-change: transform, opacity;
+  opacity: 0.85;
+  pointer-events: none;
+  width: 24px; height: 32px;
+  background: radial-gradient(ellipse at 60% 30%, #ffd6e0 60%, #ff69b4 100%);
+  border-radius: 60% 40% 60% 40% / 60% 60% 40% 40%;
+}
+
+.signature {
+  /* Cambia posición absoluta a relativa y pon margen arriba */
+  position: relative;
+  top: auto;
+  left: auto;
+  bottom: auto;
+  margin-top: 1.5em;
+  margin-left: 0;
+  display: block;
+  font-family: 'Dancing Script', 'Pacifico', cursive, sans-serif;
+  font-size: 2.2rem;
+  color: #e60026;
+  opacity: 0;
+  z-index: 5;
+  white-space: pre;
+  pointer-events: none;
+  transition: opacity 0.7s;
+}
+
+.signature.visible {
+  opacity: 1;
+  animation: signature-draw 2.2s steps(24) forwards;
+}
+
+@keyframes signature-draw {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0 0 0); }
+}
+
+.countdown {
+  position: fixed;
+  left: 50%;
+  bottom: 3%;
+  transform: translateX(-50%);
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #333;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 0.6em 1.2em;
+  border-radius: 1.2em;
+  z-index: 6;
+  box-shadow: 0 2px 12px #e6002611;
+  pointer-events: none;
+  letter-spacing: 0.06em;
+  min-width: 220px;
+  text-align: center;
+  transition: opacity 0.8s cubic-bezier(.77,0,.18,1), transform 0.8s cubic-bezier(.77,0,.18,1);
+  opacity: 0;
+  transform: translateX(-50%) translateY(30px);
+}
+
+.countdown.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Responsivo para móviles: la caja ocupa casi todo el ancho arriba del árbol */
+@media (max-width: 700px) {
+  #center-text {
+    display: none;
+  }
+
+  .sticker {
+    display: none;
+  }
+
+  .tree-container {
+    position: relative;
+    top: auto;
+    left: auto;
+    transform: none;
+    width: 85vw !important;
+    height: 85vw !important;
+    margin: 0 auto 1.2rem;
+  }
+
+  .dedication-text {
+    position: relative;
+    top: auto;
+    left: auto;
+    transform: none;
+    margin: 0 auto;
+    min-width: 0;
+    max-width: 90vw;
+    width: 90vw;
+    font-size: 1.1rem;
+    padding: 0.7em;
+  }
+
+  .signature {
+    font-size: 1.3rem;
+  }
+
+  /* Botones en columna (misma posición en móvil y desktop):
+     corazón, música y seguir al sistema */
+  #heart-btn {
+    display: flex !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    position: fixed !important;
+    bottom: 18px !important;
+    left: 18px !important;
+    width: 52px !important;
+    height: 52px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    font-size: 1.5rem !important;
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.92) !important;
+    border: 1px solid rgba(0,0,0,0.12) !important;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.25) !important;
+    color: #e60026 !important;
+  }
+
+  #music-btn {
+    display: flex !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    position: fixed !important;
+    bottom: 78px !important;
+    left: 18px !important;
+    width: 52px !important;
+    height: 52px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    font-size: 1.2rem !important;
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.92) !important;
+    border: 1px solid rgba(0,0,0,0.12) !important;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.25) !important;
+    color: #111 !important;
+  }
+
+  .continue-btn {
+    display: flex !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    position: fixed !important;
+    bottom: 138px !important;
+    left: 18px !important;
+    width: 52px !important;
+    height: 52px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    font-size: 1.2rem !important;
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    background: rgba(230, 0, 38, 0.95) !important;
+    border: 1px solid rgba(0,0,0,0.12) !important;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.25) !important;
+    color: #fff !important;
+  }
+
+  .tree-container svg.move-and-scale {
+    transform: translateX(0) scale(1.05);
+    transform-origin: center;
+  }
+}
+/* === Ajustes nuevos: contadores y botón del corazón === */
+
+#meeting-countdown,
+#nosee-countdown {
+  position: fixed;
+  left: 50%;
+  bottom: 9%;
+  transform: translateX(-50%);
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1.3rem;
+  color: #333;
+  background: #fff8;
+  padding: 0.4em 1em;
+  border-radius: 1em;
+  z-index: 7;
+  box-shadow: 0 2px 8px #e6002611;
+  text-align: center;
+  letter-spacing: 0.05em;
+  min-width: 230px;
+  transition: opacity 0.8s cubic-bezier(.77,0,.18,1), transform 0.8s cubic-bezier(.77,0,.18,1);
+  opacity: 0;
+  transform: translateX(-50%) translateY(30px);
+}
+
+#meeting-countdown.visible,
+#nosee-countdown.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+#heart-btn, #music-btn, .continue-btn {
+  position: fixed;
+  left: 18px;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+  z-index: 9999;
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out, opacity 0.25s ease;
+}
+
+#heart-btn {
+  bottom: 18px;
+  background: rgba(255,255,255,0.9);
+  border: 1px solid rgba(0,0,0,0.18);
+  font-size: 1.8rem;
+  color: #e60026;
+  opacity: 0.95;
+}
+
+#music-btn {
+  bottom: 98px;
+  background: rgba(255,255,255,0.92);
+  border: 1px solid rgba(0,0,0,0.18);
+  font-size: 1.2rem;
+  color: #111;
+}
+
+.continue-btn {
+  bottom: 178px;
+  background: rgba(230, 0, 38, 0.95);
+  color: #fff;
+  border: 1px solid rgba(0,0,0,0.12);
+  font-size: 1.2rem;
+  padding: 0;
+}
+
+#heart-btn:hover,
+#music-btn:hover,
+.continue-btn:hover {
+  transform: scale(1.1);
+  opacity: 1;
+}
+
+.mobile-actions {
+  display: none;
+  position: relative;
+  z-index: 50;
+  width: 100%;
+  max-width: 360px;
+  min-height: 88px;
+  margin: 0 auto;
+  padding: 0.6rem 0;
+  gap: 0.8rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-btn {
+  min-height: 44px;
+  border-radius: 999px;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.action-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.sticker {
+  position: fixed;
+  top: 18px;
+  left: 18px;
+  width: 92px;
+  height: 92px;
+  z-index: 20;
+  cursor: pointer;
+  filter: drop-shadow(0 6px 18px rgba(0,0,0,0.25));
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.sticker:hover {
+  transform: scale(1.08) rotate(-4deg);
+  opacity: 0.95;
+}
+
+/* El botón “Seguir al sistema” usa la columna de botones en la esquina.
+   El estilo principal se aplica en la sección de botones en columna. */
+
+.continue-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 18px rgba(230, 0, 38, 0.55);
+}
+
+/* Evita que se ensime en pantallas medianas */
+@media (max-width: 900px) {
+  #meeting-countdown,
+  #nosee-countdown {
+    bottom: 12%;
+    font-size: 1.1rem;
+  }
+}
