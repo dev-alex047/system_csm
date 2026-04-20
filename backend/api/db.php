@@ -5,9 +5,8 @@
 // Ajustes de conexión para MySQL
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'inventario');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-
+define('DB_USER', 'fjpq');
+define('DB_PASS', 'smCorp@137047');
 // Si utilizas un puerto distinto al predeterminado de MySQL (3306), puedes definirlo aquí
 define('DB_PORT', '3306');
 
