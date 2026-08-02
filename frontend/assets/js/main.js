@@ -107,9 +107,7 @@ function updateThemeToggleLabel(theme) {
 
   if (!btn) return;
 
-  btn.textContent = theme === 'dark'
-    ? 'Modo claro'
-    : 'Modo oscuro';
+  btn.textContent = theme === 'dark' ? 'Modo claro' : 'Modo oscuro';
 }
 
 /**
