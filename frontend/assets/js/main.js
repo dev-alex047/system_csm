@@ -272,7 +272,11 @@ function toggleAdminNav() {
 }
 
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initTheme);
-} else {
+  document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('themeToggleBtn')) {
+      initTheme();
+    }
+  });
+} else if (document.getElementById('themeToggleBtn')) {
   initTheme();
 }
