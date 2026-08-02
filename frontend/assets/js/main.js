@@ -61,9 +61,6 @@ function populateNav() {
   // After updating nav user text, toggle admin-specific links
   toggleAdminNav();
   // Aplicar tema y colores guardados
-  applyTheme();
-  // Inicializar tema (oscuro/claro) y actualizar botón
-  initTheme();
 }
 
 /**
@@ -71,30 +68,23 @@ function populateNav() {
  * Actualiza el atributo data-bs-theme y la etiqueta del botón.
  */
 function initTheme() {
-  const saved = localStorage.getItem('theme');
   const root = document.documentElement;
+  const saved = localStorage.getItem('theme');
   const current = saved || root.getAttribute('data-bs-theme') || 'light';
+
   root.setAttribute('data-bs-theme', current);
   updateThemeToggleLabel(current);
   applyTheme();
-  
-  const btn = document.getElementById('themeToggleBtn');
-  if (btn) {
-    btn.addEventListener('click', toggleTheme);
-  }
-  
-  // Escuchar cambios de tema con MutationObserver
-  const observer = new MutationObserver(() => {
-    setTimeout(applyTheme, 50);
-  });
-  
-  observer.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['data-bs-theme'],
-    attributeOldValue: true
-  });
-}
 
+  const btn = document.getElementById('themeToggleBtn');
+
+  if (btn) {
+    btn.onclick = function(event) {
+      event.preventDefault();
+      toggleTheme();
+    };
+  }
+}
 /**
  * Cambia entre los modos claro y oscuro.
  */
@@ -114,12 +104,12 @@ function toggleTheme() {
  */
 function updateThemeToggleLabel(theme) {
   const btn = document.getElementById('themeToggleBtn');
+
   if (!btn) return;
-  if (theme === 'dark') {
-    btn.textContent = 'Modo claro';
-  } else {
-    btn.textContent = 'Modo oscuro';
-  }
+
+  btn.textContent = theme === 'dark'
+    ? 'Modo claro'
+    : 'Modo oscuro';
 }
 
 /**
@@ -281,4 +271,10 @@ function toggleAdminNav() {
       accountingNav.style.display = 'none';
     }
   }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initTheme);
+} else {
+  initTheme();
 }
