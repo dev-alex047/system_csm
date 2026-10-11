@@ -1,3 +1,4 @@
+const MAESTRO_ID_ACTUAL = 1;
 const state = {
     activeView: 'home',
     editing: null,
@@ -1503,7 +1504,7 @@ for (
     formData.append("asignatura_id", $("#evaluationSubject").val());
     formData.append("criterio_id", criterioId);
     formData.append("alumno_id", alumnoId);
-    formData.append("maestro_id", 1);
+    formData.append("maestro_id", MAESTRO_ID_ACTUAL);
     formData.append("periodo", $("#evaluationPeriod").val());
     formData.append("ciclo_escolar", $("#evaluationCycle").val());
     formData.append("grupo", $("#evaluationGroup").val());
@@ -5423,7 +5424,7 @@ function guardarCalificaciones(calificaciones, mensajeExito = "") {
 
     formData.append("action", "guardarCalificaciones");
     formData.append("asignatura_id", asignaturaId);
-    formData.append("maestro_id", 1);
+    formData.append("maestro_id", MAESTRO_ID_ACTUAL);
     formData.append("periodo", periodo);
     formData.append("ciclo_escolar", ciclo);
     formData.append("calificaciones", JSON.stringify(calificaciones));
@@ -6460,7 +6461,7 @@ function obtenerDatosPdfEvaluacion(tipoReporte, firma) {
     const ciclo = String($('#evaluationCycle').val() || '').trim();
 
     const subject = state.subjects.find((item) => item.id === subjectId);
-    const maestroId = 1;
+    const maestroId = 2;
     
     const teacher = state.teachers.find(function(item) {
         return Number(item.id) === maestroId;
@@ -6481,7 +6482,7 @@ function obtenerDatosPdfEvaluacion(tipoReporte, firma) {
 
     const datos = {
     tipo_reporte: tipoReporte,
-    maestro_id: maestroId,
+    maestro_id: MAESTRO_ID_ACTUAL,
 
     escuela: {
         nombre: 'INSTITUTO ESTATAL DE EDUCACIÓN PÚBLICA DE OAXACA',
@@ -6895,17 +6896,8 @@ function generarPdfAprovechamientoEscolar() {
         ciclo
     );
 
-    /*
-     * Por ahora seguimos trabajando
-     * con el maestro ID 1.
-     *
-     * Cuando hagamos Horarios,
-     * esto saldrá automáticamente.
-     */
-    formData.append(
-        "maestro_id",
-        1
-    );
+
+    formData.append("maestro_id", MAESTRO_ID_ACTUAL);
 
     formData.append(
         "periodos",
@@ -6980,32 +6972,13 @@ function generarPdfAprovechamientoEscolar() {
             return;
         }
 
-        /*
-         * Datos que ya regresó PHP:
-         *
-         * tipo_reporte = aprovechamiento
-         * ciclo
-         * maestro_id
-         * resultados
-         */
         var datosPdf = data.pdf_data;
 
-        /*
-         * Estos nombres pueden quedar vacíos
-         * por ahora.
-         *
-         * Después podemos llevarlos a
-         * Configuración de la escuela.
-         */
         datosPdf.coordinador = "";
         datosPdf.subdirector = "PROFR. JOSÉ DE JESÚS FLORES RODRÍGUEZ";
         
         datosPdf.director = "PROFR. FORTINO BAUTISTA CRUZ";
 
-        /*
-         * Usamos exactamente el mismo
-         * generador que ya tienes.
-         */
         generarPdfEvaluacion(
             datosPdf
         );
