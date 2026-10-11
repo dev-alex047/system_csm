@@ -15,7 +15,7 @@ require_once __DIR__ . "/PDFEvaluacion.php";
 if (isset($_POST["session"])) {
     $session = $_POST["session"];
 } else {
-    $session = 1;
+    $session = 2;
 }
 
 if (isset($_POST["action"])) {
