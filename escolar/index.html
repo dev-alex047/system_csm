@@ -1,0 +1,1407 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#1D1D1F">
+    <title>Control escolar</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-shell min-vh-100">
+       <header id="appHeader" class="app-header is-home sticky-top px-2 px-lg-4 pt-2">
+    <nav class="navbar navbar-expand app-navbar position-relative rounded-4 border bg-white shadow-sm px-2 px-lg-3">
+                <button type="button" class="btn btn-icon btn-light border shadow-sm flex-shrink-0" data-module="home" aria-label="Ir al inicio">
+                    <i class="bi bi-house-door fs-5"></i>
+                </button>
+
+                <div class="home-header-title flex-grow-1 text-center fw-bold fs-5 px-3">
+                  Control escolar
+                </div>
+
+                <div class="nav-modules d-none d-md-flex flex-grow-1 justify-content-center gap-2 px-3 overflow-auto">
+                    <button type="button" class="btn btn-nav-module" data-module="subjects">
+                        <i class="bi bi-journal-bookmark text-primary"></i>
+                        <span>Materias</span>
+                    </button>
+                    <button type="button" class="btn btn-nav-module" data-module="teachers">
+                        <i class="bi bi-person-badge text-primary"></i>
+                        <span>Maestros</span>
+                    </button>
+                    <button type="button" class="btn btn-nav-module" data-module="students">
+                        <i class="bi bi-people text-primary"></i>
+                        <span>Alumnos</span>
+                    </button>
+                    <button type="button" class="btn btn-nav-module" data-module="schedule">
+                        <i class="bi bi-calendar3 text-primary"></i>
+                        <span>Horarios</span>
+                    </button>
+                    <button type="button" class="btn btn-nav-module" data-module="evaluations">
+                        <i class="bi bi-clipboard-check text-primary"></i>
+                        <span>Evaluaciones</span>
+                    </button>
+                </div>
+
+                <div class="d-flex align-items-center gap-2 ms-auto flex-shrink-0">
+                    <div id="saveStatus" class="save-status d-none d-lg-flex align-items-center gap-2 px-3 py-2 rounded-pill">
+                        <!--<span class="status-dot"></span>
+                        <span class="small fw-semibold">Guardado</span>-->
+                    </div>
+                    <div class="dropdown settings-dropdown">
+    <button
+        type="button"
+        class="btn menu-cabezal-config"
+        data-bs-toggle="dropdown"
+        aria-expanded="false"
+        title="Configuración"
+    >
+        <i class="bi bi-gear"></i>
+    </button>
+
+    <div class="dropdown-menu dropdown-menu-end settings-menu shadow border-0 rounded-4 p-2 mt-2">
+
+        <button
+            type="button"
+            class="dropdown-item settings-menu-option rounded-3"
+            data-settings-section="school"
+        >
+            <span class="settings-option-icon">
+                <i class="bi bi-building"></i>
+            </span>
+
+            <span>
+                <span class="d-block fw-semibold">Escuela y ajustes</span>
+                <span class="d-block small text-muted">Datos, ciclo y evaluaciones</span>
+            </span>
+
+            <i class="bi bi-chevron-right ms-auto text-muted"></i>
+        </button>
+
+        <button
+            type="button"
+            class="dropdown-item settings-menu-option rounded-3"
+            data-settings-section="more"
+        >
+            <span class="settings-option-icon">
+                <i class="bi bi-sliders"></i>
+            </span>
+
+            <span>
+                <span class="d-block fw-semibold">Más opciones</span>
+                <span class="d-block small text-muted">Usuarios, permisos y reportes</span>
+            </span>
+
+            <i class="bi bi-chevron-right ms-auto text-muted"></i>
+        </button>
+
+    </div>
+</div>
+                </div>
+            </nav>
+
+            <div class="mobile-module-nav d-md-none mt-2 overflow-auto pb-1">
+                <div class="d-flex gap-2 min-content-width">
+                    <button type="button" class="btn btn-nav-module btn-sm" data-module="subjects"><i class="bi bi-journal-bookmark text-primary"></i> Materias</button>
+                    <button type="button" class="btn btn-nav-module btn-sm" data-module="teachers"><i class="bi bi-person-badge text-primary"></i> Maestros</button>
+                    <button type="button" class="btn btn-nav-module btn-sm" data-module="students"><i class="bi bi-people text-primary"></i> Alumnos</button>
+                    <button type="button" class="btn btn-nav-module btn-sm" data-module="schedule"><i class="bi bi-calendar3 text-primary"></i> Horarios</button>
+                    <button type="button" class="btn btn-nav-module btn-sm" data-module="evaluations"><i class="bi bi-clipboard-check text-primary"></i> Evaluaciones</button>
+                </div>
+            </div>
+        </header>
+
+        <main class="container-fluid app-main px-3 px-lg-5 pb-5">
+            <!-- Inicio -->
+            <section id="view-home" class="app-view active" data-view="home">
+                <div class="dashboard-heading text-center py-4 py-lg-5">
+                   
+                </div>
+
+                <div class="row g-3 g-lg-4 justify-content-center dashboard-grid mx-auto">
+                    <div class="col-12 col-md-6">
+                        <button class="module-card card border-0 shadow-sm w-100 text-start" type="button" data-module="subjects">
+                           
+                            <span class="module-icon"><i class="bi bi-journal-bookmark"></i></span>
+                            <span class="h4 text-primary fw-bold mb-1">Materias</span>
+                            <span id="dashboardSubjects" class="text-muted">0 materias registradas</span>
+                        </button>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <button class="module-card card border-0 shadow-sm w-100 text-start" type="button" data-module="teachers">
+                           
+                            <span class="module-icon"><i class="bi bi-person-badge"></i></span>
+                            <span class="h4 text-primary fw-bold mb-1">Maestros</span>
+                            <span id="dashboardTeachers" class="text-muted">0 maestros registrados</span>
+                        </button>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <button class="module-card card border-0 shadow-sm w-100 text-start" type="button" data-module="students">
+                           
+                            <span class="module-icon"><i class="bi bi-people"></i></span>
+                            <span class="h4 text-primary fw-bold mb-1">Alumnos</span>
+                            <span id="dashboardStudents" class="text-muted">0 alumnos registrados</span>
+                        </button>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <button class="module-card card border-0 shadow-sm w-100 text-start" type="button" data-module="evaluations">
+                            
+                            <span class="module-icon"><i class="bi bi-clipboard-check"></i></span>
+                            <span class="h4 text-primary fw-bold mb-1">Evaluaciones</span>
+                            <span class="text-muted">Captura, promedios y carga masiva</span>
+                        </button>
+                    </div>
+                    <div class="col-12 col-md-7">
+                        <button class="module-card card border-0 shadow-sm w-100 text-start" type="button" data-module="schedule">
+                            
+                            <span class="module-icon"><i class="bi bi-calendar3"></i></span>
+                            <span class="h4 text-primary fw-bold mb-1">Horarios</span>
+                            <span id="dashboardSchedule" class="text-muted">0 clases esta semana</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Materias -->
+<section id="view-subjects" class="app-view" data-view="subjects">
+    <div class="module-heading d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3">
+        <div>
+            <button class="btn btn-link text-primary px-0 text-decoration-none fw-semibold mb-2" data-module="home"><i class="bi bi-arrow-left me-1"></i>Módulos</button>
+            <h1 class="display-6 fw-bold mb-1">Materias</h1>
+            <p class="text-muted fs-5 mb-0">Administra las asignaturas y sus criterios de evaluación.</p>
+        </div>
+
+        <button class="btn btn-primary rounded-pill px-4" data-action="new" data-entity="subject">
+            <i class="bi bi-plus-lg me-2"></i>Nueva materia
+        </button>
+    </div>
+
+    <div class="card content-card border shadow-sm rounded-4 overflow-hidden">
+        <div class="card-body p-3 p-lg-4 border-bottom">
+            <div class="row g-3 align-items-center">
+                <div class="col-12 col-lg-5">
+                    <div class="input-group input-group-lg search-control">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                        <input id="subjectSearch" type="search" class="form-control border-start-0" placeholder="Buscar por materia o clave...">
+                    </div>
+                </div>
+
+                <div class="col text-lg-end">
+                    <span id="subjectCount" class="text-muted fw-semibold"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Materia</th>
+                        <th>Clave</th>
+                        <th>Criterios</th>
+                        <th>Estado</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="subjectTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+            <!-- Maestros -->
+            <section id="view-teachers" class="app-view" data-view="teachers">
+                <div class="module-heading d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3">
+                    <div>
+                        <button class="btn btn-link text-primary px-0 text-decoration-none fw-semibold mb-2" data-module="home"><i class="bi bi-arrow-left me-1"></i>Módulos</button>
+                        <h1 class="display-6 fw-bold mb-1">Maestros</h1>
+                        <p class="text-muted fs-5 mb-0">Administra los usuarios docentes y sus datos de contacto.</p>
+                    </div>
+                    <button class="btn btn-primary rounded-pill px-4" data-action="new" data-entity="teacher"><i class="bi bi-person-plus me-2"></i>Nuevo maestro</button>
+                </div>
+
+                <div class="card content-card border shadow-sm rounded-4 overflow-hidden">
+                    <div class="card-body p-3 p-lg-4 border-bottom">
+                        <div class="row g-3 align-items-center">
+                            <div class="col-12 col-lg-5">
+                                <div class="input-group input-group-lg search-control">
+                                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                                    <input id="teacherSearch" type="search" class="form-control border-start-0" placeholder="Buscar maestro...">
+                                </div>
+                            </div>
+                            <div class="col text-lg-end"><span id="teacherCount" class="text-muted fw-semibold"></span></div>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Maestro</th>
+                                    <th>Clave</th>
+                                    <th>Correo</th>
+                                    <th>Materias</th>
+                                    <th class="text-end">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="teacherTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Alumnos -->
+            <section id="view-students" class="app-view" data-view="students">
+                <div class="module-heading d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3">
+                    <div>
+                        <button class="btn btn-link text-primary px-0 text-decoration-none fw-semibold mb-2" data-module="home"><i class="bi bi-arrow-left me-1"></i>Módulos</button>
+                        <h1 class="display-6 fw-bold mb-1">Alumnos</h1>
+                        <p class="text-muted fs-5 mb-0">Consulta y organiza a los alumnos por grado y grupo.</p>
+                    </div>
+                    <button class="btn btn-primary rounded-pill px-4" data-action="new" data-entity="student"><i class="bi bi-person-plus me-2"></i>Nuevo alumno</button>
+                </div>
+
+                <div class="card content-card border shadow-sm rounded-4 overflow-hidden">
+                    <div class="card-body p-3 p-lg-4 border-bottom">
+                        <div class="row g-3 align-items-center">
+                            <div class="col-12 col-lg-5">
+                                <div class="input-group input-group-lg search-control">
+                                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                                    <input id="studentSearch" type="search" class="form-control border-start-0" placeholder="Buscar alumno, matrícula o grupo...">
+                                </div>
+                            </div>
+                            <div class="col text-lg-end"><span id="studentCount" class="text-muted fw-semibold"></span></div>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Alumno</th>
+                                    <th>Matrícula</th>
+                                    <th>Grado y grupo</th>
+                                    <th>Estado</th>
+                                    <th class="text-end">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="studentTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Horarios -->
+            <section id="view-schedule" class="app-view" data-view="schedule">
+                <div class="module-heading d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3">
+                    <div>
+                        <button class="btn btn-link text-primary px-0 text-decoration-none fw-semibold mb-2" data-module="home"><i class="bi bi-arrow-left me-1"></i>Módulos</button>
+                        <h1 class="display-6 fw-bold mb-1">Horarios</h1>
+                        <p class="text-muted fs-5 mb-0">Planea clases y actividades sin cruces de horario.</p>
+                    </div>
+                    <button class="btn btn-primary rounded-pill px-4" data-action="new" data-entity="schedule"><i class="bi bi-plus-lg me-2"></i>Nueva asignación</button>
+                </div>
+
+                <div class="card border shadow-sm rounded-4 mb-4">
+                    <div class="card-body p-3 p-lg-4">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-12 col-md-4">
+                                <label class="form-label fw-semibold">Grado y grupo</label>
+                                <select id="scheduleGroupFilter" class="form-select form-select-lg">
+                                    <option value="all">Todos los grupos</option>
+                                    <option value="5° A">5° A</option>
+                                    <option value="5° B">5° B</option>
+                                    <option value="6° A">6° A</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-8">
+                                <div class="d-flex align-items-center gap-3 bg-light rounded-4 p-3">
+                                    <span class="module-icon module-icon-xs text-primary"><i class="bi bi-info-circle"></i></span>
+                                    <div>
+                                        <div class="fw-semibold">Vista semanal</div>
+                                        <div class="text-muted small">Se muestran materias, actividades, maestros y grupos.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card content-card border shadow-sm rounded-4 overflow-hidden">
+                    <div class="card-body p-3 p-lg-4 border-bottom d-flex flex-column flex-md-row justify-content-between gap-2">
+                        <div>
+                            <h2 class="h5 fw-bold mb-1">Semana de clases</h2>
+                            <p class="text-muted mb-0">Cada tarjeta muestra la hora, materia o actividad, grupo y maestro.</p>
+                        </div>
+                        <span id="scheduleCount" class="text-muted fw-semibold"></span>
+                    </div>
+                    <div class="card-body p-3 p-lg-4">
+                        <div id="scheduleBoard" class="schedule-board"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Evaluaciones -->
+            <section id="view-evaluations" class="app-view" data-view="evaluations">
+                <div class="module-heading d-flex flex-column flex-xl-row justify-content-between align-items-xl-end gap-3">
+                    <div>
+                        <button class="btn btn-link text-primary px-0 text-decoration-none fw-semibold mb-2" data-module="home"><i class="bi bi-arrow-left me-1"></i>Módulos</button>
+                        <h1 class="display-6 fw-bold mb-1">Evaluaciones</h1>
+                        <p class="text-muted fs-5 mb-0">Captura calificaciones, calcula promedios y carga archivos de forma masiva.</p>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+
+    <button
+        id="btnGeneratePerformancePdf"
+        type="button"
+        class="btn btn-primary rounded-pill px-4"
+    >
+        <i class="bi bi-file-earmark-bar-graph me-2"></i>
+        Aprovechamiento escolar
+    </button>
+
+    <button
+        id="btnDownloadTemplate"
+        type="button"
+        class="btn btn-outline-primary rounded-pill px-4"
+    >
+        <i class="bi bi-download me-2"></i>
+        Plantilla
+    </button>
+
+    <button
+        type="button"
+        class="btn btn-primary rounded-pill px-4"
+        data-bs-toggle="modal"
+        data-bs-target="#bulkUploadModal"
+    >
+        <i class="bi bi-file-earmark-arrow-up me-2"></i>
+        Carga masiva
+    </button>
+
+</div>
+                </div>
+
+                <ul class="nav nav-pills evaluation-view-tabs mb-4" id="evaluationViewTabs">
+
+    <li class="nav-item">
+        <button class="nav-link" type="button" data-evaluation-view="dashboard">
+            <i class="bi bi-grid-1x2 me-2"></i>
+            Dashboard
+        </button>
+    </li>
+
+    <li class="nav-item">
+        <button class="nav-link active" type="button" data-evaluation-view="capture">
+            <i class="bi bi-pencil-square me-2"></i>
+            Captura
+        </button>
+    </li>
+
+    <li class="nav-item">
+        <button class="nav-link" type="button" data-evaluation-view="summary">
+            <i class="bi bi-bar-chart-line me-2"></i>
+            Resumen del ciclo
+        </button>
+    </li>
+
+</ul>
+
+<div id="evaluationDashboardView" class="d-none">
+
+    <div class="card border shadow-sm rounded-4 mb-4">
+        <div class="card-body p-3 p-lg-4">
+            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+
+                <div>
+                    <div class="text-primary small fw-bold text-uppercase mb-1">
+                        Panorama académico
+                    </div>
+
+                    <h2 class="h4 fw-bold mb-1">
+                        Desempeño del grupo
+                    </h2>
+
+                    <p class="text-muted mb-0">
+                        Indicadores, tendencias y alumnos que requieren atención.
+                    </p>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2">
+                    <span id="evaluationDashboardSubject" class="badge bg-light text-dark border rounded-pill px-3 py-2"></span>
+                    <span id="evaluationDashboardGroup" class="badge bg-light text-dark border rounded-pill px-3 py-2"></span>
+                    <span id="evaluationDashboardPeriod" class="badge bg-light text-dark border rounded-pill px-3 py-2"></span>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
+    <div class="row g-3 mb-4">
+
+        <div class="col-12 col-sm-6 col-xl-4">
+            <div class="evaluation-kpi evaluation-kpi-main h-100">
+                <span class="evaluation-kpi-icon">
+                    <i class="bi bi-graph-up-arrow"></i>
+                </span>
+
+                <div class="small text-muted mb-2">Promedio del periodo</div>
+                <div id="evalDashboardAverage" class="evaluation-kpi-value">—</div>
+                <div class="small text-muted mt-2">Promedio general del grupo</div>
+            </div>
+        </div>
+
+
+        <div class="col-12 col-sm-6 col-xl-4">
+            <div class="evaluation-kpi h-100">
+                <span class="evaluation-kpi-icon">
+                    <i class="bi bi-check2-circle"></i>
+                </span>
+
+                <div class="small text-muted mb-2">Aprobados</div>
+                <div id="evalDashboardApproved" class="evaluation-kpi-value">—</div>
+                <div id="evalDashboardApprovedText" class="small text-muted mt-2"></div>
+            </div>
+        </div>
+
+
+        <div class="col-12 col-sm-6 col-xl-4">
+            <div class="evaluation-kpi h-100">
+                <span class="evaluation-kpi-icon">
+                    <i class="bi bi-x-circle"></i>
+                </span>
+
+                <div class="small text-muted mb-2">Reprobados</div>
+                <div id="evalDashboardFailed" class="evaluation-kpi-value">—</div>
+                <div id="evalDashboardFailedText" class="small text-muted mt-2"></div>
+            </div>
+        </div>
+
+
+        <div class="col-12 col-sm-6 col-xl-4">
+            <div class="evaluation-kpi h-100">
+                <span class="evaluation-kpi-icon">
+                    <i class="bi bi-trophy"></i>
+                </span>
+
+                <div class="small text-muted mb-2">Mejor promedio</div>
+                <div id="evalDashboardBest" class="evaluation-kpi-value">—</div>
+                <div id="evalDashboardBestStudent" class="small text-muted mt-2"></div>
+            </div>
+        </div>
+
+
+        <div class="col-12 col-sm-6 col-xl-4">
+            <div class="evaluation-kpi h-100">
+                <span class="evaluation-kpi-icon">
+                    <i class="bi bi-person-exclamation"></i>
+                </span>
+
+                <div class="small text-muted mb-2">Requieren atención</div>
+                <div id="evalDashboardRisk" class="evaluation-kpi-value">—</div>
+                <div class="small text-muted mt-2">Promedio menor a 7</div>
+            </div>
+        </div>
+
+
+        <div class="col-12 col-sm-6 col-xl-4">
+            <div class="evaluation-kpi h-100">
+                <span class="evaluation-kpi-icon">
+                    <i class="bi bi-clipboard-check"></i>
+                </span>
+
+                <div class="small text-muted mb-2">Captura completada</div>
+                <div id="evalDashboardCompletion" class="evaluation-kpi-value">—</div>
+
+                <div class="progress evaluation-dashboard-progress mt-3">
+                    <div id="evalDashboardCompletionBar" class="progress-bar"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+
+    <div class="row g-4 mb-4">
+
+        <div class="col-12 col-xl-8">
+            <div class="card border shadow-sm rounded-4 h-100">
+                <div class="card-body p-3 p-lg-4">
+
+                    <h3 class="h5 fw-bold mb-1">Evolución del grupo</h3>
+
+                    <p class="small text-muted mb-4">
+                        Promedio obtenido en cada periodo del ciclo escolar.
+                    </p>
+
+                    <div class="evaluation-dashboard-chart evaluation-dashboard-chart-lg">
+                        <canvas id="evaluationPeriodChart"></canvas>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+
+        <div class="col-12 col-xl-4">
+            <div class="card border shadow-sm rounded-4 h-100">
+                <div class="card-body p-3 p-lg-4">
+
+                    <h3 class="h5 fw-bold mb-1">Distribución académica</h3>
+
+                    <p class="small text-muted mb-4">
+                        Situación de los alumnos en el periodo seleccionado.
+                    </p>
+
+                    <div class="evaluation-dashboard-chart">
+                        <canvas id="evaluationDistributionChart"></canvas>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+
+    <div class="card border shadow-sm rounded-4 mb-4">
+        <div class="card-body p-3 p-lg-4">
+
+            <h3 class="h5 fw-bold mb-1">Desempeño por criterio</h3>
+
+            <p class="small text-muted mb-4">
+                Detecta rápidamente los aspectos en los que el grupo presenta mayor dificultad.
+            </p>
+
+            <div class="evaluation-dashboard-chart evaluation-dashboard-criteria-chart">
+                <canvas id="evaluationCriteriaChart"></canvas>
+            </div>
+
+        </div>
+    </div>
+
+
+    <div class="row g-4">
+
+        <div class="col-12 col-xl-8">
+            <div class="card border shadow-sm rounded-4 overflow-hidden h-100">
+
+                <div class="card-body p-3 p-lg-4 border-bottom">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h3 class="h5 fw-bold mb-1">Alumnos que requieren atención</h3>
+                            <p class="small text-muted mb-0">Promedio menor a 7 en el periodo.</p>
+                        </div>
+
+                        <i class="bi bi-exclamation-triangle text-warning fs-4"></i>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Alumno</th>
+                                <th class="text-center">Promedio</th>
+                                <th class="text-center">Situación</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="evaluationAttentionBody"></tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+
+
+        <div class="col-12 col-xl-4">
+            <div class="card border shadow-sm rounded-4 overflow-hidden h-100">
+
+                <div class="card-body p-3 p-lg-4 border-bottom">
+                    <h3 class="h5 fw-bold mb-1">Mejores promedios</h3>
+                    <p class="small text-muted mb-0">Mayor desempeño del periodo.</p>
+                </div>
+
+                <div id="evaluationTopStudents" class="p-3"></div>
+
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+                <div id="evaluationCaptureView">
+
+                <div class="card border shadow-sm rounded-4 mb-4">
+                    
+                    <div class="card-body p-3 p-lg-4">
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label fw-semibold">Materia</label>
+                                <select id="evaluationSubject" class="form-select form-select-lg"></select>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label fw-semibold">Grado y grupo</label>
+                                <select id="evaluationGroup" class="form-select form-select-lg"></select>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label fw-semibold">Periodo</label>
+                                <select id="evaluationPeriod" class="form-select form-select-lg">
+                                    <option>Primer trimestre</option>
+                                    <option>Segundo trimestre</option>
+                                    <option>Tercer trimestre</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6 col-xl-3">
+                                <label class="form-label fw-semibold">Ciclo escolar</label>
+                                <input id="evaluationCycle" class="form-control form-control-lg" value="2026-2027">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card border shadow-sm rounded-4 mb-4 overflow-hidden">
+
+    <button
+        class="btn criteria-collapse-button w-100 border-0 rounded-0 text-start p-3 p-lg-4 collapsed"
+        type="button"
+        data-bs-toggle="collapse"
+        data-bs-target="#criteriaCollapse"
+        aria-expanded="false"
+        aria-controls="criteriaCollapse"
+    >
+        <div class="d-flex align-items-center justify-content-between gap-3">
+            <div>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <i class="bi bi-ui-checks-grid text-primary"></i>
+                    <h2 class="h5 fw-bold mb-0">Criterios y actividades</h2>
+                </div>
+
+                <p class="text-muted small mb-0">
+                    Revisa la ponderación y administra las actividades del grupo y periodo seleccionado.
+                </p>
+            </div>
+
+            <div class="d-flex align-items-center gap-3 flex-shrink-0">
+                <span
+                    id="criteriaTotalBadge"
+                    class="badge rounded-pill fs-6 px-3 py-2"
+                ></span>
+
+                <i class="bi bi-chevron-down criteria-collapse-icon"></i>
+            </div>
+        </div>
+    </button>
+
+    <div id="criteriaCollapse" class="collapse">
+        <div class="card-body border-top p-3 p-lg-4">
+
+            <!--<div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+                <p class="text-muted mb-0">
+                    Define el valor de cada criterio. La suma debe ser 100%.
+                </p>
+
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <button
+                        id="btnAutoDistribute"
+                        type="button"
+                        class="btn btn-secondary rounded-pill"
+                    >
+                        <i class="bi bi-magic me-2"></i>
+                        Distribuir
+                    </button>
+
+                    <button
+                        type="button"
+                        class="btn btn-outline-primary rounded-pill"
+                        data-action="new"
+                        data-entity="criterion"
+                    >
+                        <i class="bi bi-plus-lg me-2"></i>
+                        Agregar criterio
+                    </button>
+                </div>
+                
+            </div>-->
+
+            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+    <p class="text-muted mb-0">Criterios configurados para la materia seleccionada.</p>
+
+    <div class="small text-muted">
+        <i class="bi bi-info-circle me-1"></i>
+        Los criterios se administran desde el catálogo de Materias.
+    </div>
+</div>
+
+
+            <div id="criteriaGrid" class="row g-3"></div>
+
+        </div>
+    </div>
+
+</div>
+
+<div class="card content-card border shadow-sm rounded-4 overflow-hidden">
+
+               <div class="card-body p-3 border-bottom">
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+
+        <div>
+            <h2 class="h6 fw-bold mb-1">Calificaciones del grupo</h2>
+            <p class="text-muted small mb-0">Captura de 0 a 10 por cada criterio.</p>
+        </div>
+
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+
+    <div class="average-card average-card-compact rounded-3 px-3 py-2 text-center">
+        <span class="small text-muted me-2">Promedio</span>
+        <span id="groupAverage" class="fs-5 fw-bold">0.0</span>
+    </div>
+
+    <button
+    id="btnSaveGrades"
+    type="button"
+    class="btn btn-primary rounded-pill px-3" disabled>
+
+    <i class="bi bi-floppy me-2"></i>
+    Guardar calificaciones
+</button>
+
+    <button
+        id="btnGeneratePeriodPdf"
+        type="button"
+        class="btn btn-outline-primary rounded-pill px-3"
+    >
+        <i class="bi bi-file-earmark-pdf me-2"></i>
+        Generar PDF del periodo
+    </button>
+
+    
+
+</div>
+
+    </div>
+</div>
+                    <div class="accordion bulk-grade-accordion mb-0" id="bulkGradeAccordion">
+    <div class="accordion-item border-0">
+
+        <h2 class="accordion-header" id="bulkGradeHeading">
+            <button
+                class="accordion-button collapsed"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#bulkGradeCollapse"
+                aria-expanded="false"
+                aria-controls="bulkGradeCollapse"
+            >
+                <div class="d-flex align-items-center gap-3">
+                    <i class="bi bi-lightning-charge text-primary"></i>
+
+                    <div>
+                        <div class="fw-bold">Captura rápida</div>
+                        <div class="small text-muted fw-normal">
+                            Aplica una misma calificación a varios alumnos o criterios.
+                        </div>
+                    </div>
+                </div>
+            </button>
+        </h2>
+
+        <div
+            id="bulkGradeCollapse"
+            class="accordion-collapse collapse"
+            aria-labelledby="bulkGradeHeading"
+            data-bs-parent="#bulkGradeAccordion"
+        >
+            <div class="accordion-body">
+
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <span class="small fw-semibold">Asignación masiva de calificaciones</span>
+
+                    <button
+                        type="button"
+                        class="btn btn-link text-primary p-0 border-0 lh-1"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#bulkGradeInfo"
+                        aria-expanded="false"
+                        aria-controls="bulkGradeInfo"
+                        title="Más información"
+                    >
+                        <i class="bi bi-info-circle-fill"></i>
+                    </button>
+                </div>
+
+                <div id="bulkGradeInfo" class="collapse">
+                    <div class="alert alert-light border rounded-3 py-2 px-3 small text-muted mb-3">
+                        Puedes seleccionar alumnos y criterios individualmente o activar
+                        <strong>Todos</strong>. La calificación se aplicará únicamente cuando presiones
+                        <strong>Aplicar calificación</strong>.
+                    </div>
+                </div>
+
+                <div class="row g-3">
+
+                    <div class="col-12 col-md-6">
+                        <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                            <label class="form-label fw-semibold mb-0">Alumnos</label>
+
+                            <div class="form-check form-switch bulk-all-switch mb-0">
+                                <input
+                                    class="form-check-input"
+                                    type="checkbox"
+                                    role="switch"
+                                    id="bulkGradeAllStudents"
+                                >
+                                <label class="form-check-label small fw-semibold" for="bulkGradeAllStudents">
+                                    Todos
+                                </label>
+                            </div>
+                        </div>
+
+                        <select id="bulkGradeStudents" class="form-select" multiple></select>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                            <label class="form-label fw-semibold mb-0">Criterios</label>
+
+                            <div class="form-check form-switch bulk-all-switch mb-0">
+                                <input
+                                    class="form-check-input"
+                                    type="checkbox"
+                                    role="switch"
+                                    id="bulkGradeAllCriteria"
+                                >
+                                <label class="form-check-label small fw-semibold" for="bulkGradeAllCriteria">
+                                    Todos
+                                </label>
+                            </div>
+                        </div>
+
+                        <select id="bulkGradeCriteria" class="form-select" multiple></select>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <label class="form-label fw-semibold">Calificación</label>
+
+                        <input
+                            id="bulkGradeValue"
+                            type="number"
+                            class="form-control"
+                            min="0"
+                            max="10"
+                            step="0.1"
+                            placeholder="0 a 10"
+                        >
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <label class="form-label fw-semibold d-block">Opciones</label>
+
+                        <div class="form-check form-switch bulk-grade-switch mt-2">
+                            <input
+                                class="form-check-input"
+                                type="checkbox"
+                                role="switch"
+                                id="bulkGradeOnlyEmpty"
+                            >
+                            <label class="form-check-label fw-semibold" for="bulkGradeOnlyEmpty">
+                                Solo vacíos
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <button
+                            id="btnApplyBulkGrade"
+                            type="button"
+                            class="btn btn-primary w-100 rounded-pill py-2"
+                        >
+                            <i class="bi bi-check2-circle me-2"></i>
+                            Aplicar calificación
+                        </button>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+                    <div class="table-responsive grade-table-wrap">
+                        <table class="table table-hover align-middle mb-0 grade-table">
+                            <thead class="table-light" id="gradeTableHead"></thead>
+                            <tbody id="gradeTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                </div>
+                <div id="evaluationSummaryView" class="d-none">
+
+    <div class="card border shadow-sm rounded-4 mb-4">
+        <div class="card-body p-3 p-lg-4">
+
+            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+
+                <div>
+                    <div class="text-primary small fw-bold text-uppercase mb-1">
+                        Resumen académico
+                    </div>
+
+                    <h2 class="h4 fw-bold mb-1">
+                        Resultado del ciclo escolar
+                    </h2>
+
+                    <p class="text-muted mb-0">
+                        Consulta el desempeño de cada periodo y el promedio final de los alumnos.
+                    </p>
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                    <span
+                        id="summaryCycleBadge"
+                        class="badge rounded-pill bg-light text-dark border px-3 py-2"
+                    >
+                        2026–2027
+                    </span>
+
+                    <button
+    id="btnGenerateFinalPdf"
+    type="button"
+    class="btn btn-outline-primary rounded-pill px-3"
+>
+    <i class="bi bi-file-earmark-pdf me-2"></i>
+    Generar PDF final
+</button>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+
+    <div
+        id="periodSummaryCards"
+        class="row g-3 mb-4"
+    ></div>
+
+
+    <div class="card border shadow-sm rounded-4 overflow-hidden">
+
+        <div class="card-body p-3 p-lg-4 border-bottom">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+
+                <div>
+                    <h2 class="h5 fw-bold mb-1">
+                        Promedios finales
+                    </h2>
+
+                    <p class="text-muted mb-0">
+                        Resultado acumulado de todos los periodos del ciclo escolar.
+                    </p>
+                </div>
+
+                <div class="final-average-box text-center">
+                    <div class="small text-muted">
+                        Promedio general
+                    </div>
+
+                    <div
+                        id="finalGroupAverage"
+                        class="fs-3 fw-bold"
+                    >
+                        —
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table align-middle mb-0 final-results-table">
+                <thead>
+                    <tr id="finalResultsHead"></tr>
+                </thead>
+
+                <tbody id="finalResultsBody"></tbody>
+            </table>
+        </div>
+
+    </div>
+
+</div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Botón compacto de pendientes -->
+<button
+    id="pendingEvaluationButton"
+    type="button"
+    class="btn pending-evaluation-trigger d-none align-items-center gap-2"
+    data-bs-toggle="modal"
+    data-bs-target="#pendingEvaluationModal"
+>
+    <span class="pending-trigger-icon">
+        <i class="bi bi-clipboard-data"></i>
+    </span>
+
+    <span class="pending-trigger-text text-start lh-sm">
+        <span class="d-block small opacity-75">Pendiente</span>
+        <span class="fw-bold">Continuar evaluación</span>
+    </span>
+
+    <span class="pending-count">1</span>
+</button>
+
+<!-- Modal de evaluación pendiente -->
+<div
+    class="modal fade"
+    id="pendingEvaluationModal"
+    tabindex="-1"
+    aria-labelledby="pendingEvaluationModalLabel"
+    aria-hidden="true"
+>
+    <div class="modal-dialog modal-dialog-centered pending-evaluation-dialog">
+        <div class="modal-content border-0 rounded-4 shadow-lg">
+            <div class="modal-body p-4">
+                <div class="d-flex align-items-start justify-content-between gap-3 mb-4">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="pending-modal-icon flex-shrink-0">
+                            <i class="bi bi-clipboard-data"></i>
+                        </div>
+
+                        <div>
+                            <div class="text-primary small fw-bold text-uppercase mb-1">
+                                Captura pendiente
+                            </div>
+
+                            <h2
+                                id="pendingEvaluationModalLabel"
+                                class="h5 fw-bold mb-0"
+                            >
+                                Tienes una evaluación por terminar
+                            </h2>
+                        </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Cerrar"
+                    ></button>
+                </div>
+
+                <div class="pending-evaluation-summary rounded-4 p-3 mb-4">
+                    <div class="small text-muted mb-1">
+                        Evaluación activa
+                    </div>
+
+                    <div id="pendingEvaluationName" class="fw-bold fs-5">
+                        Matemáticas · 5° A
+                    </div>
+
+                    <div id="pendingEvaluationPeriod" class="text-muted">
+                        Primer trimestre
+                    </div>
+                </div>
+
+                <div class="d-flex flex-column-reverse flex-sm-row justify-content-end gap-2">
+                    <button
+                        type="button"
+                        class="btn btn-light border rounded-pill px-4"
+                        data-bs-dismiss="modal"
+                    >
+                        Después
+                    </button>
+
+                    <button
+                        id="btnContinuePendingEvaluation"
+                        type="button"
+                        class="btn btn-primary rounded-pill px-4"
+                    >
+                        Ir a la captura
+                        <i class="bi bi-arrow-right ms-2"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Configuración -->
+<div class="modal fade" id="settingsModal" tabindex="-1" aria-labelledby="settingsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 rounded-4 shadow-lg">
+
+            <div class="modal-header settings-modal-header border-bottom">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="settings-modal-icon">
+                        <i id="settingsModalIcon" class="bi bi-building"></i>
+                    </span>
+
+                    <div>
+                        <h2 id="settingsModalLabel" class="h5 fw-bold mb-1">Escuela y ajustes</h2>
+                        <div id="settingsModalSubtitle" class="small text-muted">Configuración del control escolar</div>
+                    </div>
+                </div>
+
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <div id="settingsModalBody" class="modal-body p-3 p-lg-4"></div>
+
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="evaluationPdfModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow-lg">
+
+            <div class="modal-header border-bottom p-4">
+                <div>
+                    <div class="text-primary small fw-bold text-uppercase mb-1">
+                        Reporte académico
+                    </div>
+                    <h2 class="h5 fw-bold mb-1">Generar reporte de evaluación</h2>
+
+<p class="text-muted small mb-0">
+    Revisa el documento y agrega la firma del profesor antes de generarlo.
+</p>
+                </div>
+
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body p-4">
+
+                <div class="bg-light border rounded-4 p-3 mb-4">
+    <div class="d-flex align-items-center gap-3">
+
+        <div class="module-icon module-icon-xs text-primary flex-shrink-0">
+            <i class="bi bi-file-earmark-pdf"></i>
+        </div>
+
+        <div>
+            <div class="small text-muted mb-1">
+                Documento a generar
+            </div>
+
+            <div id="pdfCurrentPeriod" class="fw-bold">
+                Periodo actual
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<hr class="mb-4">
+
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <label class="form-label fw-bold mb-0">Firma del profesor</label>
+                        <div class="small text-muted">
+                            Firma dentro del recuadro usando mouse o pantalla táctil.
+                        </div>
+                    </div>
+
+                    <button id="btnClearEvaluationSignature" type="button"
+                        class="btn btn-sm btn-light border rounded-pill px-3">
+                        <i class="bi bi-eraser me-1"></i>
+                        Limpiar
+                    </button>
+                </div>
+
+                <div class="border rounded-4 bg-white overflow-hidden">
+                    <canvas id="evaluationSignatureCanvas" class="w-100 d-block" height="180"></canvas>
+                </div>
+
+                <div class="small text-muted mt-2">
+                    La firma es opcional. Si no firmas, el PDF conservará la línea para firma manual.
+                </div>
+
+            </div>
+
+            <div class="modal-footer border-0 px-4 pb-4 pt-0">
+                <button type="button" class="btn btn-light border rounded-pill px-4"
+                    data-bs-dismiss="modal">
+                    Cancelar
+                </button>
+
+                <button id="btnConfirmEvaluationPdf" type="button"
+                    class="btn btn-primary rounded-pill px-4">
+                    <i class="bi bi-file-earmark-pdf me-2"></i>
+                    Generar PDF
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Actividades de evaluación -->
+<div class="modal fade"
+     id="activityModal"
+     tabindex="-1"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+
+        <div class="modal-content border-0 rounded-4 shadow-lg">
+
+            <div class="modal-header border-bottom p-4">
+
+                <div>
+                    <div class="text-primary fw-bold text-uppercase small">
+                        Evaluación
+                    </div>
+
+                    <h2
+                        id="activityModalLabel"
+                        class="modal-title h4 fw-bold mb-1">
+                        Actividades
+                    </h2>
+
+                    <div
+                        id="activityModalContext"
+                        class="small text-muted">
+                    </div>
+                </div>
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Cerrar">
+                </button>
+
+            </div>
+
+            <div
+                id="activityModalBody"
+                class="modal-body p-4">
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+ <!-- Modal genérico -->
+<div class="modal fade" id="entityModal" tabindex="-1" aria-labelledby="entityModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <form id="entityForm" class="modal-content border-0 rounded-4 shadow-lg">
+            <div class="modal-header border-bottom p-4">
+                <div>
+                    <div class="text-primary fw-bold text-uppercase small letter-spacing">Registro</div>
+                    <h2 class="modal-title h4 fw-bold" id="entityModalLabel">Nuevo registro</h2>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div id="entityModalBody" class="modal-body p-4"></div>
+            <div class="modal-footer border-0 p-4 pt-3">
+                <button type="button" class="btn btn-light border rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary rounded-pill px-4">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+    <!-- Carga masiva -->
+    <div class="modal fade" id="bulkUploadModal" tabindex="-1" aria-labelledby="bulkUploadModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 rounded-4 shadow-lg">
+                <div class="modal-header border-bottom p-4">
+                    <div>
+                        <div class="text-primary fw-bold text-uppercase small letter-spacing">Evaluaciones</div>
+                        <h2 class="modal-title h4 fw-bold" id="bulkUploadModalLabel">Carga masiva de calificaciones</h2>
+                        <p class="text-muted mb-0 mt-1">Importa un archivo CSV o Excel y revisa los datos antes de guardarlos.</p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="alert alert-light border rounded-4 d-flex gap-3 align-items-start" role="alert">
+                        <i class="bi bi-info-circle text-primary fs-4"></i>
+                        <div>
+                            <div class="fw-bold">Formato esperado</div>
+                            <div class="text-muted small">La primera columna debe ser <strong>Matrícula</strong>. Las columnas restantes deben coincidir con los criterios actuales. Puedes descargar la plantilla para evitar errores.</div>
+                        </div>
+                    </div>
+
+                    <div id="uploadDropzone" class="upload-dropzone rounded-4 text-center p-4 p-lg-5 mb-4" tabindex="0" role="button" aria-label="Seleccionar archivo de calificaciones">
+                        <input
+    id="bulkFileInput"
+    class="d-none"
+    type="file"
+    accept=".csv,.xlsx,.xls,.pdf,.jpg,.jpeg,.png,.webp"
+>
+                        <div class="upload-icon mx-auto mb-3"><i class="bi bi-cloud-arrow-up"></i></div>
+                        <h3 class="h5 fw-bold">Arrastra tu archivo aquí</h3>
+                        <p class="text-muted mb-3">o selecciónalo desde tu equipo</p>
+                        <button id="btnChooseFile" type="button" class="btn btn-secondary rounded-pill px-4">Elegir archivo</button>
+                        <div class="small text-muted mt-3">CSV, XLSX o XLS · Máximo 5 MB</div>
+                    </div>
+
+                    <div id="uploadResult" class="d-none">
+                        <div class="row g-3 mb-4">
+                            <div class="col-12 col-md-4">
+                                <div class="summary-tile rounded-4 p-3 h-100">
+                                    <div class="small text-muted">Archivo</div>
+                                    <div id="uploadFileName" class="fw-bold text-truncate"></div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-2">
+                                <div class="summary-tile rounded-4 p-3 h-100">
+                                    <div class="small text-muted">Filas válidas</div>
+                                    <div id="uploadValidRows" class="fs-4 fw-bold text-success"></div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-2">
+                                <div class="summary-tile rounded-4 p-3 h-100">
+                                    <div class="small text-muted">Con errores</div>
+                                    <div id="uploadErrorRows" class="fs-4 fw-bold text-danger"></div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <div class="summary-tile rounded-4 p-3 h-100">
+                                    <div class="small text-muted">Estado</div>
+                                    <div id="uploadStatusText" class="fw-bold"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="uploadIssues" class="mb-3"></div>
+
+                        <div class="table-responsive border rounded-4">
+                            <table class="table table-sm table-hover align-middle mb-0">
+                                <thead id="uploadPreviewHead" class="table-light"></thead>
+                                <tbody id="uploadPreviewBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="btn btn-light border rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button id="btnImportGrades" type="button" class="btn btn-primary rounded-pill px-4" disabled><i class="bi bi-check2-circle me-2"></i>Importar calificaciones</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
