@@ -5,8 +5,8 @@ class conexion {
 
     public function __construct() {
         $servername = "localhost";
-        $username = "root";
-        $password = "";
+        $username = "dev";
+        $password = "devSCP117.";
         $dbname = "gestion_escolar";
 
         $this->conn = new mysqli($servername, $username, $password, $dbname);
