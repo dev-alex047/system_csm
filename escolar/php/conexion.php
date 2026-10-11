@@ -5,7 +5,7 @@ class conexion {
 
     public function __construct() {
         $servername = "localhost";
-        $username = "dev";
+        $username = "dev047";
         $password = "devSCP117.";
         $dbname = "gestion_escolar";
 
