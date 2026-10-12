@@ -327,3 +327,21 @@ html[data-bs-theme="dark"] body.csm-portal {
 
 /* Resto de módulos aún en transición: navegación primero, contenido debajo. */
 .csm-portal .csm-main-module .csm-intro { padding: 14px 0 28px; }
+
+
+/* Logo principal del sistema */
+.csm-header-logo {
+    width: 36px;
+    height: 36px;
+    max-width: 36px;
+    max-height: 36px;
+    object-fit: contain;
+    flex-shrink: 0;
+    display: block;
+}
+
+.csm-header-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
