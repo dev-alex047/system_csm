@@ -1,5 +1,4 @@
-/* Inicio y submódulos de CSM.
-   Reutiliza requireAuth() y logout() de main.js; no consulta ni modifica el backend. */
+
 (() => {
   const modules = {
     ventas: {
@@ -82,7 +81,7 @@
       return;
     }
 
-    renderHeader(page === 'sales' ? 'Ventas' : (section ? section.title : 'Sistema CSM'), user, isAdmin, page);
+    renderHeader((page === 'sales' || page === 'quotes') ? 'Ventas' : (section ? section.title : 'Sistema CSM'), user, isAdmin, page);
 
     if (page === 'dashboard') {
       document.title = 'Inicio | Sistema CSM';
@@ -101,19 +100,33 @@
       });
     }
 
-    // Sales renders the real form directly, not a second grid of submodule cards.
-    if (page === 'sales') {
-      document.title = 'Ventas | Sistema CSM';
+    // Navegación de Ventas COMPARTIDA: en el header, nunca debajo.
+    // Es la misma en Ventas, Cotizaciones y futuros submódulos.
+    if (page === 'sales' || page === 'quotes') {
+      document.title = `${page === 'sales' ? 'Ventas' : 'Cotizaciones'} | Sistema CSM`;
       const nav = document.getElementById('csmSubnav');
       if (nav) {
         nav.innerHTML = `
-          <li class="nav-item"><a class="nav-link active" aria-current="page" href="sales.html"><i class="bi bi-cart-check" aria-hidden="true"></i>Nueva venta</a></li>
-          <li class="nav-item"><a class="nav-link" href="quotes.html"><i class="bi bi-file-earmark-text" aria-hidden="true"></i>Cotizaciones</a></li>
+          <li class="nav-item"><a class="nav-link ${page === 'sales' ? 'active' : ''}" ${page === 'sales' ? 'aria-current="page"' : ''} href="sales.html"><i class="bi bi-cart-check" aria-hidden="true"></i>Nueva venta</a></li>
+          <li class="nav-item"><a class="nav-link ${page === 'quotes' ? 'active' : ''}" ${page === 'quotes' ? 'aria-current="page"' : ''} href="quotes.html"><i class="bi bi-file-earmark-text" aria-hidden="true"></i>Cotizaciones</a></li>
           <li class="nav-item"><button class="nav-link" type="button" id="csmOpenReturn"><i class="bi bi-arrow-repeat" aria-hidden="true"></i>Devoluciones y cambios</button></li>
           <li class="nav-item"><button class="nav-link" type="button" disabled title="Módulo por desarrollar"><i class="bi bi-bag-check" aria-hidden="true"></i>Pedidos</button></li>`;
         document.getElementById('csmOpenReturn').addEventListener('click', () => {
-          document.getElementById('btnReturn')?.click(); // Reutiliza el flujo original de sales.js
+          if (page === 'sales') {
+            document.getElementById('btnReturn')?.click();
+          } else {
+            location.assign('sales.html?devoluciones=1');
+          }
         });
+      }
+      // Desde Cotizaciones abrir el modal original de Ventas tras cargar sales.js.
+      if (page === 'sales' && new URLSearchParams(location.search).get('devoluciones') === '1') {
+        window.addEventListener('load', () => {
+          document.getElementById('btnReturn')?.click();
+          const cleanUrl = new URL(location.href);
+          cleanUrl.searchParams.delete('devoluciones');
+          history.replaceState(null, '', cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
+        }, { once: true });
       }
     }
 
@@ -152,7 +165,7 @@
 
   function renderHeader(title, user, isAdmin, page) {
     const header = document.getElementById('csmHeader');
-    const navigationInHeader = page === 'sales' || page === 'module';
+    const navigationInHeader = page === 'sales' || page === 'quotes' || page === 'module';
     header.className = navigationInHeader ? 'csm-header csm-header-with-nav' : 'csm-header';
     // En el dashboard, se conserva el nombre del sistema.
     // Dentro de un módulo, la navegación REEMPLAZA el nombre/ícono central.

@@ -1,6 +1,4 @@
-
-
-body.csm-portal.csm-sales-page {
+body.csm-portal.csm-sales-workspace {
   --sale-green: #0d6a47;
   --sale-green-hover: #07543a;
   --sale-ink: var(--csm-ink, #202d27);
@@ -12,20 +10,20 @@ body.csm-portal.csm-sales-page {
   --sale-shadow: 0 3px 15px rgba(30, 64, 47, .045);
   color: var(--sale-ink);
 }
-html[data-bs-theme="dark"] body.csm-portal.csm-sales-page {
+html[data-bs-theme="dark"] body.csm-portal.csm-sales-workspace {
   --sale-green: #2d9b6c;
   --sale-green-hover: #207a53;
   --sale-shadow: 0 7px 22px rgba(0, 0, 0, .15);
 }
 
 /* Anchura consistente en las pantallas del sistema; separación del menú */
-body.csm-sales-page .csm-sales-main {
+body.csm-sales-workspace .csm-sales-main {
   width: min(100%, 1512px);
   margin: 20px auto 45px;
   display: grid;
   gap: 16px;
 }
-body.csm-sales-page .csm-sale-panel {
+body.csm-sales-workspace .csm-sale-panel {
   min-width: 0;
   padding: clamp(18px, 2vw, 24px);
   margin: 0;
@@ -36,15 +34,15 @@ body.csm-sales-page .csm-sale-panel {
 }
 
 /* Primera tarjeta: función, usuario y total de un vistazo */
-body.csm-sales-page .csm-sale-overview {
+body.csm-sales-workspace .csm-sale-overview {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 18px;
   padding: 18px 22px;
 }
-body.csm-sales-page .csm-sale-overview-left {display: flex; align-items: center; min-width: 0; gap: 14px;}
-body.csm-sales-page .csm-overview-icon {
+body.csm-sales-workspace .csm-sale-overview-left {display: flex; align-items: center; min-width: 0; gap: 14px;}
+body.csm-sales-workspace .csm-overview-icon {
   flex: 0 0 52px;
   display: grid; place-items: center;
   height: 52px;
@@ -53,7 +51,7 @@ body.csm-sales-page .csm-overview-icon {
   color: var(--sale-green);
   font-size: 1.5rem;
 }
-body.csm-sales-page .csm-overview-eyebrow {
+body.csm-sales-workspace .csm-overview-eyebrow {
   display: block;
   margin-bottom: 3px;
   font-size: .68rem;
@@ -62,7 +60,7 @@ body.csm-sales-page .csm-overview-eyebrow {
   font-weight: 800;
   color: var(--sale-green);
 }
-body.csm-sales-page h1.csm-sale-heading {
+body.csm-sales-workspace h1.csm-sale-heading {
   margin: 0;
   font-size: clamp(1.2rem, 1.8vw, 1.56rem);
   line-height: 1.2;
@@ -70,8 +68,8 @@ body.csm-sales-page h1.csm-sale-heading {
   letter-spacing: -.03em;
   color: var(--sale-ink);
 }
-body.csm-sales-page .csm-sale-agent {margin-top: 4px; font-size: .82rem; line-height: 1.4; color: var(--sale-muted);}
-body.csm-sales-page .csm-sale-total-summary {
+body.csm-sales-workspace .csm-sale-agent {margin-top: 4px; font-size: .82rem; line-height: 1.4; color: var(--sale-muted);}
+body.csm-sales-workspace .csm-sale-total-summary {
   display: flex; flex-direction: column; align-items: flex-end;
   min-width: 195px;
   padding: 9px 13px;
@@ -79,8 +77,8 @@ body.csm-sales-page .csm-sale-total-summary {
   background: var(--sale-soft);
   gap: 1px;
 }
-body.csm-sales-page .csm-small-label {font-size: .77rem; font-weight: 650; color: var(--sale-muted);}
-body.csm-sales-page #ventaTotal {
+body.csm-sales-workspace .csm-small-label {font-size: .77rem; font-weight: 650; color: var(--sale-muted);}
+body.csm-sales-workspace #ventaTotal {
   font-size: clamp(1.16rem, 2vw, 1.52rem);
   font-weight: 800;
   color: var(--sale-green);
@@ -90,13 +88,13 @@ body.csm-sales-page #ventaTotal {
 }
 
 /* Títulos de secciones: icono en un recuadro, no fuera de lugar */
-body.csm-sales-page .csm-section-heading {
+body.csm-sales-workspace .csm-section-heading {
   display: flex;
   align-items: center;
   gap: 12px;
   margin: 0 0 20px;
 }
-body.csm-sales-page .csm-section-icon {
+body.csm-sales-workspace .csm-section-icon {
   flex: 0 0 42px;
   width: 42px; height: 42px;
   display: grid;
@@ -106,8 +104,8 @@ body.csm-sales-page .csm-section-icon {
   color: var(--sale-green);
   font-size: 1.13rem;
 }
-body.csm-sales-page .csm-section-copy {min-width: 0;}
-body.csm-sales-page .csm-section-heading h2 {
+body.csm-sales-workspace .csm-section-copy {min-width: 0;}
+body.csm-sales-workspace .csm-section-heading h2 {
   margin: 0 0 2px;
   font-size: 1.03rem;
   font-weight: 750;
@@ -115,7 +113,7 @@ body.csm-sales-page .csm-section-heading h2 {
   letter-spacing: -.01em;
   color: var(--sale-ink);
 }
-body.csm-sales-page .csm-section-copy p {
+body.csm-sales-workspace .csm-section-copy p {
   color: var(--sale-muted);
   margin: 0;
   line-height: 1.4;
@@ -123,7 +121,7 @@ body.csm-sales-page .csm-section-copy p {
 }
 
 /* Formularios — tamaños consistentes, foco visible */
-body.csm-sales-page .form-label {
+body.csm-sales-workspace .form-label {
   display: inline-block;
   margin-bottom: 7px;
   color: var(--sale-ink);
@@ -131,8 +129,8 @@ body.csm-sales-page .form-label {
   line-height: 1.35;
   font-weight: 650;
 }
-body.csm-sales-page .form-control,
-body.csm-sales-page .form-select {
+body.csm-sales-workspace .form-control,
+body.csm-sales-workspace .form-select {
   height: 44px;
   min-height: 44px;
   border: 1px solid var(--sale-border) !important;
@@ -143,16 +141,16 @@ body.csm-sales-page .form-select {
   font-size: .91rem;
   box-shadow: none;
 }
-body.csm-sales-page .form-control::placeholder {color: var(--sale-muted); opacity: .82;}
-body.csm-sales-page .form-control:focus,
-body.csm-sales-page .form-select:focus {
+body.csm-sales-workspace .form-control::placeholder {color: var(--sale-muted); opacity: .82;}
+body.csm-sales-workspace .form-control:focus,
+body.csm-sales-workspace .form-select:focus {
   border-color: var(--sale-green) !important;
   box-shadow: 0 0 0 .2rem rgba(26,143,94,.14) !important;
   outline: none;
 }
-body.csm-sales-page .csm-search-actions {display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px;}
-body.csm-sales-page .btn.csm-btn-main,
-body.csm-sales-page .btn.csm-btn-outline {
+body.csm-sales-workspace .csm-search-actions {display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px;}
+body.csm-sales-workspace .btn.csm-btn-main,
+body.csm-sales-workspace .btn.csm-btn-outline {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -167,27 +165,27 @@ body.csm-sales-page .btn.csm-btn-outline {
   text-decoration: none;
   white-space: nowrap;
 }
-body.csm-sales-page .btn.csm-btn-main {
+body.csm-sales-workspace .btn.csm-btn-main {
   background: #0d6a47 !important;
   border: 1px solid #0d6a47 !important;
   color: #fff !important;
 }
-body.csm-sales-page .btn.csm-btn-main:hover {background: #095738 !important; border-color: #095738 !important;}
-body.csm-sales-page .btn.csm-btn-outline {
+body.csm-sales-workspace .btn.csm-btn-main:hover {background: #095738 !important; border-color: #095738 !important;}
+body.csm-sales-workspace .btn.csm-btn-outline {
   color: var(--sale-ink) !important;
   border: 1px solid var(--sale-border) !important;
   background: var(--sale-surface) !important;
 }
-body.csm-sales-page .btn.csm-btn-outline:hover {
+body.csm-sales-workspace .btn.csm-btn-outline:hover {
   border-color: var(--sale-green) !important;
   color: var(--sale-green) !important;
   background: var(--sale-soft) !important;
 }
-body.csm-sales-page .btn:focus-visible {outline: 3px solid var(--sale-green); outline-offset: 2px;}
-body.csm-sales-page .btn:disabled {opacity: .58; cursor: not-allowed;}
+body.csm-sales-workspace .btn:focus-visible {outline: 3px solid var(--sale-green); outline-offset: 2px;}
+body.csm-sales-workspace .btn:disabled {opacity: .58; cursor: not-allowed;}
 
 /* Tabla y resumen: scroll horizontal solo cuando realmente es necesario */
-body.csm-sales-page .csm-sale-table-wrap {
+body.csm-sales-workspace .csm-sale-table-wrap {
   width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
@@ -195,7 +193,7 @@ body.csm-sales-page .csm-sale-table-wrap {
   border-radius: 12px;
   border: 1px solid var(--sale-border);
 }
-body.csm-sales-page table#saleTable {
+body.csm-sales-workspace table:is(#saleTable, #quoteTable) {
   display: table !important;
   width: 100%;
   min-width: 740px;
@@ -206,7 +204,7 @@ body.csm-sales-page table#saleTable {
   --bs-table-border-color: var(--sale-border);
   font-size: .86rem;
 }
-body.csm-sales-page #saleTable thead th {
+body.csm-sales-workspace :is(#saleTable, #quoteTable) thead th {
   position: static !important;
   background: var(--sale-soft) !important;
   color: var(--sale-ink) !important;
@@ -221,13 +219,13 @@ body.csm-sales-page #saleTable thead th {
   vertical-align: middle;
   white-space: nowrap;
 }
-body.csm-sales-page #saleTable thead th.text-end {text-align: right !important;}
-body.csm-sales-page #saleTable tbody {display: table-row-group;}
-body.csm-sales-page #saleTable tfoot {display: table-footer-group;}
-body.csm-sales-page #saleTable tbody tr,
-body.csm-sales-page #saleTable tfoot tr {display: table-row !important; height: auto; background: transparent;}
-body.csm-sales-page #saleTable tbody td,
-body.csm-sales-page #saleTable tfoot th {
+body.csm-sales-workspace :is(#saleTable, #quoteTable) thead th.text-end {text-align: right !important;}
+body.csm-sales-workspace :is(#saleTable, #quoteTable) tbody {display: table-row-group;}
+body.csm-sales-workspace :is(#saleTable, #quoteTable) tfoot {display: table-footer-group;}
+body.csm-sales-workspace :is(#saleTable, #quoteTable) tbody tr,
+body.csm-sales-workspace :is(#saleTable, #quoteTable) tfoot tr {display: table-row !important; height: auto; background: transparent;}
+body.csm-sales-workspace :is(#saleTable, #quoteTable) tbody td,
+body.csm-sales-workspace :is(#saleTable, #quoteTable) tfoot th {
   display: table-cell !important;
   width: auto;
   height: auto;
@@ -238,21 +236,21 @@ body.csm-sales-page #saleTable tfoot th {
   vertical-align: middle;
   font-size: .85rem;
 }
-body.csm-sales-page #saleTable tbody tr:hover td {background: rgba(26,143,94,.045);}
-body.csm-sales-page #saleTable tfoot th {font-weight: 600; padding: 10px 12px;}
-body.csm-sales-page #saleTable tfoot tr.csm-sale-final-row th {
+body.csm-sales-workspace :is(#saleTable, #quoteTable) tbody tr:hover td {background: rgba(26,143,94,.045);}
+body.csm-sales-workspace :is(#saleTable, #quoteTable) tfoot th {font-weight: 600; padding: 10px 12px;}
+body.csm-sales-workspace :is(#saleTable, #quoteTable) tfoot tr.csm-sale-final-row th {
   background: var(--sale-soft) !important;
   color: var(--sale-ink) !important;
   font-weight: 800;
   border-bottom: 0;
 }
-body.csm-sales-page #saleSubtotalCell,
-body.csm-sales-page #saleIvaCell,
-body.csm-sales-page #saleTotalCell {white-space: nowrap; font-variant-numeric: tabular-nums;}
-body.csm-sales-page #saleTotalCell {color: var(--sale-green) !important; font-size: .96rem !important;}
+body.csm-sales-workspace #saleSubtotalCell,
+body.csm-sales-workspace #saleIvaCell,
+body.csm-sales-workspace :is(#saleTotalCell, #totalCell) {white-space: nowrap; font-variant-numeric: tabular-nums;}
+body.csm-sales-workspace :is(#saleTotalCell, #totalCell) {color: var(--sale-green) !important; font-size: .96rem !important;}
 
 /* Zona inferior: impuestos a la izquierda y cobro resaltado a la derecha */
-body.csm-sales-page .csm-sale-actions {
+body.csm-sales-workspace .csm-sale-actions {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
@@ -260,56 +258,172 @@ body.csm-sales-page .csm-sale-actions {
   gap: 14px;
   padding-top: 19px;
 }
-body.csm-sales-page .csm-sale-options,
-body.csm-sales-page .csm-sale-primary-actions {display: flex; align-items: center; gap: 10px; flex-wrap: wrap;}
-body.csm-sales-page .csm-sale-options .form-check {display: flex; align-items: center; gap: 8px; padding-left: 0; min-height: 42px;}
-body.csm-sales-page .form-check-label {font-size: .88rem; color: var(--sale-ink); font-weight: 550; cursor: pointer;}
-body.csm-sales-page .form-check-input {float: none; margin: 0; width: 17px; height: 17px; border-color: var(--sale-border); cursor: pointer;}
-body.csm-sales-page .form-check-input:checked {background-color: #0d6a47 !important; border-color: #0d6a47 !important;}
-body.csm-sales-page .csm-btn-charge {min-width: 133px;}
+body.csm-sales-workspace .csm-sale-options,
+body.csm-sales-workspace .csm-sale-primary-actions {display: flex; align-items: center; gap: 10px; flex-wrap: wrap;}
+body.csm-sales-workspace .csm-sale-options .form-check {display: flex; align-items: center; gap: 8px; padding-left: 0; min-height: 42px;}
+body.csm-sales-workspace .form-check-label {font-size: .88rem; color: var(--sale-ink); font-weight: 550; cursor: pointer;}
+body.csm-sales-workspace .form-check-input {float: none; margin: 0; width: 17px; height: 17px; border-color: var(--sale-border); cursor: pointer;}
+body.csm-sales-workspace .form-check-input:checked {background-color: #0d6a47 !important; border-color: #0d6a47 !important;}
+body.csm-sales-workspace .csm-btn-charge {min-width: 133px;}
 
 /* Modal de cobro, cámara y devoluciones: respeta comportamiento Bootstrap */
-body.csm-sales-page .modal-content {
+body.csm-sales-workspace .modal-content {
   border: 1px solid var(--sale-border);
   border-radius: 18px;
   background: var(--sale-surface) !important;
   color: var(--sale-ink) !important;
   box-shadow: 0 18px 55px rgba(0,0,0,.14);
 }
-body.csm-sales-page .modal-header {
+body.csm-sales-workspace .modal-header {
   background: var(--sale-surface) !important;
   color: var(--sale-ink) !important;
   border-color: var(--sale-border);
   padding: 18px 20px;
   border-radius: 18px 18px 0 0;
 }
-body.csm-sales-page .modal-header .modal-title {font-weight: 750; font-size: 1.04rem;}
-body.csm-sales-page .modal-body,
-body.csm-sales-page .modal-footer {padding: 18px 20px;}
-body.csm-sales-page .modal-footer {border-color: var(--sale-border);}
-body.csm-sales-page .modal-header .btn-close {filter: none !important;}
-html[data-bs-theme="dark"] body.csm-sales-page .modal-header .btn-close {filter: invert(1) !important;}
-body.csm-sales-page .modal-body table {color: var(--sale-ink);}
-body.csm-sales-page .modal-body .table-responsive {overflow-x: auto;}
+body.csm-sales-workspace .modal-header .modal-title {font-weight: 750; font-size: 1.04rem;}
+body.csm-sales-workspace .modal-body,
+body.csm-sales-workspace .modal-footer {padding: 18px 20px;}
+body.csm-sales-workspace .modal-footer {border-color: var(--sale-border);}
+body.csm-sales-workspace .modal-header .btn-close {filter: none !important;}
+html[data-bs-theme="dark"] body.csm-sales-workspace .modal-header .btn-close {filter: invert(1) !important;}
+body.csm-sales-workspace .modal-body table {color: var(--sale-ink);}
+body.csm-sales-workspace .modal-body .table-responsive {overflow-x: auto;}
 
 @media (max-width: 767.98px) {
-  body.csm-sales-page .csm-sales-main {margin-top: 14px; gap: 13px;}
-  body.csm-sales-page .csm-sale-panel {padding: 17px; border-radius: 15px;}
-  body.csm-sales-page .csm-sale-overview {align-items: flex-start;}
-  body.csm-sales-page .csm-sale-total-summary {min-width: 0;}
-  body.csm-sales-page .csm-section-heading {margin-bottom: 16px;}
-  body.csm-sales-page .csm-sale-actions {align-items: stretch;}
-  body.csm-sales-page .csm-sale-primary-actions {width: 100%; justify-content: flex-end;}
+  body.csm-sales-workspace .csm-sales-main {margin-top: 14px; gap: 13px;}
+  body.csm-sales-workspace .csm-sale-panel {padding: 17px; border-radius: 15px;}
+  body.csm-sales-workspace .csm-sale-overview {align-items: flex-start;}
+  body.csm-sales-workspace .csm-sale-total-summary {min-width: 0;}
+  body.csm-sales-workspace .csm-section-heading {margin-bottom: 16px;}
+  body.csm-sales-workspace .csm-sale-actions {align-items: stretch;}
+  body.csm-sales-workspace .csm-sale-primary-actions {width: 100%; justify-content: flex-end;}
 }
 @media (max-width: 575.98px) {
-  body.csm-sales-page .csm-sale-overview {flex-direction: column;}
-  body.csm-sales-page .csm-sale-total-summary {width: 100%; align-items: flex-start;}
-  body.csm-sales-page .csm-search-actions {display: grid; grid-template-columns: 1fr;}
-  body.csm-sales-page .csm-sale-primary-actions {display: grid; grid-template-columns: 1fr;}
-  body.csm-sales-page .csm-sale-primary-actions .btn {width: 100%;}
-  body.csm-sales-page .csm-sale-options {width: 100%;}
+  body.csm-sales-workspace .csm-sale-overview {flex-direction: column;}
+  body.csm-sales-workspace .csm-sale-total-summary {width: 100%; align-items: flex-start;}
+  body.csm-sales-workspace .csm-search-actions {display: grid; grid-template-columns: 1fr;}
+  body.csm-sales-workspace .csm-sale-primary-actions {display: grid; grid-template-columns: 1fr;}
+  body.csm-sales-workspace .csm-sale-primary-actions .btn {width: 100%;}
+  body.csm-sales-workspace .csm-sale-options {width: 100%;}
 }
 @media (prefers-reduced-motion: reduce) {
-  body.csm-sales-page .btn.csm-btn-main,
-  body.csm-sales-page .btn.csm-btn-outline {transition: none;}
+  body.csm-sales-workspace .btn.csm-btn-main,
+  body.csm-sales-workspace .btn.csm-btn-outline {transition: none;}
+}
+
+/* ================================================================
+   COTIZACIONES — piezas específicas sobre el MISMO CSS compartido.
+   No se crea quotes.css. Todo queda limitado a csm-quotes-page.
+================================================================ */
+body.csm-quotes-page .csm-sale-overview-subtitle {
+  margin: 4px 0 0;
+  color: var(--sale-muted);
+  font-size: .82rem;
+  line-height: 1.42;
+}
+body.csm-quotes-page #quoteTotalSummary {
+  font-size: clamp(1.12rem, 2vw, 1.5rem);
+  font-weight: 800;
+  color: var(--sale-green);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+body.csm-quotes-page .csm-quote-iva-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  padding: 15px 16px;
+  margin-top: 19px;
+  border-radius: 12px;
+  background: var(--sale-soft);
+}
+body.csm-quotes-page .csm-quote-iva-row .form-check-input {flex: 0 0 17px;}
+body.csm-quotes-page .csm-quote-iva-row label {font-size: .88rem; font-weight: 650; color: var(--sale-ink); cursor: pointer;}
+body.csm-quotes-page .csm-quote-iva-row small {color: var(--sale-muted); font-size: .78rem;}
+body.csm-quotes-page .csm-quote-search-row {align-items: end;}
+body.csm-quotes-page .csm-quote-search-row .csm-quote-quantity {max-width: 220px;}
+body.csm-quotes-page .csm-quote-table-wrap {margin-top: 3px;}
+body.csm-quotes-page :is(#saleTable, #quoteTable) {min-width: 650px;}
+body.csm-quotes-page #quoteTable :is(.price-cell, .import-cell) {white-space: nowrap; font-variant-numeric: tabular-nums;}
+body.csm-quotes-page #quoteTable tbody .form-control {width: 95px; height: 39px; min-height: 39px;}
+body.csm-quotes-page #quoteTable tbody .form-select {min-width: 185px; height: 39px; min-height: 39px;}
+body.csm-quotes-page #quoteTable tbody td:last-child {min-width: 220px;}
+body.csm-quotes-page #quoteTable tbody .btn {
+  border-radius: 8px;
+  font-size: .78rem;
+  font-weight: 650;
+  padding: 7px 9px;
+  white-space: nowrap;
+}
+body.csm-quotes-page #quoteTable tbody .btn-danger {background: transparent; color: #bf3345; border-color: #ebc5ca;}
+body.csm-quotes-page #quoteTable tbody .btn-danger:hover {background: #bf3345; color: white;}
+body.csm-quotes-page #quoteTable tbody .btn-secondary {background: var(--sale-surface); border-color: var(--sale-border); color: var(--sale-ink);}
+body.csm-quotes-page #quoteTable tbody .btn-secondary:hover {border-color: var(--sale-green); color: var(--sale-green);}
+body.csm-quotes-page .csm-table-empty {
+  text-align: center;
+  padding: 21px 12px;
+  color: var(--sale-muted);
+  font-size: .85rem;
+  border-top: 1px solid var(--sale-border);
+}
+body.csm-quotes-page .csm-table-empty .bi {color: var(--sale-green); margin-right: 6px;}
+body.csm-quotes-page .csm-quote-toolbar {justify-content: space-between;}
+body.csm-quotes-page .csm-quote-hint {font-size: .78rem; color: var(--sale-muted); margin-top: 7px;}
+body.csm-quotes-page #quoteTable tfoot tr.csm-sale-final-row th {color: var(--sale-ink) !important;}
+body.csm-quotes-page #quoteTable tfoot tr.csm-sale-final-row #totalCell {color: var(--sale-green) !important; font-weight: 850;}
+
+/* Escáner de código de barras, gestionado por QuaggaJS (sin cambiar IDs). */
+body.csm-quotes-page .scanner-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 10570;
+  align-items: center;
+  justify-content: center;
+  background: rgba(9, 21, 15, .82);
+  padding: 16px;
+}
+body.csm-quotes-page .scanner-box {
+  width: min(920px, 95vw);
+  height: min(560px, 85dvh);
+  position: relative;
+  background: #101711;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 20px 65px rgba(0, 0, 0, .36);
+  border: 1px solid rgba(255,255,255,.18);
+}
+body.csm-quotes-page .scanner-actions {position: absolute; z-index: 3; right: 15px; top: 15px;}
+body.csm-quotes-page #scannerView {width: 100%; height: 100%; overflow: hidden;}
+body.csm-quotes-page #scannerView video,
+body.csm-quotes-page #scannerView canvas {max-width: 100%; width: 100%; height: 100%; object-fit: cover;}
+body.csm-quotes-page .scanner-actions .btn {background: var(--sale-surface); color: var(--sale-ink); border-color: var(--sale-border);}
+
+/* Modal de precio generado por quotes.js, compatible con modo oscuro. */
+body.csm-quotes-page .csm-price-editor-overlay {
+  position: fixed; inset: 0; z-index: 10565;
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+  background: rgba(9, 21, 15, .54);
+}
+body.csm-quotes-page .csm-price-editor {
+  width: min(420px, 100%);
+  padding: 24px;
+  border: 1px solid var(--sale-border);
+  border-radius: 18px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.2);
+  background: var(--sale-surface);
+  color: var(--sale-ink);
+}
+body.csm-quotes-page .csm-price-editor h5 {font-size: 1.08rem; font-weight: 750; margin: 0 0 15px;}
+body.csm-quotes-page .csm-price-editor p {font-size: .88rem; color: var(--sale-muted);}
+body.csm-quotes-page .csm-price-editor .btn-primary {background: #0d6a47; border-color: #0d6a47;}
+body.csm-quotes-page .csm-price-editor .btn-secondary {background: var(--sale-soft); border-color: var(--sale-border); color: var(--sale-ink);}
+@media (max-width: 575.98px) {
+  body.csm-quotes-page .csm-quote-search-row .csm-quote-quantity {max-width: none;}
+  body.csm-quotes-page .csm-quote-toolbar > div {width: 100%;}
+  body.csm-quotes-page .csm-quote-toolbar .btn {width: 100%;}
+  body.csm-quotes-page .csm-quote-iva-row small {width: 100%; margin-left: 26px;}
 }
