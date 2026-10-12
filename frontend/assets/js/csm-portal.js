@@ -196,7 +196,7 @@
           <div class="dropdown-divider"></div>
           <a class="dropdown-item csm-admin-only" href="settings.html"><i class="bi bi-sliders" aria-hidden="true"></i>Configuración</a>
           <a class="dropdown-item csm-admin-only" href="users.html"><i class="bi bi-people" aria-hidden="true"></i>Usuarios</a>
-          <button class="dropdown-item csm-admin-only" disabled title="Pendiente de implementación"><i class="bi bi-percent" aria-hidden="true"></i>Comisiones (próximamente)</button>
+          <button class="dropdown-item csm-admin-only" disabled title="Pendiente de implementación"><i class="bi bi-percent" aria-hidden="true"></i>Comisiones</button>
           <button class="dropdown-item" type="button" id="csmThemeBtn"><i class="bi bi-moon-stars" aria-hidden="true"></i><span id="csmThemeText">Modo oscuro</span></button>
           <div class="dropdown-divider"></div>
           <button class="dropdown-item" type="button" id="csmLogoutBtn"><i class="bi bi-box-arrow-right" aria-hidden="true"></i>Cerrar sesión</button>
