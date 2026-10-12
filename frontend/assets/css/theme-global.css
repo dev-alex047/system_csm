@@ -397,3 +397,26 @@ html[data-bs-theme="dark"] .alert-success {
 .modal-dialog:not(.modal-dialog-centered) {
   margin-top: 2.5rem;
 }
+
+
+/* SweetAlert2 - Identidad visual Sistema CSM */
+.swal2-container {
+    z-index: 11000 !important;
+}
+
+.swal2-confirm {
+    background-color: #0d704d !important;
+    border-color: #0d704d !important;
+}
+
+.swal2-icon.swal2-warning,
+.swal2-icon.swal2-info,
+.swal2-icon.swal2-question {
+    color: #0d704d !important;
+    border-color: #0d704d !important;
+}
+
+html[data-bs-theme="dark"] .swal2-popup {
+    background-color: #2d2d2d;
+    color: #e9ecef;
+}

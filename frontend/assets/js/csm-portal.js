@@ -173,7 +173,12 @@
       ? `<nav class="csm-subnav csm-subnav-in-header" aria-label="Navegación de ${title}">
            <ul class="nav nav-pills flex-nowrap" id="csmSubnav"></ul>
          </nav>`
-      : `<div class="csm-header-brand"><i class="bi bi-boxes" aria-hidden="true"></i>${title}</div>`;
+     : `<div class="csm-header-brand">
+     <img src="../backend/uploads/logo.png"
+          class="csm-header-logo"
+          alt="Logo del sistema">
+     <span>${title}</span>
+   </div>`;
     header.innerHTML = `
       <div class="csm-header-action">
         <a class="csm-icon-btn" href="dashboard.html" aria-label="Volver al inicio" title="Inicio">

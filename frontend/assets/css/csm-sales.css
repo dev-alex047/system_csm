@@ -427,3 +427,7 @@ body.csm-quotes-page .csm-price-editor .btn-secondary {background: var(--sale-so
   body.csm-quotes-page .csm-quote-toolbar .btn {width: 100%;}
   body.csm-quotes-page .csm-quote-iva-row small {width: 100%; margin-left: 26px;}
 }
+
+.swal2-container {
+    z-index: 10100 !important;
+}

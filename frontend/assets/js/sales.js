@@ -78,16 +78,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const stock = parseFloat(product.stock ?? 0);
     const minStock = parseFloat(product.min_stock ?? 0);
     if (stock <= 0) {
-      alert(`No hay stock suficiente para el producto: ${product.name}.`);
+      Swal.fire({ icon: 'warning', title: 'Sin existencias', text: `No hay stock suficiente para el producto: ${product.name}.` });
       return false;
     }
     // Avisar si el stock está en el mínimo
     if (stock <= minStock) {
-      alert(`El stock de ${product.name} está al mínimo. Se recomienda reabastecer.`);
-      // Permitimos la venta, pero alertamos
+      Swal.fire({ icon: 'warning', title: 'Stock mínimo', text: `El stock de ${product.name} está al mínimo. Se recomienda reabastecer.` });
     }
     if (quantity > stock) {
-      alert(`No hay suficiente stock para el producto: ${product.name}. Stock disponible: ${stock}`);
+      Swal.fire({ icon: 'warning', title: 'Stock insuficiente', text: `No hay suficiente stock para el producto: ${product.name}. Stock disponible: ${stock}` });
       return false;
     }
     return true;
@@ -190,8 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateTotals();
   }
 
-  // Buscar producto por código/clave/barcode
-  function buscarProducto() {
+  async function buscarProducto() {
     const codigo  = document.getElementById('buscarCodigo').value.trim();
     const clave   = document.getElementById('buscarClave').value.trim();
     const barcode = document.getElementById('buscarBarcode').value.trim();
@@ -207,14 +205,36 @@ document.addEventListener('DOMContentLoaded', () => {
       product = products.find(pp => pp.name && pp.name.toLowerCase().includes(nombre.toLowerCase()));
     }
     if (!product) {
-      alert('Producto no encontrado');
+      Swal.fire({ icon: 'warning', title: 'Producto no encontrado', text: 'No encontramos un producto que coincida con tu búsqueda.' });
       return;
     }
-    const qtyStr = prompt('Cantidad', '1');
-    if (qtyStr === null) return;
+    const { isConfirmed, value: qtyStr } = await Swal.fire({
+    icon: 'question',
+    title: 'Cantidad del producto',
+    text: 'Indica cuántas unidades deseas agregar a la venta.',
+    input: 'number',
+    inputValue: 1,
+    inputAttributes: {
+        min: '0.01',
+        step: '0.01'
+    },
+    showCancelButton: true,
+    confirmButtonText: 'Agregar producto',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#0d704d',
+    reverseButtons: true,
+    inputValidator: value => {
+        if (!value || !Number.isFinite(Number(value)) || Number(value) <= 0) {
+            return 'Ingresa una cantidad válida mayor que cero.';
+        }
+    }
+});
+
+if (!isConfirmed) return;
+
     const qty = parseFloat(qtyStr);
     if (isNaN(qty) || qty <= 0) {
-      alert('Cantidad inválida');
+      Swal.fire({ icon: 'warning', title: 'Cantidad inválida', text: 'Ingresa una cantidad mayor que cero.' });
       return;
     }
     addRow(product, qty);
@@ -224,10 +244,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const bnom = document.getElementById('buscarNombre'); if (bnom) bnom.value = '';
   }
 
-  // Escanear código de barras con QuaggaJS
   function iniciarEscaner() {
     if (typeof Quagga === 'undefined') {
-      alert('No se puede iniciar el escáner en este navegador');
+      Swal.fire({ icon: 'error', title: 'Escáner no disponible', text: 'No se puede iniciar el escáner en este navegador.' });
       return;
     }
     const scannerContainer = document.getElementById('scannerContainer');
@@ -242,7 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, err => {
       if (err) {
         console.error(err);
-        alert('No se pudo iniciar el escáner');
+        Swal.fire({ icon: 'error', title: 'Error del escáner', text: 'No se pudo iniciar el escáner. Revisa los permisos de la cámara.' });
         return;
       }
       Quagga.start();
@@ -315,7 +334,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // Mostrar modal de cobro solo si hay productos
   btnCobrar.addEventListener('click', () => {
     if (saleTableBody.querySelectorAll('tr').length === 0) {
-      alert('Agrega al menos un producto');
+      Swal.fire({
+        icon: 'warning',
+        iconColor: '#0d704d',
+        title: 'Atención',
+        text: 'Agrega al menos un producto',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#0d704d'
+      });
       return;
     }
     const totals = updateTotals();
@@ -383,14 +409,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (metodo === 'Efectivo') {
       recibido = parseFloat(montoRecibidoInput.value || 0);
       if (recibido < totals.total) {
-        alert('El monto recibido es menor que el total');
+        Swal.fire({ icon: 'warning', title: 'Monto insuficiente', text: 'El monto recibido es menor que el total de la venta.' });
         return;
       }
       cajaId = cajaSelect.value;
     } else if (metodo === 'Transferencia') {
       referencia = referenciaInput.value.trim();
       if (!referencia) {
-        alert('Debes ingresar una referencia bancaria');
+        Swal.fire({ icon: 'warning', title: 'Referencia requerida', text: 'Debes ingresar una referencia bancaria.' });
         return;
       }
       cajaId = cajaSelect.value;
@@ -406,7 +432,7 @@ document.addEventListener('DOMContentLoaded', () => {
     for (const pid in agregados) {
       const product = products.find(p => p.id == pid || p.id == parseInt(pid));
       if (product && product.stock !== undefined && agregados[pid] > product.stock) {
-        alert(`No hay suficiente stock para el producto: ${product.name}. Stock disponible: ${product.stock}`);
+        Swal.fire({ icon: 'warning', title: 'Stock insuficiente', text: `No hay suficiente stock para el producto: ${product.name}. Stock disponible: ${product.stock}` });
         return;
       }
     }
@@ -439,7 +465,7 @@ document.addEventListener('DOMContentLoaded', () => {
     apiRequest('sales.php', 'POST', payload)
       .then(result => {
         if (result.change !== undefined && result.change !== null) {
-          alert('Cambio: $' + parseFloat(result.change).toFixed(2));
+          Swal.fire({ icon: 'success', title: 'Venta registrada', text: 'Cambio: $' + parseFloat(result.change).toFixed(2) });
         }
         if (result.ticket) {
           window.open('../backend/' + result.ticket, '_blank');
@@ -457,7 +483,7 @@ document.addEventListener('DOMContentLoaded', () => {
         cobroModal.hide();
       })
       .catch(err => {
-        alert(err.error || 'Error al registrar la venta');
+        Swal.fire({ icon: 'error', title: 'Error al registrar la venta', text: err.error || 'No fue posible completar la operación.' });
       });
   });
 
@@ -538,10 +564,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const pid = parseInt(document.getElementById('returnProductSelect').value || 0);
     const qty = parseFloat(document.getElementById('returnProductQty').value || 0);
     const price = parseFloat(document.getElementById('returnProductPrice').value || 0);
-    if (!pid || qty <= 0) return alert('Selecciona producto y cantidad válida');
+    if (!pid || qty <= 0) return Swal.fire({ icon: 'warning', title: 'Datos incompletos', text: 'Selecciona un producto y una cantidad válida.' });
     const prod = products.find(p => p.id == pid);
-    if (!prod) return alert('Producto no encontrado');
-    if (qty > (prod.stock ?? 0)) return alert('No hay suficiente stock para ese producto');
+    if (!prod) return Swal.fire({ icon: 'warning', title: 'Producto no encontrado', text: 'El producto seleccionado no está disponible.' });
+    if (qty > (prod.stock ?? 0)) return Swal.fire({ icon: 'warning', title: 'Stock insuficiente', text: 'No hay suficiente stock para ese producto.' });
 
     const list = document.getElementById('returnNewItemsList');
     const row = document.createElement('div');
@@ -583,41 +609,143 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       rm.show();
     }).catch(err => {
-      alert(err.error || 'Error cargando solicitudes');
+      Swal.fire({
+        icon: 'error',
+        title: 'Error al cargar solicitudes',
+        text: err.error || 'No fue posible obtener las solicitudes.'
+    });
     });
   });
 
   // Approve request handler (delegated)
-  document.addEventListener('click', (e) => {
-    if (e.target && e.target.classList && e.target.classList.contains('btn-approve-request')) {
-      const id = parseInt(e.target.dataset.id || 0);
-      if (!id) return alert('Invalid request id');
-      if (!confirm('Aprobar esta solicitud?')) return;
-      apiRequest('returns.php', 'POST', { action: 'approve', request_id: id }).then(res => {
-        if (res.ticket) window.open('../backend/' + res.ticket, '_blank');
-        alert('Solicitud aprobada (refund_id ' + (res.refund_id || '') + ')');
-        // Remove row
-        e.target.closest('tr').remove();
-      }).catch(err => {
-        alert(err.error || 'Error al aprobar solicitud');
+ 
+  // Aprobar y rechazar solicitudes de devoluciones
+  document.addEventListener('click', async (e) => {
+
+    const btn = e.target.closest('.btn-approve-request, .btn-reject-request');
+    if (!btn) return;
+
+    const id = parseInt(btn.dataset.id || 0, 10);
+    const row = btn.closest('tr');
+
+    if (!id) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'Solicitud inválida',
+        text: 'El identificador de la solicitud no es válido.'
       });
+      return;
     }
 
-    if (e.target && e.target.classList && e.target.classList.contains('btn-reject-request')) {
-      const id = parseInt(e.target.dataset.id || 0);
-      if (!id) return alert('Invalid request id');
-      const reason = prompt('Motivo del rechazo (opcional):');
-      if (reason === null) return; // cancelled
-      if (!confirm('Confirmar rechazo de la solicitud?')) return;
-      apiRequest('returns.php', 'POST', { action: 'reject', request_id: id, reason: reason }).then(res => {
-        if (res.ok) alert('Solicitud rechazada');
-        else alert('Error: ' + (res.error || 'No se pudo rechazar'));
-        e.target.closest('tr').remove();
-      }).catch(err => {
-        alert(err.error || 'Error al rechazar solicitud');
+    // ===== APROBAR SOLICITUD =====
+    if (btn.classList.contains('btn-approve-request')) {
+
+      const { isConfirmed } = await Swal.fire({
+        icon: 'question',
+        title: '¿Aprobar solicitud?',
+        text: '¿Estás seguro de que deseas aprobar esta devolución?',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, aprobar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#0d704d',
+        reverseButtons: true
       });
+
+      if (!isConfirmed) return;
+
+      btn.disabled = true;
+
+      try {
+        const res = await apiRequest('returns.php', 'POST', {
+          action: 'approve',
+          request_id: id
+        });
+
+        if (res?.ok === false || res?.error) {
+          throw new Error(res.error || 'No se pudo aprobar la solicitud.');
+        }
+
+        if (res.ticket) {
+          window.open('../backend/' + res.ticket, '_blank');
+        }
+
+        await Swal.fire({
+          icon: 'success',
+          title: 'Solicitud aprobada',
+          text: 'Folio de devolución: ' + (res.refund_id || 'No disponible'),
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#0d704d'
+        });
+
+        row?.remove();
+
+      } catch (err) {
+        await Swal.fire({
+          icon: 'error',
+          title: 'Error al aprobar',
+          text: err.error || err.message || 'No se pudo aprobar la solicitud.'
+        });
+
+        btn.disabled = false;
+      }
+
+      return;
     }
+
+    // ===== RECHAZAR SOLICITUD =====
+    if (btn.classList.contains('btn-reject-request')) {
+
+      const { isConfirmed, value: reason } = await Swal.fire({
+        icon: 'warning',
+        title: '¿Rechazar solicitud?',
+        text: 'Puedes indicar el motivo del rechazo.',
+        input: 'textarea',
+        inputPlaceholder: 'Motivo del rechazo (opcional)',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, rechazar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#0d704d',
+        reverseButtons: true
+      });
+
+      if (!isConfirmed) return;
+
+      btn.disabled = true;
+
+      try {
+        const res = await apiRequest('returns.php', 'POST', {
+          action: 'reject',
+          request_id: id,
+          reason: reason || ''
+        });
+
+        if (!res?.ok) {
+          throw new Error(res?.error || 'No se pudo rechazar la solicitud.');
+        }
+
+        await Swal.fire({
+          icon: 'success',
+          title: 'Solicitud rechazada',
+          text: 'La solicitud fue rechazada correctamente.',
+          confirmButtonText: 'Entendido',
+          confirmButtonColor: '#0d704d'
+        });
+
+        row?.remove();
+
+      } catch (err) {
+        await Swal.fire({
+          icon: 'error',
+          title: 'Error al rechazar',
+          text: err.error || err.message || 'No se pudo rechazar la solicitud.'
+        });
+
+        btn.disabled = false;
+      }
+    }
+
   });
+
 
   // Remove new item
   document.addEventListener('click', (e) => {
@@ -670,13 +798,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
   btnLoadReturnSale.addEventListener('click', () => {
     const idOrFolio = returnSaleIdInput.value.trim();
-    if (!idOrFolio) return alert('Ingresa ID o folio de venta');
+    if (!idOrFolio) return Swal.fire({
+    icon: 'warning',
+    title: 'Folio requerido',
+    text: 'Ingresa el ID o folio de la venta que deseas consultar.',
+    confirmButtonColor: '#0d704d'
+});
 
     // Intentar como id numérico primero
     let url = 'sales.php?id=' + encodeURIComponent(idOrFolio);
     apiRequest(url).then(res => {
       const sale = res.sale;
-      if (!sale) return alert('Venta no encontrada');
+      if (!sale) return Swal.fire({
+    icon: 'warning',
+    title: 'Venta no encontrada',
+    text: 'No encontramos ninguna venta con el folio proporcionado.',
+    confirmButtonColor: '#0d704d'
+});
       // Poblar info
       returnSaleFolio.textContent = sale.ticket_barcode || ('#' + sale.id);
       returnSaleClient.textContent = sale.client_name || '';
@@ -698,7 +836,12 @@ document.addEventListener('DOMContentLoaded', () => {
       returnSaleIdInput.value = String(sale.id);
       updateReturnTotals();
     }).catch(err => {
-      alert(err.error || 'Error cargando la venta');
+      Swal.fire({
+    icon: 'error',
+    title: 'Error al consultar la venta',
+    text: err.error || 'No fue posible obtener la información de la venta.',
+    confirmButtonColor: '#0d704d'
+});
     });
   });
 
@@ -726,15 +869,23 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   btnConfirmReturn.addEventListener('click', () => {
-    if (returnItemsTable.querySelectorAll('tr').length === 0) return alert('Carga una venta primero');
-    const items = [];
+if (returnItemsTable.querySelectorAll('tr').length === 0) return Swal.fire({
+    icon: 'warning',
+    title: 'Venta requerida',
+    text: 'Primero debes cargar una venta para realizar una devolución.',
+    confirmButtonColor: '#0d704d'
+});    const items = [];
     document.querySelectorAll('.return-qty').forEach(inp => {
       const qty = parseFloat(inp.value || 0);
       if (qty <= 0) return;
       items.push({ sale_item_id: parseInt(inp.dataset.sid), product_id: parseInt(inp.dataset.pid), quantity: qty, unit_price: parseFloat(inp.dataset.price) });
     });
-    if (items.length === 0) return alert('Selecciona al menos un artículo para devolver');
-
+if (items.length === 0) return Swal.fire({
+    icon: 'warning',
+    title: 'Selecciona un producto',
+    text: 'Debes seleccionar al menos un artículo y especificar la cantidad a devolver.',
+    confirmButtonColor: '#0d704d'
+});
     // Construir new_items desde la lista de productos añadidos (si hay)
     const new_items = [];
     document.querySelectorAll('#returnNewItemsList > div').forEach(div => {
@@ -755,11 +906,22 @@ document.addEventListener('DOMContentLoaded', () => {
         note: ''
       };
       apiRequest('returns.php', 'POST', reqPayload).then(res => {
-        alert('Solicitud creada (ID ' + (res.request_id || '') + '). Un ADMIN debe aprobarla.');
+       Swal.fire({
+    icon: 'success',
+    title: 'Solicitud enviada',
+    text: 'Solicitud #' + (res.request_id || '') + ' creada correctamente. Un administrador deberá aprobarla.',
+    confirmButtonText: 'Entendido',
+    confirmButtonColor: '#0d704d'
+});
         const rm = bootstrap.Modal.getInstance(document.getElementById('returnModal'));
         if (rm) rm.hide();
       }).catch(err => {
-        alert(err.error || 'Error al crear la solicitud');
+        Swal.fire({
+    icon: 'error',
+    title: 'Error al crear la solicitud',
+    text: err.error || 'No fue posible registrar la solicitud de devolución.',
+    confirmButtonColor: '#0d704d'
+});
       });
       return;
     }
@@ -779,16 +941,24 @@ document.addEventListener('DOMContentLoaded', () => {
       if (res.ticket) {
         window.open('../backend/' + res.ticket, '_blank');
       }
-      alert('Devolución registrada (ID ' + (res.refund_id || '') + ')');
+      Swal.fire({
+    icon: 'success',
+    title: 'Devolución registrada',
+    text: 'La devolución se registró correctamente. Folio: ' + (res.refund_id || 'No disponible'),
+    confirmButtonText: 'Entendido',
+    confirmButtonColor: '#0d704d'
+});
       const rm = bootstrap.Modal.getInstance(document.getElementById('returnModal'));
       if (rm) rm.hide();
     }).catch(err => {
-      if (err && err.error) {
-        alert(err.error);
-      } else {
-        alert('Error al procesar la devolución');
-      }
+    Swal.fire({
+        icon: 'error',
+        title: 'Error al procesar la devolución',
+        text: err?.error || err?.message || 'No fue posible completar la devolución.',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#0d704d'
     });
+});
   });
 
 });
