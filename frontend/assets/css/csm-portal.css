@@ -256,3 +256,74 @@ html[data-bs-theme="dark"] body.csm-portal {
   .csm-portal .csm-tile, .csm-portal .csm-subtile { transition: none; }
   .csm-portal .csm-tile:hover, .csm-portal .csm-subtile[href]:hover { transform: none; }
 }
+
+/* Etapa 2: las cinco tarjetas son todo el contenido del dashboard */
+.csm-portal .csm-main-dashboard {
+  min-height: calc(100dvh - 116px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 26px 0 34px;
+}
+.csm-portal .csm-main-dashboard #csmModuleGrid { width: 100%; }
+
+/* La navegación ocupa el CENTRO del mismo header blanco.
+   Inicio a la izquierda y ajustes a la derecha. No existe barra adicional. */
+.csm-portal .csm-header.csm-header-with-nav {
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  column-gap: clamp(8px, 1.2vw, 18px);
+}
+.csm-portal .csm-header .csm-subnav-in-header {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  overscroll-behavior-x: contain;
+}
+.csm-portal .csm-header .csm-subnav-in-header .nav {
+  display: flex;
+  flex-wrap: nowrap;
+  width: max-content;
+  min-width: 100%;
+  justify-content: center;
+  gap: clamp(3px, .6vw, 9px);
+  padding: 2px 0;
+}
+.csm-portal .csm-header .csm-subnav-in-header .nav-link {
+  padding: 11px clamp(9px, 1vw, 16px);
+  border-radius: 12px;
+}
+@media (max-width: 900px) {
+  .csm-portal .csm-header .csm-subnav-in-header .nav-link {
+    padding: 10px;
+    font-size: .82rem;
+  }
+}
+@media (max-width: 575.98px) {
+  .csm-portal .csm-header.csm-header-with-nav {
+    grid-template-columns: 40px minmax(0, 1fr) 40px;
+    gap: 7px;
+  }
+  .csm-portal .csm-header .csm-subnav-in-header .nav-link {
+    font-size: .79rem;
+    padding: 9px 10px;
+  }
+}
+.csm-portal .csm-subnav .nav-link:focus-visible {
+  outline: 2px solid var(--csm-green);
+  outline-offset: 2px;
+}
+@media (max-width: 767.98px) {
+  .csm-portal .csm-main-dashboard { min-height: auto; padding: 36px 0; }
+}
+
+/* Resto de módulos aún en transición: navegación primero, contenido debajo. */
+.csm-portal .csm-main-module .csm-intro { padding: 14px 0 28px; }

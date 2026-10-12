@@ -1,0 +1,329 @@
+/* Pantallas de inicio y selección de módulos CSM.
+   Estilos aislados para no afectar el resto del sistema. */
+body.csm-portal {
+  --csm-green: #1a8f5e;
+  --csm-green-dark: #0d6a47;
+  --csm-ink: #202d27;
+  --csm-muted: #6d7772;
+  --csm-bg: #f5f7f6;
+  --csm-surface: #fff;
+  --csm-border: #e5ebe7;
+  --csm-icon-bg: #ecf6f0;
+  --csm-shadow: 0 4px 18px rgba(25, 58, 39, .055);
+  background: var(--csm-bg) !important;
+  color: var(--csm-ink) !important;
+  min-height: 100vh;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+html[data-bs-theme="dark"] body.csm-portal {
+  --csm-green: #44bb83;
+  --csm-green-dark: #2e9c6c;
+  --csm-ink: #edf4ee;
+  --csm-muted: #a6b5ad;
+  --csm-bg: #141b17;
+  --csm-surface: #202b24;
+  --csm-border: #35483b;
+  --csm-icon-bg: #263e31;
+  --csm-shadow: 0 6px 22px rgba(0, 0, 0, .12);
+}
+
+/* Encabezado compacto: solo inicio, título y ajustes */
+.csm-portal .csm-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  background: var(--csm-surface);
+  border: 1px solid var(--csm-border);
+  border-radius: 19px;
+  padding: 12px 16px;
+  box-shadow: var(--csm-shadow);
+}
+
+.csm-portal .csm-header-brand {
+  color: var(--csm-ink) !important;
+  font-size: 1.08rem;
+  font-weight: 750;
+  letter-spacing: -.02em;
+  text-decoration: none !important;
+  white-space: nowrap;
+}
+
+.csm-portal .csm-header-brand .bi {
+  color: var(--csm-green);
+  margin-right: 7px;
+}
+
+.csm-portal .csm-header-action { justify-self: start; }
+.csm-portal .csm-header-menu { justify-self: end; }
+.csm-portal .csm-icon-btn {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  color: var(--csm-ink) !important;
+  background: var(--csm-surface);
+  border: 1px solid var(--csm-border);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .04);
+  font-size: 1.15rem;
+  text-decoration: none !important;
+}
+.csm-portal .csm-icon-btn:hover,
+.csm-portal .csm-icon-btn:focus-visible {
+  border-color: var(--csm-green);
+  color: var(--csm-green) !important;
+  background: var(--csm-icon-bg);
+}
+
+.csm-portal .csm-settings-menu {
+  min-width: 238px;
+  padding: 9px;
+  border-radius: 15px;
+  border: 1px solid var(--csm-border);
+  background: var(--csm-surface);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, .13);
+}
+.csm-portal .dropdown-item {
+  border-radius: 9px;
+  padding: 10px 11px;
+  color: var(--csm-ink) !important;
+  font-weight: 500;
+  text-decoration: none !important;
+}
+.csm-portal .dropdown-item:hover:not(:disabled),
+.csm-portal .dropdown-item:focus-visible {
+  background: var(--csm-icon-bg);
+}
+.csm-portal .dropdown-item .bi { margin-right: 9px; }
+.csm-portal .csm-menu-user {
+  display: block;
+  max-width: 210px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--csm-muted);
+  padding: 5px 11px 7px;
+  font-size: .82rem;
+}
+.csm-portal .dropdown-item:disabled { opacity: .5; }
+
+.csm-portal .csm-main { max-width: 1110px; margin: 0 auto; }
+.csm-portal .csm-intro { padding: clamp(42px, 7vh, 88px) 0 37px; }
+.csm-portal .csm-eyebrow {
+  display: inline-block;
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  color: var(--csm-green);
+  font-weight: 800;
+  font-size: .73rem;
+  margin-bottom: 11px;
+}
+.csm-portal .csm-page-title {
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
+  font-weight: 760;
+  letter-spacing: -.035em;
+  color: var(--csm-ink);
+  margin-bottom: 9px;
+}
+.csm-portal .csm-page-subtitle {
+  color: var(--csm-muted);
+  font-size: 1rem;
+  margin: 0 auto;
+  max-width: 600px;
+}
+
+/* Tarjetas grandes, respetando la configuración claro/oscuro */
+.csm-portal .csm-tile,
+.csm-portal .csm-subtile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  text-decoration: none !important;
+  height: 100%;
+  background: var(--csm-surface);
+  border: 1px solid var(--csm-border);
+  color: var(--csm-ink) !important;
+  border-radius: 22px;
+  box-shadow: var(--csm-shadow);
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.csm-portal .csm-tile { min-height: 210px; padding: 26px 22px; }
+.csm-portal .csm-tile:hover,
+.csm-portal .csm-subtile[href]:hover {
+  transform: translateY(-4px);
+  border-color: var(--csm-green);
+  box-shadow: 0 13px 32px rgba(23, 108, 67, .14);
+}
+.csm-portal .csm-tile:focus-visible,
+.csm-portal .csm-subtile:focus-visible,
+.csm-portal .csm-icon-btn:focus-visible {
+  outline: 3px solid var(--csm-green);
+  outline-offset: 3px;
+}
+.csm-portal .csm-tile-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  background: var(--csm-icon-bg);
+  border-radius: 19px;
+  color: var(--csm-green);
+  font-size: 1.75rem;
+  margin-bottom: 18px;
+}
+.csm-portal .csm-tile-title {
+  color: var(--csm-ink);
+  font-size: 1.32rem;
+  font-weight: 730;
+  margin-bottom: 6px;
+}
+.csm-portal .csm-tile-desc {
+  color: var(--csm-muted);
+  font-size: .88rem;
+  max-width: 255px;
+  line-height: 1.5;
+}
+
+/* Encabezado de cada módulo: pastillas con desplazamiento horizontal */
+.csm-portal .csm-main-module .csm-intro { padding-bottom: 25px; }
+.csm-portal .csm-subnav {
+  padding: 7px;
+  margin-bottom: 28px;
+  background: var(--csm-surface);
+  border: 1px solid var(--csm-border);
+  border-radius: 16px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  box-shadow: var(--csm-shadow);
+}
+.csm-portal .csm-subnav .nav { gap: 5px; width: max-content; min-width: 100%; }
+.csm-portal .csm-subnav .nav-link {
+  color: var(--csm-ink) !important;
+  padding: 11px 15px;
+  font-size: .89rem;
+  font-weight: 620;
+  white-space: nowrap;
+  border-radius: 11px;
+  text-decoration: none !important;
+}
+.csm-portal .csm-subnav .nav-link.active {
+  color: #fff !important;
+  background: #0d6a47 !important;
+  border: none;
+}
+.csm-portal .csm-subnav .nav-link:not(.active):hover {
+  color: var(--csm-green) !important;
+  background: var(--csm-icon-bg);
+}
+.csm-portal .csm-subnav .nav-link:disabled { opacity: .42; }
+.csm-portal .csm-subnav .bi { margin-right: 6px; }
+
+.csm-portal .csm-subtile {
+  align-items: flex-start;
+  text-align: left;
+  padding: 23px;
+  min-height: 178px;
+  border-radius: 18px;
+}
+.csm-portal .csm-subtile .csm-tile-icon {
+  width: 45px;
+  height: 45px;
+  font-size: 1.22rem;
+  border-radius: 13px;
+  margin-bottom: 12px;
+}
+.csm-portal .csm-subtile .csm-tile-title { font-size: 1.05rem; margin-bottom: 5px; }
+.csm-portal .csm-subtile .csm-tile-desc { max-width: none; font-size: .83rem; }
+.csm-portal .csm-subtile.csm-disabled { opacity: .57; cursor: not-allowed; }
+.csm-portal .csm-subtile.csm-disabled:hover { transform: none; box-shadow: var(--csm-shadow); }
+.csm-portal .csm-coming { margin-top: 10px; color: var(--csm-green); font-size: .73rem; font-weight: 750; }
+
+@media (max-width: 575.98px) {
+  .csm-portal .csm-header { padding: 10px; border-radius: 15px; }
+  .csm-portal .csm-header-brand { font-size: .94rem; }
+  .csm-portal .csm-header-brand .bi { margin-right: 3px; }
+  .csm-portal .csm-icon-btn { width: 40px; height: 40px; border-radius: 12px; }
+  .csm-portal .csm-intro { padding: 41px 0 25px; }
+  .csm-portal .csm-tile { min-height: 164px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .csm-portal .csm-tile, .csm-portal .csm-subtile { transition: none; }
+  .csm-portal .csm-tile:hover, .csm-portal .csm-subtile[href]:hover { transform: none; }
+}
+
+/* Etapa 2: las cinco tarjetas son todo el contenido del dashboard */
+.csm-portal .csm-main-dashboard {
+  min-height: calc(100dvh - 116px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 26px 0 34px;
+}
+.csm-portal .csm-main-dashboard #csmModuleGrid { width: 100%; }
+
+/* La navegación ocupa el CENTRO del mismo header blanco.
+   Inicio a la izquierda y ajustes a la derecha. No existe barra adicional. */
+.csm-portal .csm-header.csm-header-with-nav {
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  column-gap: clamp(8px, 1.2vw, 18px);
+}
+.csm-portal .csm-header .csm-subnav-in-header {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  overscroll-behavior-x: contain;
+}
+.csm-portal .csm-header .csm-subnav-in-header .nav {
+  display: flex;
+  flex-wrap: nowrap;
+  width: max-content;
+  min-width: 100%;
+  justify-content: center;
+  gap: clamp(3px, .6vw, 9px);
+  padding: 2px 0;
+}
+.csm-portal .csm-header .csm-subnav-in-header .nav-link {
+  padding: 11px clamp(9px, 1vw, 16px);
+  border-radius: 12px;
+}
+@media (max-width: 900px) {
+  .csm-portal .csm-header .csm-subnav-in-header .nav-link {
+    padding: 10px;
+    font-size: .82rem;
+  }
+}
+@media (max-width: 575.98px) {
+  .csm-portal .csm-header.csm-header-with-nav {
+    grid-template-columns: 40px minmax(0, 1fr) 40px;
+    gap: 7px;
+  }
+  .csm-portal .csm-header .csm-subnav-in-header .nav-link {
+    font-size: .79rem;
+    padding: 9px 10px;
+  }
+}
+.csm-portal .csm-subnav .nav-link:focus-visible {
+  outline: 2px solid var(--csm-green);
+  outline-offset: 2px;
+}
+@media (max-width: 767.98px) {
+  .csm-portal .csm-main-dashboard { min-height: auto; padding: 36px 0; }
+}
+
+/* Resto de módulos aún en transición: navegación primero, contenido debajo. */
+.csm-portal .csm-main-module .csm-intro { padding: 14px 0 28px; }

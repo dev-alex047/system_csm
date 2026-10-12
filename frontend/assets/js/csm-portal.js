@@ -72,12 +72,17 @@
     const moduleKey = new URLSearchParams(location.search).get('modulo');
     const section = page === 'module' ? modules[moduleKey] : null;
 
+    if (page === 'module' && moduleKey === 'ventas') {
+      location.replace('sales.html');
+      return;
+    }
+
     if (page === 'module' && (!section || (section.adminOnly && !isAdmin))) {
       location.replace('dashboard.html');
       return;
     }
 
-    renderHeader(section ? section.title : 'Sistema CSM', user, isAdmin);
+    renderHeader(page === 'sales' ? 'Ventas' : (section ? section.title : 'Sistema CSM'), user, isAdmin, page);
 
     if (page === 'dashboard') {
       document.title = 'Inicio | Sistema CSM';
@@ -87,13 +92,29 @@
         const col = document.createElement('div');
         col.className = 'col-12 col-md-6 col-lg-4';
         col.innerHTML = `
-          <a class="csm-tile" href="modulo.html?modulo=${key}">
+          <a class="csm-tile" href="${key === 'ventas' ? 'sales.html' : `modulo.html?modulo=${key}`}">
             <span class="csm-tile-icon"><i class="bi ${item.icon}" aria-hidden="true"></i></span>
             <h2 class="csm-tile-title">${item.title}</h2>
             <span class="csm-tile-desc">${item.description}</span>
           </a>`;
         grid.appendChild(col);
       });
+    }
+
+    // Sales renders the real form directly, not a second grid of submodule cards.
+    if (page === 'sales') {
+      document.title = 'Ventas | Sistema CSM';
+      const nav = document.getElementById('csmSubnav');
+      if (nav) {
+        nav.innerHTML = `
+          <li class="nav-item"><a class="nav-link active" aria-current="page" href="sales.html"><i class="bi bi-cart-check" aria-hidden="true"></i>Nueva venta</a></li>
+          <li class="nav-item"><a class="nav-link" href="quotes.html"><i class="bi bi-file-earmark-text" aria-hidden="true"></i>Cotizaciones</a></li>
+          <li class="nav-item"><button class="nav-link" type="button" id="csmOpenReturn"><i class="bi bi-arrow-repeat" aria-hidden="true"></i>Devoluciones y cambios</button></li>
+          <li class="nav-item"><button class="nav-link" type="button" disabled title="Módulo por desarrollar"><i class="bi bi-bag-check" aria-hidden="true"></i>Pedidos</button></li>`;
+        document.getElementById('csmOpenReturn').addEventListener('click', () => {
+          document.getElementById('btnReturn')?.click(); // Reutiliza el flujo original de sales.js
+        });
+      }
     }
 
     if (page === 'module') {
@@ -129,16 +150,24 @@
     }
   });
 
-  function renderHeader(title, user, isAdmin) {
+  function renderHeader(title, user, isAdmin, page) {
     const header = document.getElementById('csmHeader');
-    header.className = 'csm-header';
+    const navigationInHeader = page === 'sales' || page === 'module';
+    header.className = navigationInHeader ? 'csm-header csm-header-with-nav' : 'csm-header';
+    // En el dashboard, se conserva el nombre del sistema.
+    // Dentro de un módulo, la navegación REEMPLAZA el nombre/ícono central.
+    const headerCenter = navigationInHeader
+      ? `<nav class="csm-subnav csm-subnav-in-header" aria-label="Navegación de ${title}">
+           <ul class="nav nav-pills flex-nowrap" id="csmSubnav"></ul>
+         </nav>`
+      : `<div class="csm-header-brand"><i class="bi bi-boxes" aria-hidden="true"></i>${title}</div>`;
     header.innerHTML = `
       <div class="csm-header-action">
         <a class="csm-icon-btn" href="dashboard.html" aria-label="Volver al inicio" title="Inicio">
           <i class="bi bi-house-door" aria-hidden="true"></i>
         </a>
       </div>
-      <div class="csm-header-brand"><i class="bi bi-boxes" aria-hidden="true"></i>${title}</div>
+      ${headerCenter}
       <div class="csm-header-menu dropdown">
         <button class="csm-icon-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false"
           aria-label="Abrir opciones" title="Opciones">
