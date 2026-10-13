@@ -105,3 +105,38 @@ body.csm-inventory-workspace :is(.btn,.csm-inventory-chip,.csm-inventory-accordi
 }
 
 .csm-inventory-product:focus-within, .csm-inventory-product:has(.dropdown-menu.show) { z-index: 40; }
+
+
+body.csm-inventory-workspace .csm-inventory-value-modal .modal-content {
+  background: var(--inv-surface);
+  color: var(--inv-ink);
+  border: 1px solid var(--inv-border);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.csm-inventory-value-modal .modal-header,
+.csm-inventory-value-modal .modal-footer {
+  border-color: var(--inv-border);
+  padding: 18px 22px;
+}
+
+.csm-inventory-value-modal .modal-body { padding: 22px; }
+
+.csm-inventory-value-modal .csm-inventory-financial-body {
+  padding: 0;
+  border: 0;
+}
+
+.csm-inventory-value-modal .csm-inventory-value-help {
+  padding: 15px;
+  border: 1px solid var(--inv-border);
+  border-radius: 12px;
+}
+
+.csm-inventory-value-help .btn-link { color: var(--inv-green); font-size: .85rem; font-weight: 650; }
+.csm-inventory-value-help p { color: var(--inv-muted); font-size: .85rem; line-height: 1.6; }
+
+@media (max-width: 575.98px) {
+  .csm-inventory-value-modal .csm-inventory-financial-body { grid-template-columns: 1fr; }
+}

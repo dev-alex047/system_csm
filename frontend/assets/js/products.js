@@ -184,11 +184,28 @@
     }).catch(error => alert(error.message));
   }
 
-  function deleteProduct(prod) {
-    if (!confirm(`¿Eliminar el producto "${prod.name || ''}"?`)) return;
-    apiRequest(`products.php?id=${encodeURIComponent(prod.id)}`, 'DELETE')
-      .then(() => loadProducts()).catch(error => alert(error.message));
+  async function deleteProduct(prod) {
+  const result = await Swal.fire({
+    icon: 'warning',
+    title: '¿Eliminar producto?',
+    text: `Se eliminará "${prod.name || 'este producto'}".`,
+    showCancelButton: true,
+    confirmButtonText: 'Sí, eliminar',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#dc3545',
+    reverseButtons: true
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    await apiRequest(`products.php?id=${encodeURIComponent(prod.id)}`, 'DELETE');
+    await Swal.fire({ icon: 'success', title: 'Producto eliminado', timer: 1500, showConfirmButton: false });
+    loadProducts();
+  } catch (error) {
+    await Swal.fire({ icon: 'error', title: 'No se pudo eliminar', text: error.message });
   }
+}
 
   function renderBoxGrid(products) {
     if (!boxGrid) return;
@@ -704,36 +721,96 @@ function populateClassificationFilter(products) {
   }
 
   // ===== Buscar / Editar rápido =====
-  if (btnQuickPrice) {
-    btnQuickPrice.addEventListener('click', () => {
-      const search = prompt('Clave interna o código de barras:');
-      if (!search) return;
-      apiRequest('products.php').then(list => {
-        const p = (list || []).find(x => (x.code && x.code.toLowerCase() === search.toLowerCase()) || (x.barcode && x.barcode === search));
-        if (!p) return alert('No encontrado');
-        const newPurchase = prompt(`Precio compra actual $${formatMoney(p.purchase_price)}. Nuevo (vacío si no cambia):`);
-        const newSale = prompt(`Precio venta actual $${formatMoney(p.public_price)}. Nuevo (vacío si no cambia):`);
+async function buscarProductoPorClave(titulo) {
+  const result = await Swal.fire({
+    title: titulo,
+    input: 'text',
+    inputLabel: 'Clave interna o código de barras',
+    inputPlaceholder: 'Escribe o escanea el código',
+    showCancelButton: true,
+    confirmButtonText: 'Buscar',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#0d6a47',
+    inputValidator: value => !String(value || '').trim() ? 'Ingresa una clave o código de barras' : undefined
+  });
+
+  if (!result.isConfirmed) return null;
+
+  try {
+    const list = await apiRequest('products.php');
+    const search = result.value.trim().toLowerCase();
+    const producto = Array.isArray(list) ? list.find(p =>
+      String(p.code || '').trim().toLowerCase() === search ||
+      String(p.barcode || '').trim().toLowerCase() === search
+    ) : null;
+
+    if (!producto) await Swal.fire({ icon: 'warning', title: 'Producto no encontrado', text: 'Verifica el código e inténtalo nuevamente.', confirmButtonColor: '#0d6a47' });
+    return producto || null;
+  } catch (error) {
+    await Swal.fire({ icon: 'error', title: 'Error al buscar', text: error.message, confirmButtonColor: '#0d6a47' });
+    return null;
+  }
+}
+
+if (btnSearch) {
+  btnSearch.addEventListener('click', async () => {
+    const producto = await buscarProductoPorClave('Buscar producto');
+    if (producto) openEditModal(producto);
+  });
+}
+
+if (btnQuickPrice) {
+  btnQuickPrice.addEventListener('click', async () => {
+    const producto = await buscarProductoPorClave('Actualizar precio');
+    if (!producto) return;
+
+    const result = await Swal.fire({
+      title: 'Actualizar precios',
+      html: `
+        <div class="text-start">
+          <p class="text-body-secondary small">Ingresa únicamente los precios que deseas modificar.</p>
+          <label class="form-label">Precio de compra actual: $${formatMoney(producto.purchase_price)}</label>
+          <input id="quickPurchasePrice" class="swal2-input w-100 mx-0 mt-1 mb-3" type="text" inputmode="decimal" placeholder="Nuevo precio de compra">
+          <label class="form-label">Precio de venta actual: $${formatMoney(producto.public_price)}</label>
+          <input id="quickSalePrice" class="swal2-input w-100 mx-0 mt-1" type="text" inputmode="decimal" placeholder="Nuevo precio de venta">
+        </div>`,
+      showCancelButton: true,
+      confirmButtonText: 'Guardar cambios',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#0d6a47',
+      focusConfirm: false,
+      preConfirm: () => {
+        const compra = document.getElementById('quickPurchasePrice').value.trim();
+        const venta = document.getElementById('quickSalePrice').value.trim();
         const payload = {};
-        if (newPurchase) payload.purchase_price = parseFloat(newPurchase) || 0;
-        if (newSale) payload.public_price = parseFloat(newSale) || 0;
-        if (!Object.keys(payload).length) return;
-        apiRequest(`products.php?id=${p.id}`, 'PUT', payload).then(() => {
-          alert('Actualizado'); loadProducts();
-        });
-      });
+        const precioValido = /^\d+(?:[.,]\d{1,2})?$/;
+
+        if (!compra && !venta) {
+          Swal.showValidationMessage('Ingresa al menos un precio.');
+          return false;
+        }
+        if ((compra && !precioValido.test(compra)) || (venta && !precioValido.test(venta))) {
+          Swal.showValidationMessage('Ingresa precios válidos, con máximo dos decimales.');
+          return false;
+        }
+
+        if (compra) payload.purchase_price = parseNumber(compra);
+        if (venta) payload.public_price = parseNumber(venta);
+        return payload;
+      }
     });
-  }
-  if (btnSearch) {
-    btnSearch.addEventListener('click', () => {
-      const search = prompt('Clave interna o código de barras:');
-      if (!search) return;
-      apiRequest('products.php').then(list => {
-        const p = (list || []).find(x => (x.code && x.code.toLowerCase() === search.toLowerCase()) || (x.barcode && x.barcode === search));
-        if (!p) return alert('No encontrado');
-        openEditModal(p);
-      });
-    });
-  }
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await apiRequest(`products.php?id=${encodeURIComponent(producto.id)}`, 'PUT', result.value);
+      await Swal.fire({ icon: 'success', title: 'Precios actualizados', timer: 1600, showConfirmButton: false });
+      loadProducts();
+    } catch (error) {
+      await Swal.fire({ icon: 'error', title: 'No se pudo actualizar', text: error.message, confirmButtonColor: '#0d6a47' });
+    }
+  });
+}
 
   // ===== Inicializar =====
   if (!isAdmin) {

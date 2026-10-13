@@ -199,8 +199,7 @@
           <div class="dropdown-divider"></div>
           <a class="dropdown-item csm-admin-only" href="settings.html"><i class="bi bi-sliders" aria-hidden="true"></i>Configuración</a>
           <a class="dropdown-item csm-admin-only" href="users.html"><i class="bi bi-people" aria-hidden="true"></i>Usuarios</a>
-          <button class="dropdown-item csm-admin-only" disabled title="Pendiente de implementación"><i class="bi bi-percent" aria-hidden="true"></i>Comisiones</button>
-          <button class="dropdown-item" type="button" id="csmThemeBtn"><i class="bi bi-moon-stars" aria-hidden="true"></i><span id="csmThemeText">Modo oscuro</span></button>
+         <button class="dropdown-item csm-admin-only" type="button" id="csmOpenCommissions"><i class="bi bi-percent" aria-hidden="true"></i>Comisiones</button>          <button class="dropdown-item" type="button" id="csmThemeBtn"><i class="bi bi-moon-stars" aria-hidden="true"></i><span id="csmThemeText">Modo oscuro</span></button>
           <div class="dropdown-divider"></div>
           <button class="dropdown-item" type="button" id="csmLogoutBtn"><i class="bi bi-box-arrow-right" aria-hidden="true"></i>Cerrar sesión</button>
         </div>
@@ -209,6 +208,47 @@
       `${user.username || 'Usuario'} · ${String(user.role || 'USUARIO').toUpperCase()}`;
     if (!isAdmin) {
       header.querySelectorAll('.csm-admin-only').forEach(el => el.remove());
+    }
+
+        // Abrir el módulo de Comisiones dentro de un modal
+    const btnComisiones = document.getElementById('csmOpenCommissions');
+
+    if (btnComisiones && page === 'commissions') {
+        btnComisiones.remove();
+    } else if (btnComisiones) {
+        btnComisiones.addEventListener('click', () => {
+            let modalElement = document.getElementById('csmCommissionsModal');
+
+            if (!modalElement) {
+                document.body.insertAdjacentHTML('beforeend', `
+                    <div class="modal fade csm-commissions-window" id="csmCommissionsModal" tabindex="-1" aria-labelledby="csmCommissionsModalTitle" aria-hidden="true">
+                        <div class="modal-dialog modal-xl modal-dialog-centered modal-fullscreen-md-down">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="csmCommissionsModalTitle">
+                                        <i class="bi bi-percent me-2"></i>Comisiones
+                                    </h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                                </div>
+                                <div class="modal-body p-0">
+                                    <iframe title="Administración de tarifas de pago"></iframe>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `);
+
+                modalElement = document.getElementById('csmCommissionsModal');
+            }
+
+            const iframe = modalElement.querySelector('iframe');
+
+            if (!iframe.getAttribute('src')) {
+                iframe.src = 'comisiones.html';
+            }
+
+            bootstrap.Modal.getOrCreateInstance(modalElement).show();
+        });
     }
     const themeBtn = document.getElementById('csmThemeBtn');
     const updateThemeText = () => {

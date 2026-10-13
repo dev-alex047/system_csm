@@ -177,3 +177,30 @@
     .csm-commissions-page .csm-commissions-metric-icon { grid-row: auto; }
     .csm-commissions-page .csm-commissions-metric strong { font-size: 1.12rem; }
 }
+
+
+/* Presentación del módulo dentro del modal principal */
+.csm-commissions-page.csm-commissions-embedded {
+    min-height: 0;
+    background: var(--csm-surface) !important;
+}
+
+.csm-commissions-page.csm-commissions-embedded > .container-fluid {
+    padding: 0 !important;
+}
+
+.csm-commissions-page.csm-commissions-embedded #csmHeader {
+    display: none !important;
+}
+
+.csm-commissions-page.csm-commissions-embedded .csm-commissions-main {
+    max-width: 1160px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+@media (max-width: 767.98px) {
+    .csm-commissions-page.csm-commissions-embedded .csm-commissions-main {
+        padding: 12px;
+    }
+}

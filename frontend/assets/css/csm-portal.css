@@ -384,3 +384,54 @@ html[data-bs-theme="dark"] body.csm-portal {
     display: none;
   }
 }
+
+/* Ventana modal principal de Comisiones */
+.csm-portal .csm-commissions-window .modal-dialog {
+    max-width: min(1180px, calc(100vw - 32px));
+}
+
+.csm-portal .csm-commissions-window .modal-content {
+    background: var(--csm-surface);
+    border: 1px solid var(--csm-border);
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
+}
+
+.csm-portal .csm-commissions-window .modal-header {
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--csm-border);
+}
+
+.csm-portal .csm-commissions-window .modal-title {
+    color: var(--csm-ink);
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+
+.csm-portal .csm-commissions-window .modal-title i {
+    color: var(--csm-green);
+}
+
+.csm-portal .csm-commissions-window iframe {
+    display: block;
+    width: 100%;
+    height: min(78dvh, 780px);
+    border: 0;
+    background: var(--csm-surface);
+}
+
+@media (max-width: 767.98px) {
+    .csm-portal .csm-commissions-window .modal-dialog {
+        max-width: 100%;
+        margin: 0;
+    }
+
+    .csm-portal .csm-commissions-window .modal-content {
+        border-radius: 0;
+    }
+
+    .csm-portal .csm-commissions-window iframe {
+        height: calc(100dvh - 70px);
+    }
+}

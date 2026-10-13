@@ -30,11 +30,16 @@
             </ul>
           </div>
           <div class="dropdown" id="productOptionsMenu">
-            <button class="btn csm-inv-outline dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots" aria-hidden="true"></i> Opciones</button>
-            <ul class="dropdown-menu dropdown-menu-end">
+<button class="btn csm-inv-outline dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Acciones</button>            <ul class="dropdown-menu dropdown-menu-end">
               <li><button class="dropdown-item" type="button" id="btnQuickPrice"><i class="bi bi-tags" aria-hidden="true"></i> Actualizar precio</button></li>
               <li><button class="dropdown-item" type="button" id="btnSearchProduct"><i class="bi bi-pencil-square" aria-hidden="true"></i> Buscar para editar</button></li>
               <li><a class="dropdown-item" href="assets/plantilla_productos.csv" download><i class="bi bi-filetype-csv" aria-hidden="true"></i> Descargar plantilla CSV</a></li>
+              <li><hr class="dropdown-divider"></li>
+<li>
+  <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#inventoryFinancialSection">
+    <i class="bi bi-currency-dollar" aria-hidden="true"></i> Valor del inventario
+  </button>
+</li>
             </ul>
           </div>
           <div class="csm-inventory-view-switch" role="group" aria-label="Cambiar vista">
@@ -59,12 +64,7 @@
           </div>
         </div>
       </section>
-      <section class="csm-inventory-financial" id="inventoryFinancialSection" aria-label="Costo del inventario">
-        <button type="button" class="csm-inventory-accordion" data-bs-toggle="collapse" data-bs-target="#inventoryFinance" aria-expanded="false" aria-controls="inventoryFinance">
-          <span><i class="bi bi-currency-dollar" aria-hidden="true"></i> Valor del inventario <span class="csm-inventory-info" title="Suma del precio de compra por las unidades disponibles de cada producto"><i class="bi bi-info-circle" aria-hidden="true"></i></span></span><i class="bi bi-chevron-down csm-accordion-chevron" aria-hidden="true"></i>
-        </button>
-        <div class="collapse" id="inventoryFinance"><div class="csm-inventory-financial-body"><div><small id="costSummaryCategory">Categoría: Todas</small><strong id="costSummaryValue">$0.00</strong><span>Valor estimado a costo: precio de compra × existencias</span></div><div><small>Artículos del filtro</small><strong id="costSummaryCount">Productos registrados: 0</strong><span>El cálculo se actualiza con la búsqueda y la categoría.</span></div></div></div>
-      </section>
+    
       <section class="csm-inventory-results" aria-label="Resultados del inventario">
         <div class="csm-inventory-results-header"><div><h2>Catálogo</h2><span id="inventoryResultCount" role="status" aria-live="polite">Cargando productos...</span></div><span id="inventoryActiveFilter" class="csm-inventory-filter-badge" hidden></span></div>
         <div id="boxView"><div id="boxGrid" class="row row-cols-2 row-cols-md-3 row-cols-xl-4 row-cols-xxl-5 g-3"></div><div class="text-center mt-4"><button class="btn csm-inv-outline d-none" id="btnShowMore" type="button">Mostrar más productos <i class="bi bi-chevron-down" aria-hidden="true"></i></button></div></div>
@@ -73,6 +73,52 @@
     </main>
   </div>
   <!-- Los formularios existentes permanecen intactos para conservar sus eventos. -->
+   <div class="modal fade csm-inventory-value-modal" id="inventoryFinancialSection" tabindex="-1" aria-labelledby="inventoryValueTitle" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="d-flex align-items-center gap-3">
+          <span class="csm-inventory-heading-icon"><i class="bi bi-currency-dollar"></i></span>
+          <div>
+            <h2 class="modal-title fs-5 fw-bold" id="inventoryValueTitle">Valor del inventario</h2>
+            <small class="text-body-secondary">Resumen financiero de tus existencias</small>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="csm-inventory-financial-body">
+          <div>
+            <small id="costSummaryCategory">Categoría: Todas</small>
+            <strong id="costSummaryValue">$0.00</strong>
+            <span>Valor estimado a costo del inventario</span>
+          </div>
+          <div>
+            <small>Artículos del filtro</small>
+            <strong id="costSummaryCount">Productos registrados: 0</strong>
+            <span>Productos que coinciden con los filtros seleccionados</span>
+          </div>
+        </div>
+
+        <div class="csm-inventory-value-help mt-3">
+          <button class="btn btn-link text-decoration-none p-0 d-inline-flex align-items-center gap-2" type="button" data-bs-toggle="collapse" data-bs-target="#inventoryValueHelp" aria-expanded="false" aria-controls="inventoryValueHelp">
+            <i class="bi bi-info-circle"></i> ¿Cómo se calcula esta información?
+            <i class="bi bi-chevron-down"></i>
+          </button>
+          <div class="collapse mt-3" id="inventoryValueHelp">
+            <p class="mb-2">El valor del inventario se calcula multiplicando el precio de compra de cada producto por sus existencias actuales.</p>
+            <p class="mb-0">El resultado y el número de productos se actualizan según la categoría y la búsqueda seleccionadas. No representan ganancias ni ingresos por ventas.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn csm-inv-outline" type="button" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
   <div aria-hidden="true" class="modal fade" id="productModal" tabindex="-1">
 <div class="modal-dialog modal-lg modal-dialog-centered">
 <div class="modal-content">
@@ -214,6 +260,7 @@
   <script src="assets/js/main.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="assets/js/csm-portal.js"></script>
   <script src="assets/js/products.js"></script>
 </body>

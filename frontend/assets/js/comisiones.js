@@ -1,5 +1,9 @@
 
 document.addEventListener('DOMContentLoaded', () => {
+    if (new URLSearchParams(window.location.search).get('modal') === '1') {
+        document.body.classList.add('csm-commissions-embedded');
+    }
+
     const user = typeof requireAuth === 'function' ? requireAuth() : null;
     if (!user) return;
 
