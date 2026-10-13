@@ -221,21 +221,51 @@
       const statusText = lowStock ? 'Stock bajo' : (highStock ? 'Stock alto' : 'Disponible');
       const statusClass = lowStock ? 'low' : (highStock ? 'high' : 'normal');
       const image = safeImageSrc(prod.image_path);
+   
       const card = document.createElement('div');
-      card.className = 'col';
-      card.innerHTML = `<article class="csm-inventory-product h-100">
-        <div class="csm-inventory-product-media">
-          ${image ? `<img loading="lazy" src="${escapeHTML(image)}" alt="${escapeHTML(prod.name)}">` : '<div class="csm-inventory-product-placeholder"><i class="bi bi-box-seam" aria-hidden="true"></i></div>'}
-          ${isAdmin ? `<div class="dropdown csm-inventory-card-actions"><button class="csm-inventory-more" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Acciones de ${escapeHTML(prod.name)}" title="Acciones"><i class="bi bi-three-dots-vertical" aria-hidden="true"></i></button><ul class="dropdown-menu dropdown-menu-end"><li><button class="dropdown-item" type="button" data-action="edit"><i class="bi bi-pencil"></i> Editar</button></li><li><button class="dropdown-item" type="button" data-action="ficha"><i class="bi bi-file-earmark-text"></i> Ver ficha</button></li><li><button class="dropdown-item text-danger" type="button" data-action="delete"><i class="bi bi-trash"></i> Eliminar</button></li></ul></div>` : ''}
+card.className = 'col';
+card.innerHTML = `<article class="csm-inventory-product h-100">
+  <div class="csm-inventory-product-row">
+    <div class="csm-inventory-product-media">
+      ${image
+        ? `<img loading="lazy" src="${escapeHTML(image)}" alt="${escapeHTML(prod.name)}">`
+        : `<div class="csm-inventory-product-placeholder"><i class="bi bi-box-seam" aria-hidden="true"></i></div>`}
+    </div>
+
+    <div class="csm-inventory-product-content">
+      ${isAdmin ? `<div class="dropdown csm-inventory-card-actions">
+        <button class="csm-inventory-more" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Acciones de ${escapeHTML(prod.name)}" title="Acciones">
+          <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><button class="dropdown-item" type="button" data-action="edit"><i class="bi bi-pencil"></i> Editar</button></li>
+          <li><button class="dropdown-item" type="button" data-action="ficha"><i class="bi bi-file-earmark-text"></i> Ver ficha</button></li>
+          <li><hr class="dropdown-divider"></li>
+          <li><button class="dropdown-item text-danger" type="button" data-action="delete"><i class="bi bi-trash"></i> Eliminar</button></li>
+        </ul>
+      </div>` : ''}
+
+      <div class="csm-inventory-product-top">
+        <span class="csm-inventory-product-category">${escapeHTML(prod.classification || 'Sin categoría')}</span>
+        <h3 class="csm-inventory-product-name" title="${escapeHTML(prod.name)}">${escapeHTML(prod.name || 'Sin nombre')}</h3>
+<div class="csm-inventory-product-code" title="${escapeHTML(prod.code || prod.barcode || 'Sin código')}">Código: ${escapeHTML(prod.code || prod.barcode || 'Sin código')}</div>      </div>
+
+      <div class="csm-inventory-product-meta">
+        <div class="csm-inventory-product-price">
+          <small>Precio de venta</small>
+          <strong>$${formatMoney(prod.public_price)}</strong>
         </div>
-        <div class="csm-inventory-product-content">
-          <span class="csm-inventory-product-category">${escapeHTML(prod.classification || 'Sin categoría')}</span>
-          <h3 class="csm-inventory-product-name" title="${escapeHTML(prod.name)}">${escapeHTML(prod.name || 'Sin nombre')}</h3>
-          <div class="csm-inventory-product-code">Código: ${escapeHTML(prod.code || prod.barcode || 'Sin código')}</div>
-          <div class="csm-inventory-product-bottom"><div><small>Precio de venta</small><strong>$${formatMoney(prod.public_price)}</strong></div><span class="csm-inventory-stock ${statusClass}" title="${statusText}"><i class="bi bi-box" aria-hidden="true"></i> ${stock}</span></div>
+
+        <div class="csm-inventory-product-stock-group">
+          <span class="csm-inventory-stock ${statusClass}" title="${statusText}">
+            <i class="bi bi-box" aria-hidden="true"></i> ${stock}
+          </span>
           <span class="csm-inventory-stock-caption">${statusText}</span>
         </div>
-      </article>`;
+      </div>
+    </div>
+  </div>
+</article>`;
       card.addEventListener('click', event => {
         const action = event.target.closest('[data-action]')?.dataset.action;
         if (action === 'edit' && isAdmin) openEditModal(prod);

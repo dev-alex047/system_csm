@@ -135,15 +135,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Actualizar indicadores
-    function actualizarResumen() {
-        const total = comisiones.length;
-        const promedioPct = total ? comisiones.reduce((suma, item) => suma + Number(item.porcentaje || 0), 0) / total : 0;
-        const promedioMonto = total ? comisiones.reduce((suma, item) => suma + Number(item.monto_extra || 0), 0) / total : 0;
-
-        document.getElementById('resumenTotal').textContent = String(total);
-        document.getElementById('resumenPorcentaje').textContent = porcentaje(promedioPct);
-        document.getElementById('resumenMonto').textContent = moneda(promedioMonto);
-        document.getElementById('contadorTarifas').textContent = String(total);
+        function actualizarResumen() {
+        document.getElementById('contadorTarifas').textContent = String(comisiones.length);
     }
 
     // Crear botones de edición y eliminación

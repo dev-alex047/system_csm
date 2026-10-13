@@ -204,3 +204,51 @@
         padding: 12px;
     }
 }
+
+/* Comisiones: contenido limpio dentro de la ventana modal */
+.csm-commissions-page.csm-commissions-embedded .csm-commissions-main {
+    max-width: 100%;
+    margin: 0;
+    padding: 20px 24px;
+}
+
+.csm-commissions-page .csm-commissions-panel {
+    border-radius: 16px;
+}
+
+.csm-commissions-page .csm-commissions-panel-top {
+    align-items: center;
+}
+
+.csm-commissions-page .csm-commissions-panel-buttons {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.csm-commissions-page .csm-commissions-panel-buttons .btn {
+    flex-shrink: 0;
+}
+
+@media (max-width: 575.98px) {
+    .csm-commissions-page.csm-commissions-embedded .csm-commissions-main {
+        padding: 12px;
+    }
+
+    .csm-commissions-page .csm-commissions-panel-top {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .csm-commissions-page .csm-commissions-panel-buttons {
+        justify-content: space-between;
+    }
+
+    .csm-commissions-page .csm-commissions-panel-buttons #btnNuevaComision {
+        width: auto;
+        flex: 1;
+    }
+}

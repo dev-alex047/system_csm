@@ -244,7 +244,7 @@
             const iframe = modalElement.querySelector('iframe');
 
             if (!iframe.getAttribute('src')) {
-                iframe.src = 'comisiones.html';
+                iframe.src = 'comisiones.html?modal=1';
             }
 
             bootstrap.Modal.getOrCreateInstance(modalElement).show();
