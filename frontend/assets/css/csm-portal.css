@@ -345,3 +345,42 @@ html[data-bs-theme="dark"] body.csm-portal {
     align-items: center;
     gap: 10px;
 }
+
+
+/* Dashboard: dos módulos por fila en dispositivos móviles */
+@media (max-width: 575.98px) {
+  .csm-portal .csm-main-dashboard {
+    padding: 24px 0;
+  }
+
+  .csm-portal #csmModuleGrid {
+    --bs-gutter-x: 10px;
+    --bs-gutter-y: 10px;
+  }
+
+  .csm-portal .csm-tile {
+    min-height: 155px;
+    padding: 18px 10px;
+    border-radius: 17px;
+  }
+
+  .csm-portal .csm-tile-icon {
+    width: 52px;
+    height: 52px;
+    font-size: 1.45rem;
+    border-radius: 15px;
+    margin-bottom: 12px;
+  }
+
+  .csm-portal .csm-tile-title {
+    font-size: 1rem;
+    line-height: 1.25;
+    font-weight: 700;
+    margin-bottom: 0;
+    overflow-wrap: break-word;
+  }
+
+  .csm-portal .csm-tile-desc {
+    display: none;
+  }
+}

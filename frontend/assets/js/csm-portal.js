@@ -89,7 +89,7 @@
       Object.entries(modules).forEach(([key, item]) => {
         if (item.adminOnly && !isAdmin) return;
         const col = document.createElement('div');
-        col.className = 'col-12 col-md-6 col-lg-4';
+        col.className = 'col-6 col-md-6 col-lg-4';
         col.innerHTML = `
           <a class="csm-tile" href="${key === 'ventas' ? 'sales.html' : `modulo.html?modulo=${key}`}">
             <span class="csm-tile-icon"><i class="bi ${item.icon}" aria-hidden="true"></i></span>
