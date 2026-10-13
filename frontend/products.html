@@ -1,378 +1,220 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Productos</title>
-
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Productos e inventario | Sistema CSM</title>
+  <script>try { document.documentElement.setAttribute('data-bs-theme', localStorage.getItem('theme') === 'dark' ? 'dark' : 'light'); } catch(e) { document.documentElement.setAttribute('data-bs-theme', 'light'); }</script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <link rel="stylesheet" href="assets/css/theme-global.css">
   <link rel="stylesheet" href="assets/css/modules-styles.css">
-
-  <style>
-    html, body { height: 100%; }
-
-    body {
-      overflow: hidden;
-    }
-
-    .navbar {
-      position: sticky;
-      top: 0;
-      z-index: 2000;
-    }
-
-    .container.my-4 {
-      height: calc(100vh - 56px);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    .table-wrapper {
-      flex: 1;
-      overflow-y: auto !important;
-      overflow-x: auto !important;
-      border-radius: 10px;
-      max-height: calc(100vh - 56px - 140px);
-      scrollbar-width: auto;
-    }
-
-    #productTable {
-      border-collapse: separate;
-      border-spacing: 0;
-      width: 100%;
-    }
-
-    #productTable thead th {
-      position: sticky;
-      top: 0;
-      z-index: 5;
-    }
-
-    #productTable thead th,
-    #productTable tbody td {
-      border-right: 1px solid rgba(255, 255, 255, 0.12);
-    }
-
-    #productTable thead th:last-child,
-    #productTable tbody td:last-child {
-      border-right: none;
-    }
-
-    #productTable thead th {
-      border-bottom: 2px solid rgba(255, 255, 255, 0.18);
-    }
-
-    #productTable tbody tr td {
-      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-    }
-
-    #productTable tbody tr:last-child td {
-      border-bottom: none;
-    }
-
-    #productTable td.actions-cell {
-      background-color: inherit !important;
-      background: inherit !important;
-      display: table-cell !important;
-      vertical-align: middle;
-    }
-
-    #productTable.table-striped > tbody > tr:nth-of-type(odd) > td.actions-cell,
-    #productTable.table-striped > tbody > tr:nth-of-type(even) > td.actions-cell {
-      background-color: inherit !important;
-      background: inherit !important;
-    }
-
-    #productTable td.actions-cell button {
-      display: block;
-      width: 100%;
-      margin-bottom: 6px;
-    }
-    #productTable td.actions-cell button:last-child {
-      margin-bottom: 0;
-    }
-  </style>
+  <link rel="stylesheet" href="assets/css/csm-portal.css">
+  <link rel="stylesheet" href="assets/css/csm-inventory.css">
 </head>
-
-<body>
-  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-    <div class="container-fluid">
-      <a class="navbar-brand" href="dashboard.html">
-        <i class="bi bi-boxes me-2"></i>SISTEMA CSM
-      </a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-          <li class="nav-item"><a class="nav-link active" href="products.html">Productos</a></li>
-          <li class="nav-item"><a class="nav-link" href="suppliers.html">Proveedores</a></li>
-          <li class="nav-item"><a class="nav-link" href="quotes.html">Cotizaciones</a></li>
-          <li class="nav-item"><a class="nav-link" href="sales.html">Ventas</a></li>
-          <li class="nav-item"><a class="nav-link" href="reports.html">Reportes</a></li>
-          <li class="nav-item" id="nav-accounting" style="display:none;"><a class="nav-link" href="accounting.html">Contabilidad</a></li>
-          <li class="nav-item"><a class="nav-link" href="fuel.html">Combustible</a></li>
-          <li class="nav-item" id="nav-users" style="display:none;"><a class="nav-link" href="users.html">Usuarios</a></li>
-        </ul>
-
-        <span class="navbar-text me-3" id="nav-user"></span>
-        <button class="btn btn-outline-light me-2" id="themeToggleBtn">Modo oscuro</button>
-        <button class="btn btn-outline-light" onclick="logout()">Salir</button>
-      </div>
-    </div>
-  </nav>
-
-  <div class="container my-4">
-    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
-      <div class="d-flex align-items-center mb-2 flex-wrap">
-        <h3 class="me-3">Productos</h3>
-        <button class="btn btn-sm btn-outline-light me-2" id="btnViewTable">Vista Tabla</button>
-        <button class="btn btn-sm btn-outline-light" id="btnViewBoxes">Vista Cajas</button>
-      </div>
-
-      <div class="d-flex align-items-center mb-2 flex-wrap">
-        <label for="classificationFilter" class="me-2 mb-0">Clasificación:</label>
-        <select id="classificationFilter" class="form-select form-select-sm me-3" style="width:auto;min-width:180px;">
-          <option value="">Todas</option>
-          <option value="FERRETERIA">Ferretería</option>
-          <option value="ACEROS">Aceros</option>
-          <option value="MATERIALES PARA CONSTRUCCION">Materiales para construcción</option>
-          <option value="RENTA DE MAQUINARIA">Renta de maquinaria</option>
-          <option value="COMBUSTIBLE">Combustible</option>
-          <option value="PVC">PVC</option>
-          <option value="TINACOS">TINACOS</option>
-          <option value="LAMINAS ZINTRO">LÁMINAS ZINTRO</option>
-          <option value="LLAVES MECANICO">LLAVES MECÁNICO</option>
-          <option value="CONEXIONES DE PLASTICO">CONEXIONES DE PLÁSTICO</option>
-          <option value="CONEXIONES DE GAS">CONEXIONES DE GAS</option>
-          <option value="JARDINERIA">JARDINERÍA</option>
-          <option value="MADERA">MADERA</option>
-        </select>
-      </div>
-
-      <div class="btn-group">
-        <button class="btn btn-success" id="btnAddProduct">Nuevo</button>
-        <button class="btn btn-outline-primary" id="btnImport">Importar CSV</button>
-        <a class="btn btn-outline-secondary" href="assets/plantilla_productos.csv" download>Descargar plantilla</a>
-        <button class="btn btn-outline-warning" id="btnQuickPrice">Actualizar precio</button>
-        <button class="btn btn-outline-info" id="btnSearchProduct">Buscar producto</button>
-      </div>
-
-      <input type="file" id="importFileInput" accept=".csv" style="display:none">
-    </div>
-
-    <div id="tableView">
-      <div class="table-wrapper">
-        <table class="table table-striped" id="productTable">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>FECHA DE COMPRA</th>
-              <th>CLAVE O CODIGO</th>
-              <th>NOMBRE DEL PRODUCTO</th>
-              <th>DESCRIPCION DEL PRODUCTO</th>
-              <th>UNIDAD</th>
-              <th>PRECIO DE COMPRA</th>
-              <th>PRECIO MINIMO DE VENTA</th>
-              <th>MARGEN DE GANANCIA</th>
-              <th>PRECIO DE VENTA</th>
-              <th>PRECIO DE COMPETENCIA</th>
-              <th>IMAGEN</th>
-              <th>STOCK EXISTENTE</th>
-              <th>ACCIONES</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-
-    <div id="boxView" class="d-none" style="height: calc(100vh - 56px - 112px); overflow: hidden;">
-      <div class="row h-100">
-        <div class="col-12 col-lg-3 h-100" style="overflow-y: auto;">
-          <div class="card mb-3">
-            <div class="card-body">
-              <h5 class="card-title">Categorías</h5>
-              <input id="boxSearch" class="form-control form-control-sm mb-2" placeholder="Buscar..." type="text">
-              <div id="boxCategories" class="list-group" style="max-height: 55vh; overflow-y: auto;"></div>
+<body class="csm-portal csm-inventory-workspace" data-csm-page="products">
+  <div class="container-fluid px-3 px-md-4 py-3">
+    <header id="csmHeader"></header>
+    <main class="csm-inventory-main" id="mainContent">
+      <section class="csm-inventory-toolbar" aria-label="Catálogo de productos">
+        <div class="csm-inventory-heading">
+          <span class="csm-inventory-heading-icon"><i class="bi bi-boxes" aria-hidden="true"></i></span>
+          <div><span class="csm-inventory-eyebrow">ALMACÉN</span><h1>Productos e inventario</h1><p>Administra productos, precios y existencias.</p></div>
+        </div>
+        <div class="csm-inventory-actions">
+          <div class="btn-group" id="productCreateMenu">
+            <button class="btn csm-inv-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-plus-lg" aria-hidden="true"></i> Agregar</button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><button class="dropdown-item" id="btnAddProduct" type="button"><i class="bi bi-box-seam" aria-hidden="true"></i> Nuevo producto</button></li>
+              <li><button class="dropdown-item" id="btnImport" type="button"><i class="bi bi-file-earmark-arrow-up" aria-hidden="true"></i> Importar productos CSV</button></li>
+            </ul>
+          </div>
+          <div class="dropdown" id="productOptionsMenu">
+            <button class="btn csm-inv-outline dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots" aria-hidden="true"></i> Opciones</button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><button class="dropdown-item" type="button" id="btnQuickPrice"><i class="bi bi-tags" aria-hidden="true"></i> Actualizar precio</button></li>
+              <li><button class="dropdown-item" type="button" id="btnSearchProduct"><i class="bi bi-pencil-square" aria-hidden="true"></i> Buscar para editar</button></li>
+              <li><a class="dropdown-item" href="assets/plantilla_productos.csv" download><i class="bi bi-filetype-csv" aria-hidden="true"></i> Descargar plantilla CSV</a></li>
+            </ul>
+          </div>
+          <div class="csm-inventory-view-switch" role="group" aria-label="Cambiar vista">
+            <button class="btn" type="button" id="btnViewBoxes" aria-label="Vista tarjetas" title="Vista tarjetas"><i class="bi bi-grid-3x3-gap" aria-hidden="true"></i></button>
+            <button class="btn" type="button" id="btnViewTable" aria-label="Vista tabla" title="Vista tabla"><i class="bi bi-list-ul" aria-hidden="true"></i></button>
+          </div>
+          <input type="file" id="importFileInput" accept=".csv,text/csv" hidden>
+        </div>
+      </section>
+      <section class="csm-inventory-filters" aria-label="Buscar y filtrar productos">
+        <button type="button" class="csm-inventory-accordion" data-bs-toggle="collapse" data-bs-target="#inventoryFilters" aria-expanded="false" aria-controls="inventoryFilters">
+          <span><i class="bi bi-funnel" aria-hidden="true"></i> Buscar y filtrar productos</span><i class="bi bi-chevron-down csm-accordion-chevron" aria-hidden="true"></i>
+        </button>
+        <div class="collapse" id="inventoryFilters">
+          <div class="csm-inventory-filter-body">
+            <div class="row g-3 align-items-end">
+              <div class="col-12 col-lg-8"><label class="form-label" for="boxSearch">Nombre, código, barras o descripción</label><div class="input-group"><span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span><input id="boxSearch" class="form-control" type="search" placeholder="Buscar productos..." autocomplete="off"></div></div>
+              <div class="col-12 col-lg-4"><label class="form-label" for="classificationFilter">Clasificación</label><select class="form-select" id="classificationFilter"><option value="">Todas las categorías</option></select></div>
             </div>
-          </div>
-          <div class="card" id="costSummaryCard" style="position: sticky; top: 1rem;">
-            <div class="card-body">
-              <h6 class="card-title">Costo total stock</h6>
-              <p class="card-text mb-1" id="costSummaryCategory"><small class="text-muted">Categoría: Todas</small></p>
-              <p class="card-text mb-0" id="costSummaryValue">$0.00</p>
-              <small class="text-muted">(compra × stock)</small>
-              <hr>
-              <p class="card-text mb-0" id="costSummaryCount">Productos registrados: 0</p>
-              <small class="text-muted">(filtrado por categoría/búsqueda)</small>
-            </div>
+            <div class="csm-inventory-category-wrap"><span class="csm-inventory-filter-caption">Categorías</span><div id="boxCategories" class="csm-inventory-categories" role="group" aria-label="Filtrar por categoría"></div></div>
+            <div class="csm-inventory-filter-footer"><button class="btn csm-inv-outline btn-sm" id="btnResetFilters" type="button"><i class="bi bi-x-circle" aria-hidden="true"></i> Limpiar filtros</button></div>
           </div>
         </div>
-        <div class="col-12 col-lg-9 h-100" style="overflow-y: auto;">
-          <div id="boxGrid" class="row row-cols-1 row-cols-sm-2 row-cols-md-2 row-cols-lg-3 g-3 p-2"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="modal fade" id="productModal" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="productModalLabel">Nuevo producto</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
-          <div class="modal-body">
-            <form id="productForm">
-              <input type="hidden" id="productId">
-              <input type="hidden" id="productImagePath">
-
-              <div class="row g-3">
-                <div class="col-md-4">
-                  <label class="form-label">Clave / Código</label>
-                  <input id="productCode" class="form-control" type="text">
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label">Código de barras</label>
-                  <input id="productBarcode" class="form-control" type="text">
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label">Nombre</label>
-                  <input id="productName" class="form-control" type="text" required>
-                </div>
-
-                <div class="col-12">
-                  <label class="form-label">Descripción</label>
-                  <textarea id="productDescription" class="form-control" rows="2"></textarea>
-                </div>
-
-                <div class="col-md-3">
-                  <label class="form-label">Unidad</label>
-                  <input id="productUnit" class="form-control" type="text">
-                </div>
-                <div class="col-md-3">
-                  <label class="form-label">Clasificación</label>
-                  <select id="productClassification" class="form-select">
-                    <option value="FERRETERIA">Ferretería</option>
-                    <option value="ACEROS">Aceros</option>
-                    <option value="MATERIALES PARA CONSTRUCCION">Materiales para construcción</option>
-                    <option value="RENTA DE MAQUINARIA">Renta de maquinaria</option>
-                    <option value="COMBUSTIBLE">Combustible</option>
-                    <option value="PVC">PVC</option>
-                    <option value="TINACOS">TINACOS</option>
-                    <option value="LAMINAS ZINTRO">LÁMINAS ZINTRO</option>
-                    <option value="LLAVES MECANICO">LLAVES MECÁNICO</option>
-                    <option value="CONEXIONES DE PLASTICO">CONEXIONES DE PLÁSTICO</option>
-                    <option value="CONEXIONES DE GAS">CONEXIONES DE GAS</option>
-                    <option value="JARDINERIA">JARDINERÍA</option>
-                    <option value="MADERA">MADERA</option>
-                  </select>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label">Proveedor</label>
-                  <select id="productSupplier" class="form-select">
-                    <option value="">Seleccione proveedor</option>
-                  </select>
-                </div>
-
-                <div class="col-md-3">
-                  <label class="form-label">Última compra</label>
-                  <input id="lastPurchase" type="date" class="form-control">
-                </div>
-                <div class="col-md-3">
-                  <label class="form-label">Stock</label>
-                  <input id="stock" type="number" step="1" class="form-control">
-                </div>
-                <div class="col-md-3">
-                  <label class="form-label">Stock mínimo</label>
-                  <input id="minStock" type="number" step="1" class="form-control">
-                </div>
-                <div class="col-md-3">
-                  <label class="form-label">Stock máximo</label>
-                  <input id="maxStock" type="number" step="1" class="form-control">
-                </div>
-
-                <div class="col-md-3">
-                  <label class="form-label">Precio compra</label>
-                  <input id="purchasePrice" class="form-control" type="text">
-                </div>
-                <div class="col-md-3">
-                  <label class="form-label">Precio mínimo</label>
-                  <input id="minPrice" class="form-control" type="text">
-                </div>
-                <div class="col-md-3">
-                  <label class="form-label">Margen (%)</label>
-                  <input id="profitMargin" class="form-control" type="text">
-                </div>
-                <div class="col-md-3">
-                  <label class="form-label">Precio público</label>
-                  <input id="publicPrice" class="form-control" type="text">
-                </div>
-
-                <div class="col-md-4">
-                  <label class="form-label">Precio competencia</label>
-                  <input id="competitorPrice" class="form-control" type="text">
-                </div>
-
-                <div class="col-md-8 d-flex align-items-end">
-                  <div class="me-3">
-                    <input id="fileUploadHidden" type="file" accept="image/*" style="display:none">
-                    <label id="btnUploadLabel" class="btn btn-outline-secondary me-2" for="fileUploadHidden">Subir imagen</label>
-                    <button type="button" class="btn btn-outline-secondary me-2" id="btnCaptureImage">Tomar foto</button>
-                    <button type="button" class="btn btn-outline-danger me-2 d-none" id="btnClearImage">Quitar</button>
-                  </div>
-                  <div>
-                    <img id="productImagePreview" src="" alt="Vista" class="img-thumbnail d-none" style="max-height:80px;">
-                  </div>
-                </div>
-
-              </div>
-
-              <div class="mt-3 text-end">
-                <button type="submit" class="btn btn-primary">Guardar</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="modal fade" id="cameraModal" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-md modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Tomar foto</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
-          <div class="modal-body">
-            <div class="video-holder">
-              <video id="cameraVideo" autoplay playsinline></video>
-              <div class="snap-overlay">
-                <button class="btn btn-success" id="btnTakeSnapshot" type="button">
-                  <i class="bi bi-camera"></i> Capturar
-                </button>
-              </div>
-            </div>
-            <canvas id="cameraCanvas" class="d-none"></canvas>
-          </div>
-          <div class="modal-footer">
-            <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-            <button class="btn btn-primary" id="btnUseSnapshot" type="button" disabled>Usar foto</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
+      </section>
+      <section class="csm-inventory-financial" id="inventoryFinancialSection" aria-label="Costo del inventario">
+        <button type="button" class="csm-inventory-accordion" data-bs-toggle="collapse" data-bs-target="#inventoryFinance" aria-expanded="false" aria-controls="inventoryFinance">
+          <span><i class="bi bi-currency-dollar" aria-hidden="true"></i> Valor del inventario <span class="csm-inventory-info" title="Suma del precio de compra por las unidades disponibles de cada producto"><i class="bi bi-info-circle" aria-hidden="true"></i></span></span><i class="bi bi-chevron-down csm-accordion-chevron" aria-hidden="true"></i>
+        </button>
+        <div class="collapse" id="inventoryFinance"><div class="csm-inventory-financial-body"><div><small id="costSummaryCategory">Categoría: Todas</small><strong id="costSummaryValue">$0.00</strong><span>Valor estimado a costo: precio de compra × existencias</span></div><div><small>Artículos del filtro</small><strong id="costSummaryCount">Productos registrados: 0</strong><span>El cálculo se actualiza con la búsqueda y la categoría.</span></div></div></div>
+      </section>
+      <section class="csm-inventory-results" aria-label="Resultados del inventario">
+        <div class="csm-inventory-results-header"><div><h2>Catálogo</h2><span id="inventoryResultCount" role="status" aria-live="polite">Cargando productos...</span></div><span id="inventoryActiveFilter" class="csm-inventory-filter-badge" hidden></span></div>
+        <div id="boxView"><div id="boxGrid" class="row row-cols-2 row-cols-md-3 row-cols-xl-4 row-cols-xxl-5 g-3"></div><div class="text-center mt-4"><button class="btn csm-inv-outline d-none" id="btnShowMore" type="button">Mostrar más productos <i class="bi bi-chevron-down" aria-hidden="true"></i></button></div></div>
+        <div id="tableView" class="d-none"><div class="csm-inventory-table-wrap"><table id="productTable" class="table align-middle mb-0"><thead><tr><th>ID</th><th>FECHA DE COMPRA</th><th>CLAVE O CÓDIGO</th><th>PRODUCTO</th><th>DESCRIPCIÓN</th><th>UNIDAD</th><th>PRECIO DE COMPRA</th><th>PRECIO MÍNIMO</th><th>MARGEN</th><th>PRECIO DE VENTA</th><th>COMPETENCIA</th><th>IMAGEN</th><th>STOCK</th><th>ACCIONES</th></tr></thead><tbody></tbody></table></div></div>
+      </section>
+    </main>
   </div>
+  <!-- Los formularios existentes permanecen intactos para conservar sus eventos. -->
+  <div aria-hidden="true" class="modal fade" id="productModal" tabindex="-1">
+<div class="modal-dialog modal-lg modal-dialog-centered">
+<div class="modal-content">
+<div class="modal-header">
+<h5 class="modal-title" id="productModalLabel">Nuevo producto</h5>
+<button class="btn-close" data-bs-dismiss="modal" type="button"></button>
+</div>
+<div class="modal-body">
+<form id="productForm">
+<input id="productId" type="hidden"/>
+<input id="productImagePath" type="hidden"/>
+<div class="row g-3">
+<div class="col-md-4">
+<label class="form-label">Clave / Código</label>
+<input class="form-control" id="productCode" type="text"/>
+</div>
+<div class="col-md-4">
+<label class="form-label">Código de barras</label>
+<input class="form-control" id="productBarcode" type="text"/>
+</div>
+<div class="col-md-4">
+<label class="form-label">Nombre</label>
+<input class="form-control" id="productName" required="" type="text"/>
+</div>
+<div class="col-12">
+<label class="form-label">Descripción</label>
+<textarea class="form-control" id="productDescription" rows="2"></textarea>
+</div>
+<div class="col-md-3">
+<label class="form-label">Unidad</label>
+<input class="form-control" id="productUnit" type="text"/>
+</div>
+<div class="col-md-3">
+<label class="form-label">Clasificación</label>
+<select class="form-select" id="productClassification">
+<option value="FERRETERIA">Ferretería</option>
+<option value="ACEROS">Aceros</option>
+<option value="MATERIALES PARA CONSTRUCCION">Materiales para construcción</option>
+<option value="RENTA DE MAQUINARIA">Renta de maquinaria</option>
+<option value="COMBUSTIBLE">Combustible</option>
+<option value="PVC">PVC</option>
+<option value="TINACOS">TINACOS</option>
+<option value="LAMINAS ZINTRO">LÁMINAS ZINTRO</option>
+<option value="LLAVES MECANICO">LLAVES MECÁNICO</option>
+<option value="CONEXIONES DE PLASTICO">CONEXIONES DE PLÁSTICO</option>
+<option value="CONEXIONES DE GAS">CONEXIONES DE GAS</option>
+<option value="JARDINERIA">JARDINERÍA</option>
+<option value="MADERA">MADERA</option>
+</select>
+</div>
+<div class="col-md-6">
+<label class="form-label">Proveedor</label>
+<select class="form-select" id="productSupplier">
+<option value="">Seleccione proveedor</option>
+</select>
+</div>
+<div class="col-md-3">
+<label class="form-label">Última compra</label>
+<input class="form-control" id="lastPurchase" type="date"/>
+</div>
+<div class="col-md-3">
+<label class="form-label">Stock</label>
+<input class="form-control" id="stock" step="1" type="number"/>
+</div>
+<div class="col-md-3">
+<label class="form-label">Stock mínimo</label>
+<input class="form-control" id="minStock" step="1" type="number"/>
+</div>
+<div class="col-md-3">
+<label class="form-label">Stock máximo</label>
+<input class="form-control" id="maxStock" step="1" type="number"/>
+</div>
+<div class="col-md-3">
+<label class="form-label">Precio compra</label>
+<input class="form-control" id="purchasePrice" type="text"/>
+</div>
+<div class="col-md-3">
+<label class="form-label">Precio mínimo</label>
+<input class="form-control" id="minPrice" type="text"/>
+</div>
+<div class="col-md-3">
+<label class="form-label">Margen (%)</label>
+<input class="form-control" id="profitMargin" type="text"/>
+</div>
+<div class="col-md-3">
+<label class="form-label">Precio público</label>
+<input class="form-control" id="publicPrice" type="text"/>
+</div>
+<div class="col-md-4">
+<label class="form-label">Precio competencia</label>
+<input class="form-control" id="competitorPrice" type="text"/>
+</div>
+<div class="col-md-8 d-flex align-items-end">
+<div class="me-3">
+<input accept="image/*" id="fileUploadHidden" style="display:none" type="file"/>
+<label class="btn btn-outline-secondary me-2" for="fileUploadHidden" id="btnUploadLabel">Subir imagen</label>
+<button class="btn btn-outline-secondary me-2" id="btnCaptureImage" type="button">Tomar foto</button>
+<button class="btn btn-outline-danger me-2 d-none" id="btnClearImage" type="button">Quitar</button>
+</div>
+<div>
+<img alt="Vista" class="img-thumbnail d-none" id="productImagePreview" src="" style="max-height:80px;"/>
+</div>
+</div>
+</div>
+<div class="mt-3 text-end">
+<button class="btn btn-primary" type="submit">Guardar</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+</div>
+<div aria-hidden="true" class="modal fade" id="cameraModal" tabindex="-1">
+<div class="modal-dialog modal-md modal-dialog-centered">
+<div class="modal-content">
+<div class="modal-header">
+<h5 class="modal-title">Tomar foto</h5>
+<button class="btn-close" data-bs-dismiss="modal" type="button"></button>
+</div>
+<div class="modal-body">
+<div class="video-holder">
+<video autoplay="" id="cameraVideo" playsinline=""></video>
+<div class="snap-overlay">
+<button class="btn btn-success" id="btnTakeSnapshot" type="button">
+<i class="bi bi-camera"></i> Capturar
 
+                </button>
+</div>
+</div>
+<canvas class="d-none" id="cameraCanvas"></canvas>
+</div>
+<div class="modal-footer">
+<button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+<button class="btn btn-primary" disabled="" id="btnUseSnapshot" type="button">Usar foto</button>
+</div>
+</div>
+</div>
+</div>
   <script src="assets/js/main.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="assets/js/theme-handler.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+  <script src="assets/js/csm-portal.js"></script>
   <script src="assets/js/products.js"></script>
 </body>
 </html>

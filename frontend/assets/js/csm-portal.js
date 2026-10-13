@@ -1,4 +1,3 @@
-
 (() => {
   const modules = {
     ventas: {
@@ -54,7 +53,6 @@
       ]
     }
   };
-
   document.addEventListener('DOMContentLoaded', () => {
     let user;
     try {
@@ -65,24 +63,19 @@
       return;
     }
     if (!user) return;
-
     const isAdmin = String(user.role || '').toUpperCase() === 'ADMIN';
     const page = document.body.dataset.csmPage;
     const moduleKey = new URLSearchParams(location.search).get('modulo');
     const section = page === 'module' ? modules[moduleKey] : null;
-
-    if (page === 'module' && moduleKey === 'ventas') {
-      location.replace('sales.html');
+    if (page === 'module' && (moduleKey === 'ventas' || moduleKey === 'almacen')) {
+      location.replace(moduleKey === 'ventas' ? 'sales.html' : 'products.html');
       return;
     }
-
     if (page === 'module' && (!section || (section.adminOnly && !isAdmin))) {
       location.replace('dashboard.html');
       return;
     }
-
-    renderHeader((page === 'sales' || page === 'quotes') ? 'Ventas' : (section ? section.title : 'Sistema CSM'), user, isAdmin, page);
-
+    renderHeader((page === 'sales' || page === 'quotes') ? 'Ventas' : (page === 'products' ? 'Almacén' : (section ? section.title : 'Sistema CSM')), user, isAdmin, page);
     if (page === 'dashboard') {
       document.title = 'Inicio | Sistema CSM';
       const grid = document.getElementById('csmModuleGrid');
@@ -91,7 +84,7 @@
         const col = document.createElement('div');
         col.className = 'col-6 col-md-6 col-lg-4';
         col.innerHTML = `
-          <a class="csm-tile" href="${key === 'ventas' ? 'sales.html' : `modulo.html?modulo=${key}`}">
+          <a class="csm-tile" href="${key === 'ventas' ? 'sales.html' : (key === 'almacen' ? 'products.html' : `modulo.html?modulo=${key}`)}">
             <span class="csm-tile-icon"><i class="bi ${item.icon}" aria-hidden="true"></i></span>
             <h2 class="csm-tile-title">${item.title}</h2>
             <span class="csm-tile-desc">${item.description}</span>
@@ -99,7 +92,21 @@
         grid.appendChild(col);
       });
     }
-
+    // Navegación de Almacén: se renderiza dentro del mismo encabezado que Ventas.
+    if (page === 'products') {
+      document.title = 'Productos e inventario | Sistema CSM';
+      const nav = document.getElementById('csmSubnav');
+      if (nav) nav.innerHTML = `
+        <li class="nav-item"><a class="nav-link active" aria-current="page" href="products.html"><i class="bi bi-boxes" aria-hidden="true"></i>Productos e inventario</a></li>
+        <li class="nav-item"><button type="button" class="nav-link" id="csmOpenPrices"><i class="bi bi-tags" aria-hidden="true"></i>Actualizar precios</button></li>
+        <li class="nav-item"><button type="button" class="nav-link" disabled title="Próximamente"><i class="bi bi-arrow-left-right" aria-hidden="true"></i>Movimientos</button></li>
+        <li class="nav-item"><button type="button" class="nav-link" disabled title="Próximamente"><i class="bi bi-arrow-down-up" aria-hidden="true"></i>Traspasos y mermas</button></li>`;
+      const prices = document.getElementById('csmOpenPrices');
+      if (prices) {
+        if (!isAdmin) prices.disabled = true;
+        prices.addEventListener('click', () => document.getElementById('btnQuickPrice')?.click());
+      }
+    }
     // Navegación de Ventas COMPARTIDA: en el header, nunca debajo.
     // Es la misma en Ventas, Cotizaciones y futuros submódulos.
     if (page === 'sales' || page === 'quotes') {
@@ -129,16 +136,13 @@
         }, { once: true });
       }
     }
-
     if (page === 'module') {
       document.title = `${section.title} | Sistema CSM`;
       document.getElementById('csmModuleTitle').textContent = section.title;
       document.getElementById('csmModuleDescription').textContent = section.description;
-
       const pills = document.getElementById('csmSubnav');
       const cards = document.getElementById('csmSubmoduleGrid');
       pills.innerHTML = '<li class="nav-item"><a class="nav-link active" href="#mainContent" aria-current="page"><i class="bi bi-grid-1x2" aria-hidden="true"></i>Resumen</a></li>';
-
       section.items.forEach(item => {
         const li = document.createElement('li');
         li.className = 'nav-item';
@@ -146,7 +150,6 @@
           ? `<a class="nav-link" href="${item.href}"><i class="bi ${item.icon}" aria-hidden="true"></i>${item.title}</a>`
           : `<button class="nav-link" type="button" disabled title="Próximamente"><i class="bi ${item.icon}" aria-hidden="true"></i>${item.title}</button>`;
         pills.appendChild(li);
-
         const col = document.createElement('div');
         col.className = 'col-12 col-md-6 col-lg-4';
         const tag = item.href ? 'a' : 'div';
@@ -165,7 +168,7 @@
 
   function renderHeader(title, user, isAdmin, page) {
     const header = document.getElementById('csmHeader');
-    const navigationInHeader = page === 'sales' || page === 'quotes' || page === 'module';
+    const navigationInHeader = page === 'sales' || page === 'quotes' || page === 'products' || page === 'module';
     header.className = navigationInHeader ? 'csm-header csm-header-with-nav' : 'csm-header';
     // En el dashboard, se conserva el nombre del sistema.
     // Dentro de un módulo, la navegación REEMPLAZA el nombre/ícono central.
@@ -202,14 +205,11 @@
           <button class="dropdown-item" type="button" id="csmLogoutBtn"><i class="bi bi-box-arrow-right" aria-hidden="true"></i>Cerrar sesión</button>
         </div>
       </div>`;
-
     document.getElementById('csmCurrentUser').textContent =
       `${user.username || 'Usuario'} · ${String(user.role || 'USUARIO').toUpperCase()}`;
-
     if (!isAdmin) {
       header.querySelectorAll('.csm-admin-only').forEach(el => el.remove());
     }
-
     const themeBtn = document.getElementById('csmThemeBtn');
     const updateThemeText = () => {
       const dark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
@@ -224,7 +224,6 @@
       localStorage.setItem('theme', next);
       updateThemeText();
     });
-
     document.getElementById('csmLogoutBtn').addEventListener('click', () => {
       if (typeof logout === 'function') logout();
     });

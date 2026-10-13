@@ -1,0 +1,179 @@
+/* Tarifas de pago: estilos exclusivos del módulo Comisiones CSM */
+.csm-commissions-page .csm-commissions-main { max-width: 1160px; margin: 34px auto 50px; }
+.csm-commissions-page .csm-commissions-hero, .csm-commissions-page .csm-commissions-panel,
+.csm-commissions-page .csm-commissions-metric {
+    background: var(--csm-surface);
+    border: 1px solid var(--csm-border);
+    box-shadow: var(--csm-shadow);
+}
+.csm-commissions-page .csm-commissions-hero {
+    display: flex; align-items: center; justify-content: space-between; gap: 22px;
+    padding: 26px 28px; border-radius: 22px;
+}
+.csm-commissions-page .csm-commissions-hero-info { display: flex; align-items: center; gap: 19px; min-width: 0; }
+.csm-commissions-page .csm-commissions-hero-icon {
+    display: grid; place-items: center; flex: 0 0 65px; width: 65px; height: 65px;
+    color: var(--csm-green); background: var(--csm-icon-bg); border-radius: 19px; font-size: 1.85rem;
+}
+.csm-commissions-page .csm-commissions-eyebrow {
+    color: var(--csm-green); font-size: .76rem; font-weight: 750; letter-spacing: .055em;
+    text-transform: uppercase; margin-bottom: 4px;
+}
+.csm-commissions-page .csm-commissions-hero h1 {
+    font-size: clamp(1.42rem, 2.5vw, 1.85rem); font-weight: 770; letter-spacing: -.035em;
+    color: var(--csm-ink); margin: 0 0 6px;
+}
+.csm-commissions-page .csm-commissions-hero p, .csm-commissions-page .csm-commissions-panel-top p {
+    font-size: .89rem; line-height: 1.5; color: var(--csm-muted); margin: 0;
+}
+.csm-commissions-page .csm-commissions-primary, .csm-commissions-page .csm-commissions-secondary {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: 43px; padding: 10px 17px; border-radius: 12px; font-size: .9rem;
+    font-weight: 700; white-space: nowrap; transition: background .16s ease, border-color .16s ease;
+}
+.csm-commissions-page .csm-commissions-primary { color: #fff; background: #0d704d; border: 1px solid #0d704d; }
+.csm-commissions-page .csm-commissions-primary:hover, .csm-commissions-page .csm-commissions-primary:focus-visible {
+    background: #095b3e; border-color: #095b3e; color: #fff;
+}
+.csm-commissions-page .csm-commissions-secondary {
+    background: var(--csm-surface); border: 1px solid var(--csm-border); color: var(--csm-ink);
+}
+.csm-commissions-page .csm-commissions-secondary:hover { background: var(--csm-icon-bg); color: var(--csm-green); }
+.csm-commissions-page .csm-commissions-metrics { margin-top: 4px; margin-bottom: 19px; }
+.csm-commissions-page .csm-commissions-metric {
+    min-height: 127px; border-radius: 18px; padding: 20px 22px; display: grid;
+    grid-template-columns: 44px 1fr; grid-template-rows: auto 1fr; column-gap: 13px;
+    align-items: center;
+}
+.csm-commissions-page .csm-commissions-metric-icon {
+    width: 44px; height: 44px; display: grid; place-items: center; grid-row: 1 / 3;
+    border-radius: 13px; color: var(--csm-green); background: var(--csm-icon-bg); font-size: 1.17rem;
+}
+.csm-commissions-page .csm-commissions-metric-label { font-size: .81rem; color: var(--csm-muted); line-height: 1.35; }
+.csm-commissions-page .csm-commissions-metric strong { color: var(--csm-ink); font-size: 1.55rem; font-weight: 770; letter-spacing: -.03em; }
+.csm-commissions-page .csm-commissions-panel { border-radius: 20px; overflow: hidden; }
+.csm-commissions-page .csm-commissions-panel-top {
+    padding: 23px 26px 17px; display: flex; align-items: flex-start; justify-content: space-between; gap: 14px;
+}
+.csm-commissions-page .csm-commissions-panel-heading { display: flex; gap: 10px; align-items: center; margin-bottom: 5px; }
+.csm-commissions-page .csm-commissions-panel h2 { margin: 0; color: var(--csm-ink); font-size: 1.16rem; font-weight: 750; }
+.csm-commissions-page .csm-commissions-counter {
+    min-width: 25px; height: 25px; padding: 0 7px; display: inline-grid; place-items: center;
+    border-radius: 9px; color: var(--csm-green); background: var(--csm-icon-bg);
+    font-size: .75rem; font-weight: 800;
+}
+.csm-commissions-page .csm-commissions-refresh, .csm-commissions-page .csm-commissions-icon-action {
+    width: 38px; height: 38px; display: inline-grid; place-items: center;
+    border-radius: 11px; border: 1px solid var(--csm-border); color: var(--csm-ink);
+    background: var(--csm-surface); padding: 0;
+}
+.csm-commissions-page .csm-commissions-refresh:hover, .csm-commissions-page .csm-commissions-icon-action:hover {
+    background: var(--csm-icon-bg); color: var(--csm-green); border-color: var(--csm-green);
+}
+.csm-commissions-page .csm-commissions-icon-action.is-danger:hover { color: #c24145; background: rgba(210, 55, 55, .07); border-color: #c24145; }
+.csm-commissions-page .csm-commissions-toolbar {
+    padding: 0 26px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.csm-commissions-page .csm-commissions-search { position: relative; width: min(100%, 390px); }
+.csm-commissions-page .csm-commissions-search > .bi {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--csm-muted);
+}
+.csm-commissions-page .csm-commissions-search .form-control {
+    background: var(--csm-surface); color: var(--csm-ink); border-color: var(--csm-border);
+    padding: 11px 14px 11px 40px; border-radius: 12px; font-size: .88rem;
+}
+.csm-commissions-page .csm-commissions-search .form-control:focus {
+    box-shadow: 0 0 0 .2rem rgba(13, 112, 77, .12); border-color: var(--csm-green);
+}
+.csm-commissions-page .csm-commissions-results { color: var(--csm-muted); font-size: .8rem; white-space: nowrap; }
+.csm-commissions-page .csm-commissions-table-wrap { border-top: 1px solid var(--csm-border); }
+.csm-commissions-page .csm-commissions-table { margin: 0; color: var(--csm-ink); font-size: .88rem; }
+.csm-commissions-page .csm-commissions-table thead th {
+    padding: 15px 22px; background: var(--csm-bg); color: var(--csm-muted);
+    font-size: .76rem; font-weight: 750; border-bottom: 1px solid var(--csm-border);
+    white-space: nowrap;
+}
+.csm-commissions-page .csm-commissions-table tbody td {
+    padding: 17px 22px; background: var(--csm-surface); color: var(--csm-ink);
+    border-bottom: 1px solid var(--csm-border); vertical-align: middle;
+}
+.csm-commissions-page .csm-commissions-table tbody tr:last-child td { border-bottom: 0; }
+.csm-commissions-page .csm-commissions-table tbody tr:hover td { background: var(--csm-bg); }
+.csm-commissions-page .csm-commissions-name { display: flex; align-items: center; gap: 11px; min-width: 175px; }
+.csm-commissions-page .csm-commissions-name-icon {
+    display: grid; place-items: center; width: 38px; height: 38px; flex: 0 0 38px;
+    border-radius: 11px; color: var(--csm-green); background: var(--csm-icon-bg);
+}
+.csm-commissions-page .csm-commissions-name strong { font-size: .87rem; font-weight: 720; word-break: break-word; }
+.csm-commissions-page .csm-commissions-percent {
+    display: inline-block; border-radius: 9px; padding: 5px 9px; background: var(--csm-icon-bg);
+    color: var(--csm-green); font-size: .82rem; font-weight: 750; white-space: nowrap;
+}
+.csm-commissions-page .csm-commissions-amount { font-weight: 700; white-space: nowrap; }
+.csm-commissions-page .csm-commissions-date { color: var(--csm-muted); font-size: .82rem; white-space: nowrap; }
+.csm-commissions-page .csm-commissions-actions { display: flex; gap: 7px; justify-content: flex-end; }
+.csm-commissions-page .csm-commissions-state, .csm-commissions-page .csm-commissions-empty {
+    padding: 48px 22px; text-align: center; color: var(--csm-muted);
+}
+.csm-commissions-page .csm-commissions-state { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.csm-commissions-page .csm-commissions-empty-icon {
+    width: 70px; height: 70px; display: grid; place-items: center; margin: 0 auto 15px;
+    border-radius: 20px; color: var(--csm-green); background: var(--csm-icon-bg); font-size: 2rem;
+}
+.csm-commissions-page .csm-commissions-empty h3 { color: var(--csm-ink); font-size: 1.08rem; font-weight: 750; }
+.csm-commissions-page .csm-commissions-empty p { margin: 7px 0 18px; font-size: .88rem; }
+.csm-commissions-page .csm-commissions-mobile-list { padding: 0 16px 16px; }
+.csm-commissions-page .csm-commissions-mobile-card { border: 1px solid var(--csm-border); border-radius: 15px; padding: 15px; margin-top: 12px; }
+.csm-commissions-page .csm-commissions-mobile-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.csm-commissions-page .csm-commissions-mobile-card-values { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 14px; }
+.csm-commissions-page .csm-commissions-mobile-card-values small { display: block; font-size: .75rem; color: var(--csm-muted); margin-bottom: 5px; }
+.csm-commissions-page .csm-commissions-mobile-card-footer { border-top: 1px solid var(--csm-border); padding-top: 11px; margin-top: 13px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.csm-commissions-page .csm-commissions-mobile-card-footer .csm-commissions-date { white-space: normal; }
+.csm-commissions-page .csm-commissions-modal {
+    border: 1px solid var(--csm-border); border-radius: 20px; background: var(--csm-surface); color: var(--csm-ink);
+    box-shadow: 0 24px 65px rgba(0,0,0,.16);
+}
+.csm-commissions-page .csm-commissions-modal .modal-header,
+.csm-commissions-page .csm-commissions-modal .modal-footer { border-color: var(--csm-border); padding: 20px 24px; }
+.csm-commissions-page .csm-commissions-modal .modal-body { padding: 23px 24px; }
+.csm-commissions-page .csm-commissions-modal .modal-title { color: var(--csm-ink); font-size: 1.17rem; font-weight: 770; }
+.csm-commissions-page .csm-commissions-modal-subtitle { margin: 4px 0 0; color: var(--csm-muted); font-size: .83rem; }
+.csm-commissions-page .csm-commissions-modal .form-label { color: var(--csm-ink); font-size: .84rem; font-weight: 660; }
+.csm-commissions-page .csm-commissions-modal .form-control,
+.csm-commissions-page .csm-commissions-modal .input-group-text {
+    color: var(--csm-ink); background: var(--csm-surface); border-color: var(--csm-border); min-height: 44px;
+}
+.csm-commissions-page .csm-commissions-modal .form-control:focus { border-color: var(--csm-green); box-shadow: 0 0 0 .2rem rgba(13, 112, 77, .12); }
+.csm-commissions-page .csm-commissions-modal .input-group-text { background: var(--csm-bg); color: var(--csm-muted); }
+.csm-commissions-page .csm-commissions-example { display: flex; gap: 11px; padding: 14px; background: var(--csm-icon-bg); border-radius: 13px; }
+.csm-commissions-page .csm-commissions-example > .bi { color: var(--csm-green); font-size: 1.05rem; }
+.csm-commissions-page .csm-commissions-example strong,
+.csm-commissions-page .csm-commissions-example span { display: block; font-size: .8rem; line-height: 1.5; }
+.csm-commissions-page .csm-commissions-example strong { color: var(--csm-ink); margin-bottom: 3px; }
+.csm-commissions-page .csm-commissions-example span, .csm-commissions-page .csm-commissions-form-help { color: var(--csm-muted); }
+.csm-commissions-page .csm-commissions-form-help { font-size: .77rem; line-height: 1.5; }
+.csm-commissions-page .csm-commissions-modal .modal-footer { gap: 8px; }
+.csm-commissions-page .csm-commissions-modal .modal-footer .btn { margin: 0; }
+.csm-commissions-page .btn:disabled { opacity: .63; }
+.swal2-container { z-index: 11000 !important; }
+@media (max-width: 767.98px) {
+    .csm-commissions-page .csm-commissions-main { margin: 22px auto 35px; }
+    .csm-commissions-page .csm-commissions-hero { padding: 20px; align-items: stretch; flex-direction: column; gap: 17px; }
+    .csm-commissions-page .csm-commissions-hero-icon { flex-basis: 51px; width: 51px; height: 51px; border-radius: 14px; font-size: 1.45rem; }
+    .csm-commissions-page .csm-commissions-hero-info { gap: 12px; align-items: flex-start; }
+    .csm-commissions-page .csm-commissions-hero h1 { font-size: 1.38rem; }
+    .csm-commissions-page .csm-commissions-hero p { font-size: .82rem; }
+    .csm-commissions-page #btnNuevaComision { width: 100%; }
+    .csm-commissions-page .csm-commissions-panel-top { padding: 19px 17px 13px; }
+    .csm-commissions-page .csm-commissions-toolbar { padding: 0 17px 16px; flex-wrap: wrap; gap: 7px; }
+    .csm-commissions-page .csm-commissions-search { width: 100%; }
+    .csm-commissions-page .csm-commissions-metric { padding: 15px; min-height: 105px; grid-template-columns: 36px 1fr; column-gap: 9px; }
+    .csm-commissions-page .csm-commissions-metric-icon { width: 36px; height: 36px; font-size: 1rem; border-radius: 10px; }
+    .csm-commissions-page .csm-commissions-metric-label { font-size: .72rem; }
+    .csm-commissions-page .csm-commissions-metric strong { font-size: 1.23rem; }
+}
+@media (max-width: 380px) {
+    .csm-commissions-page .csm-commissions-metric { grid-template-columns: 1fr; gap: 5px; }
+    .csm-commissions-page .csm-commissions-metric-icon { grid-row: auto; }
+    .csm-commissions-page .csm-commissions-metric strong { font-size: 1.12rem; }
+}
