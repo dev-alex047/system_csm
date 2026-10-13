@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Configuración de la API y sesión
-    const API_URL = '../backend/index.php';
+    const API_URL = '../backend/php/index.php';
     const SESSION = 1;
     const TIPO_TARIFA_PAGO = 1;
     const colorPrincipal = '#0d704d';
