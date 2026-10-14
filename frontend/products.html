@@ -68,8 +68,14 @@
       <section class="csm-inventory-results" aria-label="Resultados del inventario">
         <div class="csm-inventory-results-header"><div><h2>Catálogo</h2><span id="inventoryResultCount" role="status" aria-live="polite">Cargando productos...</span></div><span id="inventoryActiveFilter" class="csm-inventory-filter-badge" hidden></span></div>
 <div id="boxView">
-<div id="boxGrid" class="csm-inventory-grid">        
-        <div class="text-center mt-4"><button class="btn csm-inv-outline d-none" id="btnShowMore" type="button">Mostrar más productos <i class="bi bi-chevron-down" aria-hidden="true"></i></button></div></div>
+  <div id="boxGrid" class="csm-inventory-grid"></div>
+  <div class="text-center mt-4">
+    <button class="btn csm-inv-outline d-none" id="btnShowMore" type="button">
+      Mostrar más productos <i class="bi bi-chevron-down"></i>
+    </button>
+  </div>
+</div>
+        
         <div id="tableView" class="d-none"><div class="csm-inventory-table-wrap"><table id="productTable" class="table align-middle mb-0"><thead><tr><th>ID</th><th>FECHA DE COMPRA</th><th>CLAVE O CÓDIGO</th><th>PRODUCTO</th><th>DESCRIPCIÓN</th><th>UNIDAD</th><th>PRECIO DE COMPRA</th><th>PRECIO MÍNIMO</th><th>MARGEN</th><th>PRECIO DE VENTA</th><th>COMPETENCIA</th><th>IMAGEN</th><th>STOCK</th><th>ACCIONES</th></tr></thead><tbody></tbody></table></div></div>
       </section>
     </main>

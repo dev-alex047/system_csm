@@ -142,13 +142,27 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="pc-price-card"><span class="pc-price-label">Precio de venta</span><strong class="pc-price-number">$${formatPrice(publicPrice)}</strong></div>
           <div class="pc-facts"><div class="pc-fact"><span class="pc-fact-label">Presentación</span><strong>${escapeHtml(presentation)}</strong></div>
             <div class="pc-fact"><span class="pc-fact-label">Existencias registradas</span><strong>${stock === 0 ? 'Sin existencias' : `${stock.toLocaleString('es-MX')} unidades`}</strong></div></div>
-          ${description ? `<section class="pc-description"><h3>Descripción del producto</h3><p>${escapeHtml(description)}</p></section>` : ''}
+          ${description ? `<section class="pc-description" aria-label="Descripción del producto"><h3>Descripción del producto</h3><p class="pc-description-text is-collapsed" id="pcDescriptionText">${escapeHtml(description)}</p><button class="pc-description-toggle" type="button" aria-expanded="false" aria-controls="pcDescriptionText" hidden><span>Ver más</span><i class="bi bi-chevron-down" aria-hidden="true"></i></button></section>` : ''}
         </div>
       </div>
     </article>`;
     resultContainer.querySelector('.btn-print')?.addEventListener('click', () => {
       window.printQuotation(product.name || '', publicPrice, product.code || '', photoUrl, description);
     });
+    const descriptionText = resultContainer.querySelector('.pc-description-text');
+    const descriptionToggle = resultContainer.querySelector('.pc-description-toggle');
+    if (descriptionText && descriptionToggle) {
+      // El botón aparece únicamente cuando el texto excede las tres líneas.
+      requestAnimationFrame(() => {
+        descriptionToggle.hidden = descriptionText.scrollHeight <= descriptionText.clientHeight + 2;
+      });
+      descriptionToggle.addEventListener('click', () => {
+        const expanded = descriptionToggle.getAttribute('aria-expanded') === 'true';
+        descriptionToggle.setAttribute('aria-expanded', String(!expanded));
+        descriptionText.classList.toggle('is-collapsed', expanded);
+        descriptionToggle.querySelector('span').textContent = expanded ? 'Ver más' : 'Ver menos';
+      });
+    }
     hideAutocomplete();
   }
   // Seleccionar producto del autocomplete

@@ -1,123 +1,137 @@
-/* Consulta pública CSM: los estilos se aíslan de Ventas, Almacén y el resto del sistema. */
-body.csm-price-consultation { --pc-text:#21312b; --pc-muted:#6d7a72; --pc-border:#dfe9e2; --pc-surface:#fff; --pc-soft:#f0f8f2; --pc-green:#116b4b; --pc-accent:#e7f5ed; background:radial-gradient(ellipse 58% 55% at 100% 0%,rgba(68,173,114,.18),transparent 75%),radial-gradient(ellipse 50% 70% at -5% 100%,rgba(112,174,150,.13),transparent 80%),#f5f8f6; color:var(--pc-text); min-height:100dvh; margin:0; overflow-x:hidden; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
+/* Sistema CSM · Consulta de precios v2. Estilos exclusivos de esta pantalla. */
+body.csm-price-consultation { --pc-text:#1e3027; --pc-muted:#65746b; --pc-border:#dce7df; --pc-surface:#ffffff; --pc-soft:#f4f7f5; --pc-green:#0d704b; --pc-deep:#08543a; background:#f1f3f2; color:var(--pc-text); min-height:100dvh; margin:0; overflow-x:hidden; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
 body.csm-price-consultation * { box-sizing:border-box; }
-.csm-price-consultation .pc-shell { width:min(100% - 40px,1120px); margin:auto; }
-.csm-price-consultation .pc-topbar { display:flex; align-items:center; justify-content:space-between; gap:20px; padding:21px 0; border-bottom:1px solid rgba(18,80,51,.08); }
+.csm-price-consultation .pc-shell { width:min(calc(100% - 36px),1160px); margin:0 auto; }
+/* Barra superior: blanca como la navegación de los demás módulos. */
+.csm-price-consultation .pc-topbar { display:flex; align-items:center; justify-content:space-between; gap:18px; padding:15px 21px; margin:18px 0 0; background:var(--pc-surface); border:1px solid var(--pc-border); border-radius:17px; box-shadow:0 5px 24px rgba(20,56,33,.045); }
 .csm-price-consultation .pc-brand { display:flex; align-items:center; gap:11px; min-width:0; color:var(--pc-text)!important; text-decoration:none!important; }
-.csm-price-consultation .pc-brand-image { display:grid; place-items:center; width:49px; height:49px; flex-shrink:0; border-radius:14px; background:#ffffffbf; border:1px solid var(--pc-border); box-shadow:0 4px 15px rgba(0,0,0,.04); }
-.csm-price-consultation .pc-brand-image img { display:block; width:42px; height:42px; object-fit:contain; }
-.csm-price-consultation .pc-brand strong { display:block; font-size:.86rem; line-height:1.3; letter-spacing:.025em; font-weight:800; }
-.csm-price-consultation .pc-brand small { display:block; font-size:.73rem; color:var(--pc-muted); margin-top:2px; }
-.csm-price-consultation .pc-toplink { border:1px solid var(--pc-border); border-radius:11px; background:#ffffffb5; padding:10px 14px; color:var(--pc-text)!important; display:inline-flex; align-items:center; gap:8px; text-decoration:none!important; font-size:.83rem; font-weight:650; white-space:nowrap; transition:background .15s,border-color .15s; }
-.csm-price-consultation .pc-toplink:hover { background:#fff; border-color:#abd4bb; }
-.csm-price-consultation .pc-main { width:min(100%,930px); margin:0 auto; padding:62px 0 25px; }
-.csm-price-consultation .pc-intro { text-align:center; margin-bottom:30px; }
-.csm-price-consultation .pc-eyebrow { display:inline-flex; align-items:center; gap:7px; color:var(--pc-green); border:1px solid #c9e8d7; background:#e9f7ee; border-radius:99px; padding:8px 13px; font-size:.69rem; font-weight:800; letter-spacing:.055em; }
-.csm-price-consultation .pc-intro h1 { margin:19px 0 9px; font-size:clamp(1.75rem,4vw,2.75rem); font-weight:820; letter-spacing:-.04em; line-height:1.18; color:var(--pc-text); }
-.csm-price-consultation .pc-intro h1 span { color:var(--pc-green); }
-.csm-price-consultation .pc-intro p { margin:0 auto; color:var(--pc-muted); font-size:.96rem; max-width:600px; line-height:1.65; }
-.csm-price-consultation .pc-search-panel { position:relative; z-index:10; background:rgba(255,255,255,.88); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border:1px solid rgba(196,218,205,.86); border-radius:20px; box-shadow:0 16px 42px rgba(15,74,40,.075); padding:22px; margin-bottom:22px; }
-.csm-price-consultation .pc-search-label { display:flex; align-items:center; gap:9px; color:var(--pc-text); font-weight:760; font-size:.93rem; margin-bottom:11px; }
-.csm-price-consultation .pc-search-label .bi { color:var(--pc-green); }
+.csm-price-consultation .pc-brand-image { display:grid; place-items:center; width:47px; height:47px; flex-shrink:0; border-radius:13px; background:#f6f8f6; border:1px solid var(--pc-border); }
+.csm-price-consultation .pc-brand-image img { display:block; width:41px; height:41px; object-fit:contain; }
+.csm-price-consultation .pc-brand strong { display:block; font-size:.85rem; line-height:1.3; letter-spacing:.015em; font-weight:800; }
+.csm-price-consultation .pc-brand small { display:block; font-size:.72rem; color:var(--pc-muted); margin-top:2px; }
+.csm-price-consultation .pc-toplink { display:inline-flex; justify-content:center; align-items:center; gap:9px; padding:10px 15px; background:#edf7f0; border:1px solid #b8dfc7; border-radius:11px; color:var(--pc-green)!important; text-decoration:none!important; font-size:.84rem; font-weight:750; white-space:nowrap; transition:background .15s,transform .15s; }
+.csm-price-consultation .pc-toplink:hover { background:#d8f0e0; transform:translateY(-1px); }
+.csm-price-consultation .pc-main { width:min(100%,970px); margin:0 auto; padding:23px 0 20px; }
+/* Encabezado breve, con color verde sólido solo en la zona de presentación. */
+.csm-price-consultation .pc-intro { position:relative; background:linear-gradient(125deg,#0f8759 0%,#0a6545 58%,#084b37 100%); padding:37px 30px 59px; border-radius:22px; text-align:center; overflow:hidden; box-shadow:0 12px 26px rgba(6,68,42,.12); }
+.csm-price-consultation .pc-intro:after { content:""; position:absolute; width:250px; height:250px; border:1px solid rgba(255,255,255,.12); border-radius:50%; right:-90px; top:-160px; pointer-events:none; }
+.csm-price-consultation .pc-intro h1 { position:relative; z-index:1; margin:0 0 9px; font-size:clamp(1.65rem,3.8vw,2.65rem); font-weight:820; letter-spacing:-.037em; line-height:1.17; color:#fff; }
+.csm-price-consultation .pc-intro h1 span { color:#cbf5d8; }
+.csm-price-consultation .pc-intro p { position:relative; z-index:1; margin:0 auto; color:#e2f4e9; font-size:.94rem; max-width:590px; line-height:1.6; }
+/* Buscador: tarjeta blanca flotante y enfoque destacado. */
+.csm-price-consultation .pc-search-panel { position:relative; z-index:10; margin:-28px 23px 21px; padding:20px 23px; border:1px solid var(--pc-border); border-top:3px solid #26a16a; border-radius:17px; background:var(--pc-surface); box-shadow:0 15px 28px rgba(15,56,32,.09); }
+.csm-price-consultation .pc-search-label { display:flex; align-items:center; gap:9px; color:var(--pc-text); font-size:.96rem; font-weight:780; margin-bottom:11px; }
+.csm-price-consultation .pc-search-label .bi { color:var(--pc-green); font-size:1.1rem; }
 .csm-price-consultation .pc-search-box { position:relative; }
-.csm-price-consultation .pc-search-icon { position:absolute; left:16px; top:50%; transform:translateY(-50%); color:#74897d; font-size:1.05rem; pointer-events:none; z-index:2; }
-.csm-price-consultation #searchInput { height:55px; border:1.5px solid var(--pc-border); border-radius:12px; box-shadow:none; background:var(--pc-surface)!important; color:var(--pc-text)!important; font-size:.97rem; padding:10px 16px 10px 47px; width:100%; transition:border-color .15s,box-shadow .15s; }
-.csm-price-consultation #searchInput::placeholder { color:#94a099; }
-.csm-price-consultation #searchInput:focus { border-color:#5faf84!important; box-shadow:0 0 0 4px rgba(17,107,75,.1)!important; }
-.csm-price-consultation .pc-search-foot { display:flex; justify-content:space-between; gap:12px; margin:12px 1px 0; color:var(--pc-muted); font-size:.73rem; }
+.csm-price-consultation .pc-search-icon { position:absolute; left:16px; top:50%; transform:translateY(-50%); color:var(--pc-green); font-size:1.1rem; pointer-events:none; z-index:2; }
+.csm-price-consultation #searchInput { height:54px; width:100%; background:#fff!important; border:1.5px solid #c9dacf; color:var(--pc-text)!important; border-radius:11px; padding:10px 16px 10px 47px; font-size:.96rem; box-shadow:none; }
+.csm-price-consultation #searchInput::placeholder { color:#829187; }
+.csm-price-consultation #searchInput:focus { border-color:#0d8754!important; box-shadow:0 0 0 4px rgba(13,112,75,.12)!important; }
+.csm-price-consultation .pc-search-foot { display:flex; justify-content:space-between; gap:12px; color:var(--pc-muted); font-size:.73rem; margin:12px 1px 0; }
 .csm-price-consultation .pc-search-foot .bi { color:var(--pc-green); }
-.csm-price-consultation .autocomplete-list { position:absolute; left:0; right:0; top:calc(100% + 7px); z-index:60; overflow-x:hidden; overflow-y:auto; max-height:min(390px,56dvh); display:none; border:1px solid var(--pc-border); border-radius:14px; background:var(--pc-surface); box-shadow:0 20px 45px rgba(16,50,30,.16); overscroll-behavior:contain; }
+.csm-price-consultation .autocomplete-list { display:none; position:absolute; left:0; right:0; top:calc(100% + 6px); z-index:60; max-height:min(360px,55dvh); overflow-x:hidden; overflow-y:auto; overscroll-behavior:contain; border:1px solid var(--pc-border); border-radius:12px; background:var(--pc-surface); box-shadow:0 16px 34px rgba(16,50,30,.19); }
 .csm-price-consultation .autocomplete-list.active { display:block; }
-.csm-price-consultation .autocomplete-item { width:100%; display:flex; align-items:center; gap:12px; padding:11px 13px; border:0; border-bottom:1px solid var(--pc-border); background:transparent; color:var(--pc-text); text-align:left; cursor:pointer; }
+.csm-price-consultation .autocomplete-item { display:flex; align-items:center; width:100%; padding:10px 13px; gap:12px; color:var(--pc-text); text-align:left; border:0; border-bottom:1px solid var(--pc-border); background:transparent; cursor:pointer; }
 .csm-price-consultation .autocomplete-item:last-child { border-bottom:0; }
-.csm-price-consultation .autocomplete-item:hover,.csm-price-consultation .autocomplete-item.selected { background:var(--pc-soft); }
-.csm-price-consultation .pc-suggest-image { width:45px; height:45px; flex:0 0 45px; border-radius:10px; background:var(--pc-soft); object-fit:contain; padding:4px; }
-.csm-price-consultation .pc-suggest-placeholder { display:grid; place-items:center; font-size:1.15rem; color:var(--pc-green); }
+.csm-price-consultation .autocomplete-item:is(:hover,.selected) { background:#eaf6ef; }
+.csm-price-consultation .pc-suggest-image { width:44px; height:44px; flex:0 0 44px; border-radius:9px; background:#f3f7f4; object-fit:contain; padding:4px; }
+.csm-price-consultation .pc-suggest-placeholder { display:grid; place-items:center; color:var(--pc-green); font-size:1.2rem; }
 .csm-price-consultation .pc-suggest-info { flex:1; min-width:0; }
-.csm-price-consultation .pc-suggest-name { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; color:var(--pc-text); font-weight:700; font-size:.83rem; line-height:1.35; }
-.csm-price-consultation .pc-suggest-code { color:var(--pc-muted); display:block; font-size:.74rem; margin-top:3px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
-.csm-price-consultation .pc-suggest-price { color:var(--pc-green); font-weight:800; font-size:.87rem; flex-shrink:0; font-variant-numeric:tabular-nums; }
-.csm-price-consultation .error-message { display:none; margin-top:14px; padding:10px 13px; color:#9a3236; background:#fff1f1; border:1px solid #f2c6c7; border-radius:10px; font-size:.83rem; }
-.csm-price-consultation .pc-product { overflow:hidden; background:var(--pc-surface); border:1px solid var(--pc-border); border-radius:20px; box-shadow:0 12px 35px rgba(16,75,41,.055); animation:pc-enter .25s ease-out; }
-@keyframes pc-enter { from {opacity:0;transform:translateY(10px)} to {opacity:1;transform:translateY(0)} }
-.csm-price-consultation .pc-product-head { display:flex; justify-content:space-between; align-items:flex-start; gap:18px; border-bottom:1px solid var(--pc-border); padding:22px 25px; }
-.csm-price-consultation .pc-found { display:block; color:var(--pc-green); font-size:.65rem; font-weight:850; letter-spacing:.075em; margin-bottom:6px; }
-.csm-price-consultation .pc-product-head h2 { color:var(--pc-text); margin:0 0 12px; font-size:clamp(1.16rem,2.8vw,1.5rem); font-weight:770; line-height:1.32; overflow-wrap:anywhere; }
+.csm-price-consultation .pc-suggest-name { color:var(--pc-text); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; font-size:.84rem; line-height:1.35; font-weight:720; }
+.csm-price-consultation .pc-suggest-code { display:block; color:var(--pc-muted); font-size:.73rem; margin-top:3px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.csm-price-consultation .pc-suggest-price { flex-shrink:0; color:var(--pc-green); font-weight:850; font-size:.86rem; font-variant-numeric:tabular-nums; }
+.csm-price-consultation .error-message { display:none; margin-top:13px; padding:11px 12px; border-radius:9px; background:#fff1f1; border:1px solid #eac5c5; color:#9a3236; font-size:.84rem; }
+/* Ficha del producto. */
+.csm-price-consultation .pc-product { overflow:hidden; background:var(--pc-surface); border:1px solid var(--pc-border); border-radius:18px; box-shadow:0 6px 24px rgba(18,66,37,.06); animation:pc-enter .22s ease-out; }
+@keyframes pc-enter { from {opacity:0;transform:translateY(8px)} to {opacity:1;transform:translateY(0)} }
+.csm-price-consultation .pc-product-head { display:flex; justify-content:space-between; align-items:flex-start; gap:18px; padding:20px 23px; border-bottom:1px solid var(--pc-border); border-top:4px solid #0f8454; }
+.csm-price-consultation .pc-found { display:block; color:var(--pc-green); font-size:.66rem; font-weight:820; letter-spacing:.065em; margin-bottom:7px; }
+.csm-price-consultation .pc-product-head h2 { color:var(--pc-text); margin:0 0 11px; font-size:clamp(1.17rem,2.65vw,1.52rem); font-weight:780; line-height:1.32; overflow-wrap:anywhere; }
 .csm-price-consultation .pc-product-codes { display:flex; gap:8px; flex-wrap:wrap; }
-.csm-price-consultation .pc-product-codes span { display:inline-flex; gap:5px; align-items:center; color:var(--pc-muted); background:#f2f6f3; padding:5px 9px; border-radius:7px; font-size:.74rem; max-width:100%; overflow-wrap:anywhere; }
+.csm-price-consultation .pc-product-codes span { display:inline-flex; align-items:center; gap:5px; max-width:100%; padding:5px 9px; border-radius:7px; background:#f0f4f1; color:var(--pc-muted); font-size:.74rem; overflow-wrap:anywhere; }
 .csm-price-consultation .pc-product-codes strong { color:var(--pc-text); }
-.csm-price-consultation .btn-print { display:inline-flex; justify-content:center; align-items:center; gap:8px; background:var(--pc-soft); color:var(--pc-green); border:1px solid #b9dfc7; border-radius:10px; padding:10px 15px; flex-shrink:0; font-size:.81rem; font-weight:750; cursor:pointer; transition:background .15s,border-color .15s; }
-.csm-price-consultation .btn-print:hover { background:#d9f1e1; border-color:#7ab999; }
-.csm-price-consultation .pc-product-main { display:grid; grid-template-columns:minmax(0,240px) minmax(0,1fr); gap:24px; padding:24px; align-items:start; }
-.csm-price-consultation .pc-photo { display:grid; place-items:center; min-height:230px; border:1px solid var(--pc-border); background:#f8faf8; border-radius:14px; overflow:hidden; }
-.csm-price-consultation .pc-photo img { display:block; width:100%; height:230px; object-fit:contain; padding:13px; }
-.csm-price-consultation .pc-photo-placeholder { color:#9db4a4; font-size:3.5rem; }
-.csm-price-consultation .pc-product-information { display:grid; gap:17px; min-width:0; }
-.csm-price-consultation .pc-price-card { display:flex; justify-content:space-between; align-items:center; gap:15px; background:linear-gradient(120deg,#ebf8ef,#f4faf6); border:1px solid #d2ebda; padding:17px 20px; border-radius:14px; }
-.csm-price-consultation .pc-price-label { display:block; color:#557362; font-size:.79rem; font-weight:650; }
-.csm-price-consultation .pc-price-number { color:#09653f; font-size:clamp(1.55rem,4vw,2rem); font-weight:850; letter-spacing:-.035em; white-space:nowrap; font-variant-numeric:tabular-nums; }
-.csm-price-consultation .pc-facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
-.csm-price-consultation .pc-fact { display:flex; flex-direction:column; gap:5px; padding:13px 15px; border:1px solid var(--pc-border); border-radius:12px; min-width:0; }
-.csm-price-consultation .pc-fact-label { font-size:.71rem; color:var(--pc-muted); }
-.csm-price-consultation .pc-fact strong { color:var(--pc-text); font-size:.87rem; font-weight:740; overflow-wrap:anywhere; }
-.csm-price-consultation .pc-description { border-top:1px solid var(--pc-border); padding-top:15px; }
-.csm-price-consultation .pc-description h3 { font-size:.86rem; color:var(--pc-text); font-weight:760; margin:0 0 7px; }
-.csm-price-consultation .pc-description p { color:var(--pc-muted); font-size:.83rem; line-height:1.65; margin:0; white-space:pre-line; overflow-wrap:anywhere; }
-.csm-price-consultation .pc-footer { display:flex; justify-content:space-between; align-items:center; gap:15px; color:var(--pc-muted); font-size:.73rem; margin-top:28px; padding-bottom:22px; }
+.csm-price-consultation .btn-print { display:inline-flex; justify-content:center; align-items:center; gap:9px; flex-shrink:0; min-height:44px; padding:10px 17px; border:1px solid #0d704b; border-radius:10px; background:#0d704b; color:#fff; font-size:.85rem; font-weight:760; cursor:pointer; transition:background .15s,transform .15s,box-shadow .15s; }
+.csm-price-consultation .btn-print:hover { color:#fff; background:#085438; box-shadow:0 6px 17px rgba(13,112,75,.18); transform:translateY(-1px); }
+.csm-price-consultation .pc-product-main { display:grid; grid-template-columns:minmax(0,240px) minmax(0,1fr); align-items:start; gap:23px; padding:23px; }
+.csm-price-consultation .pc-photo { display:grid; place-items:center; min-height:228px; background:#f8faf9; border:1px solid var(--pc-border); border-radius:13px; overflow:hidden; }
+.csm-price-consultation .pc-photo img { display:block; width:100%; height:228px; object-fit:contain; padding:11px; }
+.csm-price-consultation .pc-photo-placeholder { color:#9eafa4; font-size:3.2rem; }
+.csm-price-consultation .pc-product-information { display:grid; align-content:start; gap:13px; min-width:0; }
+.csm-price-consultation .pc-price-card { display:flex; justify-content:space-between; align-items:center; gap:15px; padding:16px 20px; border:1px solid #08754c; border-radius:12px; background:linear-gradient(125deg,#11885a,#086b49); }
+.csm-price-consultation .pc-price-label { display:block; color:#e6f5ed; font-size:.81rem; font-weight:690; }
+.csm-price-consultation .pc-price-number { color:#fff; font-size:clamp(1.5rem,4vw,2rem); letter-spacing:-.034em; font-weight:850; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.csm-price-consultation .pc-facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:11px; }
+.csm-price-consultation .pc-fact { display:flex; flex-direction:column; min-width:0; gap:5px; padding:13px 14px; border:1px solid var(--pc-border); background:#f7f9f7; border-radius:11px; }
+.csm-price-consultation .pc-fact-label { font-size:.72rem; color:var(--pc-muted); }
+.csm-price-consultation .pc-fact strong { color:var(--pc-text); font-size:.88rem; font-weight:760; overflow-wrap:anywhere; }
+/* Descripción: máximo tres líneas inicialmente, con botón accesible. */
+.csm-price-consultation .pc-description { padding:14px 15px; border:1px solid var(--pc-border); border-radius:11px; background:#f7f9f7; }
+.csm-price-consultation .pc-description h3 { margin:0 0 8px; color:var(--pc-text); font-size:.87rem; font-weight:760; }
+.csm-price-consultation .pc-description-text { margin:0; color:#58695e; font-size:.84rem; line-height:1.65; white-space:pre-line; overflow-wrap:anywhere; }
+.csm-price-consultation .pc-description-text.is-collapsed { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; overflow:hidden; }
+.csm-price-consultation .pc-description-toggle { display:inline-flex; gap:8px; align-items:center; justify-content:center; margin-top:10px; padding:4px 0; border:0; background:transparent; color:var(--pc-green); font-size:.82rem; font-weight:800; cursor:pointer; }
+.csm-price-consultation .pc-description-toggle .bi { display:inline-block; transition:transform .18s; }
+.csm-price-consultation .pc-description-toggle[aria-expanded="true"] .bi { transform:rotate(180deg); }
+.csm-price-consultation .pc-description-toggle:hover { text-decoration:underline; }
+.csm-price-consultation .pc-description-toggle[hidden] { display:none!important; }
+.csm-price-consultation .pc-footer { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:0 0 18px; margin-top:24px; color:var(--pc-muted); font-size:.73rem; }
 .csm-price-consultation .pc-footer .bi { color:var(--pc-green); }
-.csm-price-consultation :is(.btn-print,.pc-toplink,.autocomplete-item):focus-visible { outline:3px solid #68b68b; outline-offset:3px; }
-@media (max-width:767.98px) {
-  .csm-price-consultation .pc-shell { width:calc(100% - 26px); }
-  .csm-price-consultation .pc-topbar { padding:14px 0; }
-  .csm-price-consultation .pc-brand-image { width:43px; height:43px; }
-  .csm-price-consultation .pc-brand-image img { width:37px; height:37px; }
-  .csm-price-consultation .pc-brand strong { font-size:.72rem; }
-  .csm-price-consultation .pc-toplink { width:40px; height:40px; padding:0; justify-content:center; }
+.csm-price-consultation :is(.btn-print,.pc-description-toggle,.pc-toplink,.autocomplete-item):focus-visible { outline:3px solid #6dbb90; outline-offset:3px; }
+@media(max-width:767.98px) {
+  .csm-price-consultation .pc-shell { width:calc(100% - 22px); }
+  .csm-price-consultation .pc-topbar { margin-top:11px; padding:12px 13px; gap:10px; border-radius:14px; }
+  .csm-price-consultation .pc-brand-image { width:40px; height:40px; }
+  .csm-price-consultation .pc-brand-image img { width:35px; height:35px; }
+  .csm-price-consultation .pc-brand strong { font-size:.7rem; }
+  .csm-price-consultation .pc-brand small { font-size:.67rem; }
+  .csm-price-consultation .pc-toplink { width:40px; height:40px; padding:0; flex-shrink:0; }
   .csm-price-consultation .pc-toplink span { display:none; }
-  .csm-price-consultation .pc-main { padding:34px 0 15px; }
-  .csm-price-consultation .pc-intro { margin-bottom:24px; }
-  .csm-price-consultation .pc-intro h1 { margin:15px 0 9px; font-size:clamp(1.55rem,7vw,2rem); }
-  .csm-price-consultation .pc-intro p { font-size:.83rem; }
-  .csm-price-consultation .pc-eyebrow { font-size:.6rem; letter-spacing:.025em; padding:7px 10px; }
-  .csm-price-consultation .pc-search-panel { padding:15px; border-radius:16px; margin-bottom:15px; }
-  .csm-price-consultation #searchInput { height:51px; font-size:16px; }
+  .csm-price-consultation .pc-main { padding:13px 0 15px; }
+  .csm-price-consultation .pc-intro { border-radius:17px; padding:27px 18px 52px; }
+  .csm-price-consultation .pc-intro h1 { font-size:clamp(1.4rem,6.5vw,1.92rem); }
+  .csm-price-consultation .pc-intro p { font-size:.82rem; line-height:1.48; }
+  .csm-price-consultation .pc-search-panel { margin:-28px 10px 16px; padding:15px; border-radius:14px; }
+  .csm-price-consultation .pc-search-label { font-size:.87rem; }
+  .csm-price-consultation #searchInput { height:50px; font-size:16px; }
   .csm-price-consultation .pc-search-foot { font-size:.67rem; }
   .csm-price-consultation .autocomplete-list { max-height:42dvh; }
   .csm-price-consultation .autocomplete-item { padding:10px; gap:9px; }
   .csm-price-consultation .pc-suggest-image { width:39px; height:39px; flex-basis:39px; }
-  .csm-price-consultation .pc-suggest-name { font-size:.78rem; }
-  .csm-price-consultation .pc-suggest-price { font-size:.78rem; }
-  .csm-price-consultation .pc-product { border-radius:16px; }
-  .csm-price-consultation .pc-product-head { display:block; padding:17px; }
-  .csm-price-consultation .pc-product-head h2 { font-size:1.15rem; line-height:1.28; margin-bottom:10px; }
-  .csm-price-consultation .btn-print { margin-top:15px; width:100%; min-height:43px; }
-  .csm-price-consultation .pc-product-main { display:flex; flex-direction:column; gap:14px; padding:15px; }
-  .csm-price-consultation .pc-photo { width:100%; min-height:0; height:180px; }
-  .csm-price-consultation .pc-photo img { height:178px; padding:9px; }
-  .csm-price-consultation .pc-product-information { width:100%; gap:12px; }
-  .csm-price-consultation .pc-price-card { padding:13px 15px; }
-  .csm-price-consultation .pc-price-number { font-size:1.65rem; }
-  .csm-price-consultation .pc-facts { gap:9px; }
-  .csm-price-consultation .pc-fact { padding:12px; }
-  .csm-price-consultation .pc-fact strong { font-size:.8rem; }
+  .csm-price-consultation .pc-suggest-name,.csm-price-consultation .pc-suggest-price { font-size:.78rem; }
+  .csm-price-consultation .pc-product { border-radius:15px; }
+  .csm-price-consultation .pc-product-head { display:block; padding:15px; }
+  .csm-price-consultation .pc-product-head h2 { font-size:1.12rem; line-height:1.3; margin-bottom:10px; }
+  .csm-price-consultation .btn-print { margin-top:14px; width:100%; min-height:45px; }
+  .csm-price-consultation .pc-product-main { display:flex; flex-direction:column; gap:12px; padding:14px; }
+  .csm-price-consultation .pc-photo { width:100%; min-height:0; height:168px; }
+  .csm-price-consultation .pc-photo img { height:166px; padding:8px; }
+  .csm-price-consultation .pc-product-information { width:100%; gap:11px; }
+  .csm-price-consultation .pc-price-card { padding:13px 14px; }
+  .csm-price-consultation .pc-price-number { font-size:1.6rem; }
+  .csm-price-consultation .pc-facts { gap:8px; }
+  .csm-price-consultation .pc-fact { padding:11px; }
+  .csm-price-consultation .pc-fact strong { font-size:.81rem; }
   .csm-price-consultation .pc-footer { flex-direction:column; text-align:center; gap:5px; }
 }
-@media (max-width:365px) {
-  .csm-price-consultation .pc-brand strong { font-size:.65rem; }
+@media(max-width:365px) {
+  .csm-price-consultation .pc-brand strong { font-size:.63rem; }
   .csm-price-consultation .pc-product-codes { gap:5px; }
   .csm-price-consultation .pc-product-codes span { font-size:.7rem; }
   .csm-price-consultation .pc-facts { grid-template-columns:1fr; }
-  .csm-price-consultation .pc-price-number { font-size:1.45rem; }
+  .csm-price-consultation .pc-price-label { font-size:.73rem; }
+  .csm-price-consultation .pc-price-number { font-size:1.43rem; }
 }
-/* Modo oscuro independiente del estilo global para mantener legibilidad. */
-html[data-bs-theme="dark"] body.csm-price-consultation { --pc-text:#e7eee9; --pc-muted:#aabbb0; --pc-border:#35473b; --pc-surface:#1e2922; --pc-soft:#243b2d; --pc-green:#7dd6a0; --pc-accent:#294333; background:radial-gradient(ellipse at top right,#183e2b,transparent 60%),#141d17; }
-html[data-bs-theme="dark"] .csm-price-consultation :is(.pc-toplink,.pc-brand-image,.pc-search-panel) { background:rgba(30,41,34,.92); }
-html[data-bs-theme="dark"] .csm-price-consultation :is(.pc-product-codes span,.pc-photo,.pc-suggest-image) { background:#293b30; }
-html[data-bs-theme="dark"] .csm-price-consultation :is(.pc-price-card,.pc-eyebrow) { background:#23402f; border-color:#3f654c; }
-html[data-bs-theme="dark"] .csm-price-consultation .pc-price-number { color:#9aeab7; }
-html[data-bs-theme="dark"] .csm-price-consultation .pc-price-label { color:#accfba; }
-html[data-bs-theme="dark"] .csm-price-consultation #searchInput { background:#1e2922!important; color:#e7eee9!important; border-color:#35473b!important; }
-html[data-bs-theme="dark"] .csm-price-consultation .pc-product-codes strong { color:var(--pc-text); }
-html[data-bs-theme="dark"] .csm-price-consultation .btn-print { color:#9aeab7; background:#24402f; border-color:#3d654b; }
-html[data-bs-theme="dark"] .csm-price-consultation .autocomplete-item.selected,html[data-bs-theme="dark"] .csm-price-consultation .autocomplete-item:hover { background:#2b4433; }
-@media (prefers-reduced-motion:reduce) { .csm-price-consultation .pc-product { animation:none; } }
+/* Respeta tema oscuro si el usuario lo tiene activado. */
+html[data-bs-theme="dark"] body.csm-price-consultation { --pc-text:#eaf1eb; --pc-muted:#adbcaf; --pc-border:#344c3d; --pc-surface:#1d2b22; --pc-soft:#263b2c; --pc-green:#7dddb0; background:#121b15; }
+html[data-bs-theme="dark"] .csm-price-consultation .pc-topbar,html[data-bs-theme="dark"] .csm-price-consultation .pc-search-panel,html[data-bs-theme="dark"] .csm-price-consultation .pc-product { background:var(--pc-surface); }
+html[data-bs-theme="dark"] .csm-price-consultation .pc-intro { background:linear-gradient(120deg,#116441,#073724); }
+html[data-bs-theme="dark"] .csm-price-consultation .pc-intro h1 { color:#fff; }
+html[data-bs-theme="dark"] .csm-price-consultation .pc-toplink { background:#213b2c; border-color:#3a654b; color:#b8ebca!important; }
+html[data-bs-theme="dark"] .csm-price-consultation #searchInput { background:#203127!important; color:#eaf1eb!important; border-color:#405745!important; }
+html[data-bs-theme="dark"] .csm-price-consultation :is(.pc-photo,.pc-fact,.pc-description,.pc-product-codes span,.pc-suggest-image) { background:#26382b; }
+html[data-bs-theme="dark"] .csm-price-consultation .pc-description-text { color:#c2cdc5; }
+html[data-bs-theme="dark"] .csm-price-consultation .pc-price-card { background:linear-gradient(120deg,#086b49,#07553b); }
+html[data-bs-theme="dark"] .csm-price-consultation .pc-price-label,html[data-bs-theme="dark"] .csm-price-consultation .pc-price-number { color:#fff; }
+html[data-bs-theme="dark"] .csm-price-consultation .btn-print { background:#0c7850; border-color:#0c7850; color:#fff; }
+html[data-bs-theme="dark"] .csm-price-consultation .autocomplete-item:is(:hover,.selected) { background:#294735; }
+@media(prefers-reduced-motion:reduce) { .csm-price-consultation .pc-product { animation:none; } }
