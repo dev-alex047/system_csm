@@ -93,8 +93,25 @@ body.csm-price-consultation * { box-sizing:border-box; }
   font-variant-numeric: tabular-nums;
 }
 
-.csm-price-consultation .pc-facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:11px; }
+.csm-price-consultation .pc-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 11px;
+}
 .csm-price-consultation .pc-fact { display:flex; flex-direction:column; min-width:0; gap:5px; padding:13px 14px; border:1px solid var(--pc-border); background:#f7f9f7; border-radius:11px; }
+.csm-price-consultation .pc-fact {
+  justify-content: center;
+  min-height: 88px;
+}
+
+.csm-price-consultation .pc-fact-price .pc-price-number {
+  color: var(--pc-text);
+  font-size: clamp(1.05rem, 1.8vw, 1.4rem);
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
 .csm-price-consultation .pc-fact-label { font-size:.72rem; color:var(--pc-muted); }
 .csm-price-consultation .pc-fact strong { color:var(--pc-text); font-size:.88rem; font-weight:760; overflow-wrap:anywhere; }
 /* Descripción: máximo tres líneas inicialmente, con botón accesible. */
@@ -157,6 +174,14 @@ body.csm-price-consultation * { box-sizing:border-box; }
 
 .csm-price-consultation .pc-price-number {
   font-size: 1.55rem;
+}
+.csm-price-consultation .pc-facts {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.csm-price-consultation .pc-facts .pc-fact:last-child {
+  grid-column: 1 / -1;
 }
 }
 @media(max-width:365px) {
