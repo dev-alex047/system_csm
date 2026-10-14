@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const stock = Math.max(0, Math.floor(Number(product.stock || 0)));
     resultContainer.innerHTML = `<article class="pc-product">
       <header class="pc-product-head">
-        <div><span class="pc-found"><i class="bi bi-check-circle" aria-hidden="true"></i> PRODUCTO ENCONTRADO</span>
+        <div>
           <h2>${escapeHtml(product.name || 'Producto sin nombre')}</h2>
           <div class="pc-product-codes"><span>Código: <strong>${escapeHtml(product.code || 'N/A')}</strong></span>${product.barcode ? `<span>Barras: <strong>${escapeHtml(product.barcode)}</strong></span>` : ''}</div>
         </div>
