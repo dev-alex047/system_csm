@@ -98,10 +98,19 @@ body.csm-price-consultation * { box-sizing:border-box; }
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 11px;
 }
-.csm-price-consultation .pc-fact { display:flex; flex-direction:column; min-width:0; gap:5px; padding:13px 14px; border:1px solid var(--pc-border); background:#f7f9f7; border-radius:11px; }
+.csm-price-consultation .pc-fact { 
+    display:flex; 
+    flex-direction:column; 
+    min-width:0; 
+    gap:3px; 
+    padding:8px 12px; 
+    border:1px solid var(--pc-border); 
+    background:#f7f9f7; 
+    border-radius:11px; 
+}
 .csm-price-consultation .pc-fact {
   justify-content: center;
-  min-height: 88px;
+  min-height: 60px;
 }
 
 .csm-price-consultation .pc-fact-price .pc-price-number {
@@ -218,3 +227,18 @@ html[data-bs-theme="dark"] .csm-price-consultation .pc-price-number {
 html[data-bs-theme="dark"] .csm-price-consultation .btn-print { background:#0c7850; border-color:#0c7850; color:#fff; }
 html[data-bs-theme="dark"] .csm-price-consultation .autocomplete-item:is(:hover,.selected) { background:#294735; }
 @media(prefers-reduced-motion:reduce) { .csm-price-consultation .pc-product { animation:none; } }
+
+
+/* Alinear información e imagen en computadora */
+@media (min-width: 768px) {
+  .csm-price-consultation .pc-product-information {
+    min-height: 228px;
+    grid-template-rows: auto minmax(0, 1fr);
+    align-content: stretch;
+    gap: 10px;
+  }
+
+  .csm-price-consultation .pc-description {
+    align-self: stretch;
+  }
+}
