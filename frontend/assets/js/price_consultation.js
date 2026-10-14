@@ -152,12 +152,25 @@ document.addEventListener('DOMContentLoaded', () => {
     <strong class="pc-price-number">$${formatPrice(publicPrice)}</strong>
   </div>
   <div class="pc-fact">
-    <span class="pc-fact-label">Existencias registradas</span>
-    <strong>${stock === 0 ? 'Sin existencias' : `${stock.toLocaleString('es-MX')} unidades`}</strong>
-  </div>
+  <span class="pc-fact-label">Existencias registradas</span>
+  <strong>${stock === 0 ? 'Sin existencias' : `${stock.toLocaleString('es-MX')} unidades`}</strong>
 </div>
-      </div>
-    </article>`;
+</div>
+
+${description ? `
+  <section class="pc-description" aria-label="Descripción del producto">
+    <h3>Descripción del producto</h3>
+    <p class="pc-description-text is-collapsed" id="pcDescriptionText">${escapeHtml(description)}</p>
+    <button class="pc-description-toggle" type="button" aria-expanded="false" aria-controls="pcDescriptionText" hidden>
+      <span>Ver más</span>
+      <i class="bi bi-chevron-down" aria-hidden="true"></i>
+    </button>
+  </section>
+` : ''}
+
+</div>
+</div>
+</article>`;
     resultContainer.querySelector('.btn-print')?.addEventListener('click', () => {
       window.printQuotation(product.name || '', publicPrice, product.code || '', photoUrl, description);
     });
