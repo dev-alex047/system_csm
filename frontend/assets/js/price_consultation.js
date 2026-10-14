@@ -135,12 +135,19 @@ document.addEventListener('DOMContentLoaded', () => {
         <button class="btn-print" type="button"><i class="bi bi-file-earmark-arrow-down" aria-hidden="true"></i> Descargar PDF</button>
       </header>
       <div class="pc-product-main">
+      <div class="pc-product-visual">
         <div class="pc-photo">${photoUrl ? `<img src="${escapeHtml(photoUrl)}" alt="Imagen de ${escapeHtml(product.name || 'producto')}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.hidden=false;">` : ''}
           <span class="pc-photo-placeholder" ${photoUrl ? 'hidden' : ''}><i class="bi bi-image" aria-hidden="true"></i></span>
+                </div>
+        <div class="pc-price-card">
+          <span class="pc-price-label">Precio de venta</span>
+          <strong class="pc-price-number">$${formatPrice(publicPrice)}</strong>
         </div>
-        <div class="pc-product-information">
-          <div class="pc-price-card"><span class="pc-price-label">Precio de venta</span><strong class="pc-price-number">$${formatPrice(publicPrice)}</strong></div>
-          <div class="pc-facts"><div class="pc-fact"><span class="pc-fact-label">Presentación</span><strong>${escapeHtml(presentation)}</strong></div>
+      </div>
+      <div class="pc-product-information">
+        <div class="pc-facts">
+          
+          <div class="pc-fact"><span class="pc-fact-label">Presentación</span><strong>${escapeHtml(presentation)}</strong></div>
             <div class="pc-fact"><span class="pc-fact-label">Existencias registradas</span><strong>${stock === 0 ? 'Sin existencias' : `${stock.toLocaleString('es-MX')} unidades`}</strong></div></div>
           ${description ? `<section class="pc-description" aria-label="Descripción del producto"><h3>Descripción del producto</h3><p class="pc-description-text is-collapsed" id="pcDescriptionText">${escapeHtml(description)}</p><button class="pc-description-toggle" type="button" aria-expanded="false" aria-controls="pcDescriptionText" hidden><span>Ver más</span><i class="bi bi-chevron-down" aria-hidden="true"></i></button></section>` : ''}
         </div>
