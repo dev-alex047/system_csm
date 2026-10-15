@@ -4475,7 +4475,7 @@ function entityFields(entity, record = {}) {
                 <div class="mb-3">
                     <label class="form-label fw-semibold" for="field-password">Contraseña</label>
                     <input id="field-password" class="form-control form-control-lg" type="password" name="password"
-                        placeholder="${editando ? 'Déjala vacía para conservar la actual' : 'Mínimo 8 caracteres'}"
+                        placeholder="${editando ? '' : 'Mínimo 8 caracteres'}"
                         autocomplete="new-password" ${editando ? '' : 'required'}>
                     ${editando ? '<div class="form-text">Solo escribe una contraseña si deseas cambiarla.</div>' : ''}
                 </div>
