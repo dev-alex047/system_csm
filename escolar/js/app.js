@@ -3004,8 +3004,22 @@ function renderStudents() {
                 </td>
 
                 <td>
-                    <span class="fw-semibold">${escapeHtml(student.enrollment)}</span>
-                </td>
+    ${
+        String(
+            student.enrollment || ''
+        ).startsWith('SINMAT-')
+            ? `
+                <span class="text-muted">
+                    Sin matrícula
+                </span>
+            `
+            : `
+                <span class="fw-semibold">
+                    ${escapeHtml(student.enrollment)}
+                </span>
+            `
+    }
+</td>
 
                 <td>
                     <span class="badge rounded-pill badge-group">${escapeHtml(student.group)}</span>
@@ -4491,14 +4505,26 @@ function entityFields(entity, record = {}) {
 
             <div class="row g-3">
                 <div class="col-md-5">
-                    ${inputField(
-                        'matricula',
-                        'Matrícula',
-                        record.matricula || record.enrollment || '',
-                        'Ej. A-001',
-                        'text',
-                        'maxlength="60" autocomplete="off" style="text-transform:uppercase"'
-                    )}
+                   ${optionalInputField(
+    'matricula',
+    'Matrícula (opcional)',
+    (
+        String(
+            record.matricula ||
+            record.enrollment ||
+            ''
+        ).startsWith('SINMAT-')
+            ? ''
+            : (
+                record.matricula ||
+                record.enrollment ||
+                ''
+            )
+    ),
+    'Déjela vacía si no cuenta con matrícula',
+    'text',
+    'maxlength="60" autocomplete="off" style="text-transform:uppercase"'
+)}
                 </div>
 
                 <div class="col-md-7">

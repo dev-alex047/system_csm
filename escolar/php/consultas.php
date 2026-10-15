@@ -94,14 +94,80 @@ class consultas{
         $telefono = isset($data["telefono"]) ? trim((string)$data["telefono"]) : "";
         $observaciones = isset($data["observaciones"]) ? trim((string)$data["observaciones"]) : "";
 
+        /*
+ * Si estamos editando un alumno que originalmente
+ * no tenía matrícula, conservamos su código interno.
+ */
+if ($matricula === "" && $id > 0) {
+    $sqlMatriculaActual = "SELECT matricula
+                           FROM alumnos
+                           WHERE myuser_id = ?
+                           AND id = ?
+                           AND eliminado = 0
+                           LIMIT 1";
+
+    $stmtMatriculaActual = $this->conn->prepare($sqlMatriculaActual);
+
+    if ($stmtMatriculaActual) {
+        $stmtMatriculaActual->bind_param(
+            "si",
+            $myuser_id,
+            $id
+        );
+
+        if ($stmtMatriculaActual->execute()) {
+            $resultMatriculaActual =
+                $stmtMatriculaActual->get_result();
+
+            if ($resultMatriculaActual->num_rows > 0) {
+                $registroMatricula =
+                    $resultMatriculaActual->fetch_assoc();
+
+                $matriculaActual =
+                    (string)$registroMatricula["matricula"];
+
+                if (
+                    strpos(
+                        $matriculaActual,
+                        "SINMAT-"
+                    ) === 0
+                ) {
+                    $matricula =
+                        $matriculaActual;
+                }
+            }
+        }
+
+        $stmtMatriculaActual->close();
+    }
+}
+
+/*
+ * Si realmente no tiene matrícula,
+ * generamos una solamente para uso interno.
+ *
+ * Ejemplo:
+ * SINMAT-4217A88F...
+ */
+if ($matricula === "") {
+    $matricula =
+        "SINMAT-" .
+        strtoupper(
+            bin2hex(
+                random_bytes(16)
+            )
+        );
+}
+
+
         $datosValidos = true;
 
-        if ($matricula === "" || $nombre === "" || $apellido === "" || $grado === "" || $grupo === "") {
-            $json["status"] = "warning";
-            $json["answer"] = "Completa matrícula, nombre, apellidos, grado y grupo";
-            $json["code"] = 400;
-            $datosValidos = false;
-        } elseif ($correo !== "" && !filter_var($correo, FILTER_VALIDATE_EMAIL)) {
+        if ($nombre === "" || $apellido === "" || $grado === "" || $grupo === "") {
+    $json["status"] = "warning";
+    $json["answer"] = "Completa nombre, apellidos, grado y grupo";
+    $json["code"] = 400;
+    $datosValidos = false;
+} elseif ($correo !== "" && !filter_var($correo, FILTER_VALIDATE_EMAIL)) {
             $json["status"] = "warning";
             $json["answer"] = "El correo electrónico no tiene un formato válido";
             $json["code"] = 400;
