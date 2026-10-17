@@ -4594,6 +4594,7 @@ function entityFields(entity, record = {}) {
 
     if (entity === 'student') {
         const estado = record.estado !== undefined ? Number(record.estado) : 1;
+        const editandoAlumno = Number(record.id || 0) > 0;
 
         return `
             <div class="mb-4">
@@ -4683,6 +4684,39 @@ function entityFields(entity, record = {}) {
                         'text',
                         'maxlength="20" style="text-transform:uppercase"'
                     )}
+                </div>
+            </div>
+
+                        <div id="studentOrderSection" class="border-top pt-3 mt-2 mb-3">
+                <div class="fw-semibold">Posición en la lista</div>
+                <div class="small text-muted mb-3">
+                    Elige dónde debe aparecer el alumno dentro de su grupo.
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold" for="field-posicion">
+                            Ubicación
+                        </label>
+
+                        <select id="field-posicion" name="posicion" class="form-select form-select-lg">
+                            ${editandoAlumno ? '<option value="mantener" selected>Mantener posición actual</option>' : ''}
+                            <option value="inicio">Al inicio</option>
+                            <option value="final" ${editandoAlumno ? '' : 'selected'}>Al final</option>
+                            <option value="antes">Antes de otro alumno</option>
+                            <option value="despues">Después de otro alumno</option>
+                        </select>
+                    </div>
+
+                    <div id="studentReferenceWrap" class="col-md-6 d-none">
+                        <label class="form-label fw-semibold" for="field-referencia_id">
+                            Alumno de referencia
+                        </label>
+
+                        <select id="field-referencia_id" name="referencia_id" class="form-select form-select-lg">
+                            <option value="">Selecciona un alumno</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
