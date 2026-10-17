@@ -53,6 +53,7 @@ window.addEventListener('DOMContentLoaded', () => {
     bindSearches();
     bindForms();
     bindEvaluationEvents();
+    activarOrdenAlumnos();
     bindEvaluationViews();
     bindBulkUpload();
     bindPendingEvaluation();
@@ -2972,6 +2973,71 @@ function getAlumnos(mostrarCarga = true) {
     });
 }
 
+function activarOrdenAlumnos() {
+    Sortable.create(document.getElementById("studentTableBody"), {
+        handle: ".student-drag-handle",
+        animation: 180,
+        ghostClass: "student-sort-ghost",
+
+        onMove: function(evt) {
+            if (!evt.related) return true;
+            return evt.dragged.dataset.group === evt.related.dataset.group;
+        },
+
+        onEnd: function(evt) {
+            if (evt.oldIndex === evt.newIndex) return;
+
+            var grupo = evt.item.dataset.group;
+
+            var ids = Array.from(
+                document.querySelectorAll("#studentTableBody tr[data-student-id]")
+            ).filter(function(row) {
+                return row.dataset.group === grupo;
+            }).map(function(row) {
+                return Number(row.dataset.studentId);
+            });
+
+            var formData = new FormData();
+            formData.append("action", "guardarOrdenAlumnos");
+            formData.append("ids", JSON.stringify(ids));
+
+            $.ajax({
+                type: "POST",
+                url: "php/index.php",
+                data: formData,
+                dataType: "json",
+                processData: false,
+                contentType: false
+            }).done(function(data) {
+                if (!data || data.status !== "ok") {
+                    getAlumnos(false);
+
+                    Swal.fire({
+                        icon: "error",
+                        title: "No fue posible cambiar el orden",
+                        text: data && data.answer ? data.answer : "Inténtelo nuevamente.",
+                        confirmButtonColor: "#1D1D1F"
+                    });
+
+                    return;
+                }
+
+                getAlumnos(false);
+                showToast("Orden de alumnos actualizado.");
+            }).fail(function() {
+                getAlumnos(false);
+
+                Swal.fire({
+                    icon: "error",
+                    title: "No fue posible cambiar el orden",
+                    text: "No fue posible comunicarse con el servidor.",
+                    confirmButtonColor: "#1D1D1F"
+                });
+            });
+        }
+    });
+}
+
 function renderStudents() {
     const search = normalize($("#studentSearch").val());
 
@@ -2992,10 +3058,15 @@ function renderStudents() {
         var activo = Number(student.estado) === 1;
 
         return `
-            <tr>
-                <td>
-                    <div class="d-flex align-items-center gap-3">
-                        <span class="avatar">${initials(student.name)}</span>
+    <tr data-student-id="${student.id}" data-group="${escapeHtml(student.group)}">
+        <td>
+            <div class="d-flex align-items-center gap-3">
+                ${search ? "" : `
+                    <span class="student-drag-handle" title="Arrastrar para cambiar el orden">
+                        <i class="bi bi-grip-vertical"></i>
+                    </span>
+                `}
+                <span class="avatar">${initials(student.name)}</span>
                         <div class="min-w-0">
                             <div class="fw-bold">${escapeHtml(student.name)}</div>
                             ${student.correo ? `<div class="small text-muted text-truncate">${escapeHtml(student.correo)}</div>` : ""}

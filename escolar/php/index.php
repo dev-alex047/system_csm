@@ -39,11 +39,12 @@ switch ($action) {
     break;
 
     case "eliminarAlumno":
-        $idAlumno = isset($_POST["id"])
-            ? (int)$_POST["id"]
-            : 0;
-
+        $idAlumno = isset($_POST["id"]) ? (int)$_POST["id"] : 0;
         $response = $consultas->eliminarAlumno($idAlumno);
+    break;
+
+    case "guardarOrdenAlumnos":
+        $response = $consultas->guardarOrdenAlumnos($_POST);
     break;
 
     case "getMaestros":

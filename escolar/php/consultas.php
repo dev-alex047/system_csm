@@ -28,7 +28,7 @@ class consultas{
 
         $myuser_id = $this->token;
 
-        $sql = "SELECT id, matricula, nombre, apellido, grado, grupo, estado, fecha_nacimiento, curp, correo, telefono, observaciones, fecha_alta
+        $sql = "SELECT id, matricula, nombre, apellido, grado, grupo, orden, estado, fecha_nacimiento, curp, correo, telefono, observaciones, fecha_alta
                 FROM alumnos
                 WHERE myuser_id = ? AND eliminado = 0
                 ORDER BY grado ASC, grupo ASC, apellido ASC, nombre ASC";
@@ -44,6 +44,7 @@ class consultas{
 
                 while ($row = $result->fetch_assoc()) {
                     $row["id"] = (int)$row["id"];
+                    $row["orden"] = (int)$row["orden"];
                     $row["estado"] = (int)$row["estado"];
                     $row["name"] = trim($row["nombre"] . " " . $row["apellido"]);
                     $row["enrollment"] = $row["matricula"];
@@ -94,10 +95,7 @@ class consultas{
         $telefono = isset($data["telefono"]) ? trim((string)$data["telefono"]) : "";
         $observaciones = isset($data["observaciones"]) ? trim((string)$data["observaciones"]) : "";
 
-        /*
- * Si estamos editando un alumno que originalmente
- * no tenía matrícula, conservamos su código interno.
- */
+        
 if ($matricula === "" && $id > 0) {
     $sqlMatriculaActual = "SELECT matricula
                            FROM alumnos
@@ -142,13 +140,7 @@ if ($matricula === "" && $id > 0) {
     }
 }
 
-/*
- * Si realmente no tiene matrícula,
- * generamos una solamente para uso interno.
- *
- * Ejemplo:
- * SINMAT-4217A88F...
- */
+ 
 if ($matricula === "") {
     $matricula =
         "SINMAT-" .
@@ -385,6 +377,56 @@ if ($matricula === "") {
     
         return $json;
     }
+
+    public function guardarOrdenAlumnos($data) {
+    $json = [];
+    $myuser_id = $this->token;
+    $ids = isset($data["ids"]) ? json_decode($data["ids"], true) : [];
+
+    if (!is_array($ids) || count($ids) === 0) {
+        $json["status"] = "warning";
+        $json["answer"] = "No se recibió un orden válido";
+        $json["code"] = 400;
+    } else {
+        $stmt = $this->conn->prepare("UPDATE alumnos SET orden = ? WHERE myuser_id = ? AND id = ? AND eliminado = 0");
+
+        if ($stmt) {
+            $this->conn->begin_transaction();
+            $valido = true;
+
+            foreach ($ids as $index => $alumnoId) {
+                $orden = $index + 1;
+                $alumnoId = (int)$alumnoId;
+                $stmt->bind_param("isi", $orden, $myuser_id, $alumnoId);
+
+                if (!$stmt->execute()) {
+                    $valido = false;
+                    break;
+                }
+            }
+
+            $stmt->close();
+
+            if ($valido) {
+                $this->conn->commit();
+                $json["status"] = "ok";
+                $json["answer"] = "Orden actualizado correctamente";
+                $json["code"] = 200;
+            } else {
+                $this->conn->rollback();
+                $json["status"] = "error";
+                $json["answer"] = "No fue posible guardar el nuevo orden";
+                $json["code"] = 500;
+            }
+        } else {
+            $json["status"] = "error";
+            $json["answer"] = "No fue posible preparar el cambio de orden";
+            $json["code"] = 500;
+        }
+    }
+
+    return $json;
+}
 
     //MAESTROS
     public function getMaestros() {
