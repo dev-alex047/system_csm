@@ -52,7 +52,6 @@
   const tableView = document.getElementById('tableView');
   const boxView = document.getElementById('boxView');
   const boxSearch = document.getElementById('boxSearch');
-  const boxCategories = document.getElementById('boxCategories');
   const boxGrid = document.getElementById('boxGrid');
   const costSummaryValue = document.getElementById('costSummaryValue');
   let productsCache = [];
@@ -157,26 +156,6 @@
     }
   }
 
-  function renderCategories(products) {
-    if (!boxCategories) return;
-    const categories = [...new Set((products || []).map(p => String(p.classification || '').trim()).filter(Boolean))].sort();
-    const selected = classificationFilter?.value || '';
-    boxCategories.replaceChildren();
-    [['Todas', ''], ...categories.map(x => [x, x])].forEach(([name, value]) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = `csm-inventory-chip ${selected === value ? 'active' : ''}`;
-      btn.textContent = name;
-      btn.setAttribute('aria-pressed', String(selected === value));
-      btn.addEventListener('click', () => {
-        if (classificationFilter) classificationFilter.value = value;
-        visibleLimit = 24;
-        applyBoxFilters();
-      });
-      boxCategories.appendChild(btn);
-    });
-  }
-
   function openProductFicha(prod) {
     apiRequest(`product_card.php?id=${encodeURIComponent(prod.id)}`).then(res => {
       if (res.success && res.file) window.open(`../backend/${res.file}`, '_blank', 'noopener');
@@ -240,8 +219,7 @@ card.innerHTML = `<article class="csm-inventory-product h-100">
         <ul class="dropdown-menu dropdown-menu-end">
           <li><button class="dropdown-item" type="button" data-action="edit"><i class="bi bi-pencil"></i> Editar</button></li>
           <li><button class="dropdown-item" type="button" data-action="ficha"><i class="bi bi-file-earmark-text"></i> Ver ficha</button></li>
-          <li><hr class="dropdown-divider"></li>
-          <li><button class="dropdown-item text-danger" type="button" data-action="delete"><i class="bi bi-trash"></i> Eliminar</button></li>
+          <li><button class="dropdown-item" type="button" data-action="delete"><i class="bi bi-trash"></i> Eliminar</button></li>
         </ul>
       </div>` : ''}
 
@@ -284,7 +262,6 @@ card.innerHTML = `<article class="csm-inventory-product h-100">
 
   function applyBoxFilters() {
     const filtered = getBoxFilteredProducts();
-    renderCategories(productsCache);
     renderBoxGrid(filtered);
     if (currentView === 'table') renderTable(filtered);
     updateCostSummary(filtered, classificationFilter?.value || 'Todas');
@@ -857,14 +834,6 @@ if (btnQuickPrice) {
   btnViewBoxes?.addEventListener('click', () => setView('boxes'));
   boxSearch?.addEventListener('input', () => {
     boxSearchTerm = boxSearch.value || '';
-    visibleLimit = 24;
-    applyBoxFilters();
-  });
-  document.getElementById('btnResetFilters')?.addEventListener('click', () => {
-    if (boxSearch) boxSearch.value = '';
-    if (classificationFilter) classificationFilter.value = '';
-    boxSearchTerm = '';
-    boxSelectedCategory = '';
     visibleLimit = 24;
     applyBoxFilters();
   });

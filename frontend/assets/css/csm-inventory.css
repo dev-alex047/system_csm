@@ -113,7 +113,7 @@ body.csm-inventory-workspace #boxGrid > .col:has(.dropdown-menu.show) { position
 .csm-inventory-product-row { display: flex; flex-direction: column; flex: 1; min-width: 0; padding: 0; gap: 0; }
 
 /* La imagen no se estira ni se recorta, aun con fotografías verticales o muy anchas. */
-body.csm-inventory-workspace #boxGrid .csm-inventory-product-media { position: relative; display: grid; place-items: center; flex: 0 0 166px; width: 100%; height: 166px; min-width: 0; padding: 0; overflow: hidden; border: 0; border-radius: 14px 14px 0 0; background: var(--inv-soft); }
+body.csm-inventory-workspace #boxGrid .csm-inventory-product-media { position: relative; display: grid; place-items: center; flex: 0 0 166px; width: 100%; height: 166px; min-width: 0; padding: 0; overflow: hidden; border: 0; border-radius: 14px 14px 0 0; background: #ffffff; }
 body.csm-inventory-workspace #boxGrid .csm-inventory-product-media img { position: absolute; inset: 12px; display: block; width: calc(100% - 24px); height: calc(100% - 24px); min-width: 0; max-width: none; min-height: 0; max-height: none; object-fit: contain; object-position: center; transform: none; }
 .csm-inventory-product-placeholder { font-size: 2.4rem; color: var(--inv-green); opacity: .45; }
 
@@ -151,7 +151,7 @@ html[data-bs-theme="dark"] .csm-inventory-stock.high { background: #263b59; colo
   body.csm-inventory-workspace #boxGrid { grid-template-columns: minmax(0,1fr); gap: 10px; }
   .csm-inventory-product { height: auto !important; min-height: 0; }
   .csm-inventory-product-row { display: grid; grid-template-columns: 66px minmax(0,1fr); grid-template-areas: "imagen info" "footer footer"; column-gap: 12px; row-gap: 10px; align-items: center; flex: none; padding: 12px; }
-  body.csm-inventory-workspace #boxGrid .csm-inventory-product-media { grid-area: imagen; width: 66px; height: 66px; min-width: 0; flex: none; padding: 0; border: 1px solid var(--inv-border); border-radius: 50%; background: var(--inv-soft); }
+  body.csm-inventory-workspace #boxGrid .csm-inventory-product-media { grid-area: imagen; width: 66px; height: 66px; min-width: 0; flex: none; padding: 0; border: 1px solid var(--inv-border); border-radius: 50%; background: #ffffff; }
   body.csm-inventory-workspace #boxGrid .csm-inventory-product-media img { inset: 6px; width: calc(100% - 12px); height: calc(100% - 12px); object-fit: contain; }
   .csm-inventory-product-placeholder { font-size: 1.6rem; }
   .csm-inventory-product-content { display: contents; }
