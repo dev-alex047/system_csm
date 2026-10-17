@@ -115,15 +115,13 @@
             </div>
         </header>
 
-        <main class="container-fluid app-main px-3 px-lg-5 pb-5">
+    <main class="container-fluid app-main px-3 px-lg-5 pb-5">
             <!-- Inicio -->
             <section id="view-home" class="app-view active" data-view="home">
-                <div class="dashboard-heading text-center py-4 py-lg-5">
-                   
-                </div>
+                <div class="dashboard-heading"></div>
 
                 <div class="row g-3 g-lg-4 justify-content-center dashboard-grid mx-auto">
-                    <div class="col-12 col-md-6">
+                    <div class="col-6 col-md-6">
                         <button class="module-card card border-0 shadow-sm w-100 text-start" type="button" data-module="subjects">
                            
                             <span class="module-icon"><i class="bi bi-journal-bookmark"></i></span>
@@ -131,7 +129,7 @@
                             <span id="dashboardSubjects" class="text-muted">0 materias registradas</span>
                         </button>
                     </div>
-                    <div class="col-12 col-md-6">
+                    <div class="col-6 col-md-6">
                         <button class="module-card card border-0 shadow-sm w-100 text-start" type="button" data-module="teachers">
                            
                             <span class="module-icon"><i class="bi bi-person-badge"></i></span>
@@ -139,7 +137,7 @@
                             <span id="dashboardTeachers" class="text-muted">0 maestros registrados</span>
                         </button>
                     </div>
-                    <div class="col-12 col-md-6">
+                   <div class="col-6 col-md-6">
                         <button class="module-card card border-0 shadow-sm w-100 text-start" type="button" data-module="students">
                            
                             <span class="module-icon"><i class="bi bi-people"></i></span>
@@ -147,7 +145,7 @@
                             <span id="dashboardStudents" class="text-muted">0 alumnos registrados</span>
                         </button>
                     </div>
-                    <div class="col-12 col-md-6">
+                    <div class="col-6 col-md-6">
                         <button class="module-card card border-0 shadow-sm w-100 text-start" type="button" data-module="evaluations">
                             
                             <span class="module-icon"><i class="bi bi-clipboard-check"></i></span>
@@ -170,7 +168,6 @@
 <section id="view-subjects" class="app-view" data-view="subjects">
     <div class="module-heading d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3">
         <div>
-            <button class="btn btn-link text-primary px-0 text-decoration-none fw-semibold mb-2" data-module="home"><i class="bi bi-arrow-left me-1"></i>Módulos</button>
             <h1 class="display-6 fw-bold mb-1">Materias</h1>
             <p class="text-muted fs-5 mb-0">Administra las asignaturas y sus criterios de evaluación.</p>
         </div>
@@ -217,7 +214,6 @@
             <section id="view-teachers" class="app-view" data-view="teachers">
                 <div class="module-heading d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3">
                     <div>
-                        <button class="btn btn-link text-primary px-0 text-decoration-none fw-semibold mb-2" data-module="home"><i class="bi bi-arrow-left me-1"></i>Módulos</button>
                         <h1 class="display-6 fw-bold mb-1">Maestros</h1>
                         <p class="text-muted fs-5 mb-0">Administra los usuarios docentes y sus datos de contacto.</p>
                     </div>
@@ -257,7 +253,6 @@
             <section id="view-students" class="app-view" data-view="students">
                 <div class="module-heading d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3">
                     <div>
-                        <button class="btn btn-link text-primary px-0 text-decoration-none fw-semibold mb-2" data-module="home"><i class="bi bi-arrow-left me-1"></i>Módulos</button>
                         <h1 class="display-6 fw-bold mb-1">Alumnos</h1>
                         <p class="text-muted fs-5 mb-0">Consulta y organiza a los alumnos por grado y grupo.</p>
                     </div>
@@ -275,6 +270,15 @@
                             </div>
                             <div class="col text-lg-end"><span id="studentCount" class="text-muted fw-semibold"></span></div>
                         </div>
+                        <div class="student-group-scroll mt-3">
+    <ul id="studentGroupTabs" class="nav nav-pills gap-2 flex-nowrap student-group-tabs">
+        <li class="nav-item">
+            <button class="nav-link active" type="button" data-student-group-filter="all">
+                Todos
+            </button>
+        </li>
+    </ul>
+</div>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
@@ -297,7 +301,6 @@
             <section id="view-schedule" class="app-view" data-view="schedule">
                 <div class="module-heading d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3">
                     <div>
-                        <button class="btn btn-link text-primary px-0 text-decoration-none fw-semibold mb-2" data-module="home"><i class="bi bi-arrow-left me-1"></i>Módulos</button>
                         <h1 class="display-6 fw-bold mb-1">Horarios</h1>
                         <p class="text-muted fs-5 mb-0">Planea clases y actividades sin cruces de horario.</p>
                     </div>
@@ -343,7 +346,6 @@
             <section id="view-evaluations" class="app-view" data-view="evaluations">
                 <div class="module-heading d-flex flex-column flex-xl-row justify-content-between align-items-xl-end gap-3">
                     <div>
-                        <button class="btn btn-link text-primary px-0 text-decoration-none fw-semibold mb-2" data-module="home"><i class="bi bi-arrow-left me-1"></i>Módulos</button>
                         <h1 class="display-6 fw-bold mb-1">Evaluaciones</h1>
                         <p class="text-muted fs-5 mb-0">Captura calificaciones, calcula promedios y carga archivos de forma masiva.</p>
                     </div>
@@ -1037,7 +1039,7 @@
     </div>
 
     <!-- Botón compacto de pendientes -->
-<button
+<!--<button
     id="pendingEvaluationButton"
     type="button"
     class="btn pending-evaluation-trigger d-none align-items-center gap-2"
@@ -1054,9 +1056,10 @@
     </span>
 
     <span class="pending-count">1</span>
-</button>
+</button>-->
 
 <!-- Modal de evaluación pendiente -->
+
 <div
     class="modal fade"
     id="pendingEvaluationModal"

@@ -20,6 +20,7 @@ activeEvaluationKey: null,
     subjects: [],
     teachers: [],
     students: [],
+    studentGroupFilter: 'all',
     assignments: [],
     schedule: [],
     criteria: [],
@@ -29,7 +30,7 @@ activeEvaluationKey: null,
 
 const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
 const entityModal = new bootstrap.Modal(document.getElementById('entityModal'));
-const pendingEvaluationModal = new bootstrap.Modal(document.getElementById('pendingEvaluationModal'));
+//const pendingEvaluationModal = new bootstrap.Modal(document.getElementById('pendingEvaluationModal'));
 const activityModalInstance = bootstrap.Modal.getOrCreateInstance(document.getElementById('activityModal'));
 
 var saveTimer = null;
@@ -42,7 +43,7 @@ window.addEventListener('DOMContentLoaded', () => {
     activarOrdenAlumnos();
     bindEvaluationViews();
     bindBulkUpload();
-    bindPendingEvaluation();
+    //bindPendingEvaluation();
     bindSettingsMenu();
     //bindEvaluationPdf();
 
@@ -55,7 +56,7 @@ window.addEventListener('DOMContentLoaded', () => {
     getHorarios();
 
     navigateTo('home', false);
-    setTimeout(showPendingEvaluationReminder, 650);
+    //setTimeout(showPendingEvaluationReminder, 650);
 });
 
 function bindNavigation() {
@@ -63,6 +64,14 @@ function bindNavigation() {
         const moduleButton = event.target.closest('[data-module]');
         if (moduleButton) {
             navigateTo(moduleButton.dataset.module);
+            return;
+        }
+
+        const studentGroupButton = event.target.closest('[data-student-group-filter]');
+        
+        if (studentGroupButton) {
+            state.studentGroupFilter = studentGroupButton.dataset.studentGroupFilter;
+            renderStudents();
             return;
         }
 
@@ -2514,6 +2523,7 @@ function bindBulkUpload() {
     document.getElementById('bulkUploadModal').addEventListener('hidden.bs.modal', resetBulkUpload);
 }
 
+/*
 function bindPendingEvaluation() {
     document
         .getElementById('btnContinuePendingEvaluation')
@@ -2538,7 +2548,7 @@ function showPendingEvaluationReminder() {
 
     sessionStorage.setItem(storageKey, 'shown');
     pendingEvaluationModal.show();
-}
+}*/
 
 function renderPendingEvaluation() {
     const button = document.getElementById(
@@ -3228,13 +3238,79 @@ function activarOrdenAlumnos() {
 function renderStudents() {
     const search = normalize($("#studentSearch").val());
 
-    const rows = state.students.filter(function(student) {
+    const grupos = [...new Set(
+        state.students
+            .map(function(student) {
+                return String(student.group || "").trim();
+            })
+            .filter(Boolean)
+    )].sort(function(a, b) {
+        return a.localeCompare(b, "es", {
+            numeric: true,
+            sensitivity: "base"
+        });
+    });
+
+    if (
+        state.studentGroupFilter !== "all" &&
+        !grupos.includes(state.studentGroupFilter)
+    ) {
+        state.studentGroupFilter = "all";
+    }
+
+    $("#studentGroupTabs").html(`
+        <li class="nav-item">
+            <button
+                type="button"
+                class="nav-link ${state.studentGroupFilter === "all" ? "active" : ""}"
+                data-student-group-filter="all"
+            >
+                Todos
+                <span class="badge rounded-pill ms-1">
+                    ${state.students.length}
+                </span>
+            </button>
+        </li>
+
+        ${grupos.map(function(grupo) {
+            var totalGrupo = state.students.filter(function(student) {
+                return String(student.group || "").trim() === grupo;
+            }).length;
+
+            return `
+                <li class="nav-item">
+                    <button
+                        type="button"
+                        class="nav-link ${state.studentGroupFilter === grupo ? "active" : ""}"
+                        data-student-group-filter="${escapeHtml(grupo)}"
+                    >
+                        ${escapeHtml(grupo)}
+                        <span class="badge rounded-pill ms-1">
+                            ${totalGrupo}
+                        </span>
+                    </button>
+                </li>
+            `;
+        }).join("")}
+    `);
+
+    const alumnosGrupo = state.studentGroupFilter === "all"
+        ? state.students
+        : state.students.filter(function(student) {
+            return String(student.group || "").trim() === state.studentGroupFilter;
+        });
+
+    const rows = alumnosGrupo.filter(function(student) {
         return normalize(
             `${student.name} ${student.enrollment} ${student.group} ${student.status} ${student.curp || ""} ${student.correo || ""} ${student.telefono || ""}`
         ).includes(search);
     });
 
-    $("#studentCount").text(`${rows.length} de ${state.students.length} alumnos`);
+    $("#studentCount").text(
+        state.studentGroupFilter === "all"
+            ? `${rows.length} de ${state.students.length} alumnos`
+            : `${rows.length} de ${alumnosGrupo.length} alumnos`
+    );
 
     if (!rows.length) {
         $("#studentTableBody").html(emptyTableRow(5, "No se encontraron alumnos."));
