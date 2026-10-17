@@ -4380,6 +4380,35 @@ function distributeCriteria() {
     showToast('Los porcentajes se distribuyeron automáticamente.');
 }
 
+function actualizarPosicionAlumnoModal() {
+    var posicion = String($("#field-posicion").val() || "");
+    var mostrarReferencia = posicion === "antes" || posicion === "despues";
+    var grado = String($("#field-grado").val() || "").trim();
+    var grupo = String($("#field-grupo").val() || "").trim().toUpperCase();
+    var alumnoActualId = state.editing && state.editing.id ? Number(state.editing.id) : 0;
+
+    $("#studentReferenceWrap").toggleClass("d-none", !mostrarReferencia);
+    $("#field-referencia_id").prop("required", mostrarReferencia);
+
+    if (!mostrarReferencia) {
+        $("#field-referencia_id").val("");
+        return;
+    }
+
+    var alumnos = state.students.filter(function(student) {
+        return Number(student.id) !== alumnoActualId &&
+            String(student.grado || "").trim() === grado &&
+            String(student.grupo || "").trim().toUpperCase() === grupo;
+    });
+
+    $("#field-referencia_id").html(
+        '<option value="">Selecciona un alumno</option>' +
+        alumnos.map(function(student) {
+            return `<option value="${student.id}">${escapeHtml(student.name)}</option>`;
+        }).join("")
+    );
+}
+
 function openEntityModal(entity, id = null) {
     state.editing = { entity, id };
 
@@ -4396,11 +4425,17 @@ function openEntityModal(entity, id = null) {
     title.textContent = `${record ? 'Editar' : 'Nuevo'} ${entityLabel(entity)}`;
     body.innerHTML = entityFields(entity, record);
 
-    if (entity === 'subject') {
-        actualizarTotalCriteriosAsignatura();
-    }
+if (entity === 'subject') {
+    actualizarTotalCriteriosAsignatura();
+}
 
-    entityModal.show();
+if (entity === 'student') {
+    $("#field-posicion").on("change", actualizarPosicionAlumnoModal);
+    $("#field-grado, #field-grupo").on("input", actualizarPosicionAlumnoModal);
+    actualizarPosicionAlumnoModal();
+}
+
+entityModal.show();
 }
 
 function entityFields(entity, record = {}) {
@@ -5131,16 +5166,98 @@ function guardarAlumno(form, id) {
 
             return;
         }
+var posicion = String(formData.get("posicion") || (id ? "mantener" : "final"));
+var alumnoId = Number(data.id || id || 0);
+var grado = String(formData.get("grado") || "").trim();
+var grupo = String(formData.get("grupo") || "").trim().toUpperCase();
+var referenciaId = Number(formData.get("referencia_id") || 0);
 
-        entityModal.hide();
-        markSaved();
+var alumnoAnterior = id
+    ? state.students.find(function(student) {
+        return Number(student.id) === Number(id);
+    })
+    : null;
 
-        getAlumnos(false);
+if (posicion === "mantener" && alumnoAnterior && (String(alumnoAnterior.grado || "").trim() !== grado || String(alumnoAnterior.grupo || "").trim().toUpperCase() !== grupo)) {
+    posicion = "final";
+}
 
-        showToast(
-            data.answer ||
-            "Alumno guardado correctamente."
+if (posicion === "mantener") {
+    entityModal.hide();
+    markSaved();
+    getAlumnos(false);
+    showToast(data.answer || "Alumno actualizado correctamente.");
+    return;
+}
+
+var ids = state.students
+    .filter(function(student) {
+        return Number(student.id) !== alumnoId &&
+            String(student.grado || "").trim() === grado &&
+            String(student.grupo || "").trim().toUpperCase() === grupo;
+    })
+    .map(function(student) {
+        return Number(student.id);
+    });
+
+if (posicion === "inicio") {
+    ids.unshift(alumnoId);
+} else if (posicion === "final") {
+    ids.push(alumnoId);
+} else {
+    var indice = ids.indexOf(referenciaId);
+
+    if (indice === -1) {
+        ids.push(alumnoId);
+    } else {
+        ids.splice(
+            posicion === "antes" ? indice : indice + 1,
+            0,
+            alumnoId
         );
+    }
+}
+
+var ordenData = new FormData();
+ordenData.append("action", "guardarOrdenAlumnos");
+ordenData.append("ids", JSON.stringify(ids));
+
+$.ajax({
+    type: "POST",
+    url: "php/index.php",
+    data: ordenData,
+    dataType: "json",
+    processData: false,
+    contentType: false
+}).done(function(dataOrden) {
+    entityModal.hide();
+    markSaved();
+    getAlumnos(false);
+
+    if (!dataOrden || dataOrden.status !== "ok") {
+        Swal.fire({
+            icon: "warning",
+            title: "Alumno guardado",
+            text: "El alumno se guardó, pero no fue posible actualizar su posición.",
+            confirmButtonColor: "#1D1D1F"
+        });
+
+        return;
+    }
+
+    showToast("Alumno guardado correctamente.");
+}).fail(function() {
+    entityModal.hide();
+    markSaved();
+    getAlumnos(false);
+
+    Swal.fire({
+        icon: "warning",
+        title: "Alumno guardado",
+        text: "El alumno se guardó, pero no fue posible actualizar su posición.",
+        confirmButtonColor: "#1D1D1F"
+    });
+});
 
     }).fail(function(xhr) {
         boton.prop("disabled", false);

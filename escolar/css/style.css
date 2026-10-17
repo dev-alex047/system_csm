@@ -1327,3 +1327,22 @@ textarea {
         transform: translateY(0);
     }
 }
+
+.student-drag-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    color: #9a9a9a;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+}
+
+.student-drag-handle:active {
+    cursor: grabbing;
+}
+
+.student-sort-ghost {
+    opacity: .35;
+}
