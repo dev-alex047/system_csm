@@ -1400,9 +1400,9 @@ textarea {
     color: #fff;
 }
 
-@media (max-width: 767.98px) {
+/*@media (max-width: 767.98px) {
     .dashboard-heading {
         height: 1.25rem;
         padding: 0 !important;
     }
-}
+}*/
