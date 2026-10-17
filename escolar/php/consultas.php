@@ -31,7 +31,7 @@ class consultas{
         $sql = "SELECT id, matricula, nombre, apellido, grado, grupo, orden, estado, fecha_nacimiento, curp, correo, telefono, observaciones, fecha_alta
                 FROM alumnos
                 WHERE myuser_id = ? AND eliminado = 0
-                ORDER BY grado ASC, grupo ASC, apellido ASC, nombre ASC";
+                ORDER BY grado ASC, grupo ASC, orden ASC, id ASC";
 
         $stmt = $this->conn->prepare($sql);
 
@@ -742,6 +742,647 @@ public function eliminarMaestro($id) {
             error_log("eliminarMaestro prepare: " . $this->conn->error);
             $json["status"] = "error";
             $json["answer"] = "Error en la preparación de la eliminación";
+            $json["code"] = 500;
+        }
+    }
+
+    return $json;
+}
+
+//HORARIOS
+public function getHorarios() {
+    $json = [];
+    $myuser_id = $this->token;
+    $valido = true;
+    $asignaciones = [];
+    $horarios = [];
+
+    if (!$this->conn) {
+        $json["status"] = "error";
+        $json["answer"] = "No existe conexión con la base de datos";
+        $json["code"] = 501;
+        $valido = false;
+    }
+
+    if ($valido) {
+        $sql = "SELECT
+                    aa.id,
+                    aa.maestro_id,
+                    aa.asignatura_id,
+                    aa.grado,
+                    aa.grupo,
+                    aa.ciclo_escolar,
+                    aa.estado,
+                    a.nombre AS asignatura,
+                    a.clave AS asignatura_clave,
+                    CONCAT(m.nombre, ' ', m.apellido) AS maestro
+                FROM asignaciones_academicas aa
+                INNER JOIN asignaturas a
+                    ON a.myuser_id = aa.myuser_id
+                    AND a.id = aa.asignatura_id
+                    AND a.eliminado = 0
+                INNER JOIN maestros m
+                    ON m.myuser_id = aa.myuser_id
+                    AND m.id = aa.maestro_id
+                    AND m.eliminado = 0
+                WHERE aa.myuser_id = ?
+                    AND aa.estado = 1
+                    AND aa.eliminado = 0
+                ORDER BY
+                    CAST(aa.grado AS UNSIGNED) ASC,
+                    aa.grupo ASC,
+                    a.nombre ASC";
+
+        $stmt = $this->conn->prepare($sql);
+
+        if ($stmt) {
+            $stmt->bind_param("s", $myuser_id);
+
+            if ($stmt->execute()) {
+                $result = $stmt->get_result();
+
+                while ($row = $result->fetch_assoc()) {
+                    $row["id"] = (int)$row["id"];
+                    $row["maestro_id"] = (int)$row["maestro_id"];
+                    $row["asignatura_id"] = (int)$row["asignatura_id"];
+                    $row["estado"] = (int)$row["estado"];
+                    $row["group"] = trim($row["grado"] . "° " . $row["grupo"]);
+
+                    $asignaciones[] = $row;
+                }
+            } else {
+                $json["status"] = "error";
+                $json["answer"] = "No fue posible consultar las asignaciones académicas";
+                $json["code"] = 500;
+                $valido = false;
+            }
+
+            $stmt->close();
+        } else {
+            $json["status"] = "error";
+            $json["answer"] = "No fue posible preparar la consulta de asignaciones";
+            $json["code"] = 500;
+            $valido = false;
+        }
+    }
+
+    if ($valido) {
+        $sql = "SELECT
+                    h.id,
+                    h.asignacion_id,
+                    h.dia,
+                    TIME_FORMAT(h.hora_inicio, '%H:%i') AS hora_inicio,
+                    TIME_FORMAT(h.hora_fin, '%H:%i') AS hora_fin,
+                    h.aula,
+                    h.observaciones,
+                    h.estado,
+                    aa.maestro_id,
+                    aa.asignatura_id,
+                    aa.grado,
+                    aa.grupo,
+                    aa.ciclo_escolar,
+                    a.nombre AS asignatura,
+                    CONCAT(m.nombre, ' ', m.apellido) AS maestro
+                FROM horarios h
+                INNER JOIN asignaciones_academicas aa
+                    ON aa.myuser_id = h.myuser_id
+                    AND aa.id = h.asignacion_id
+                    AND aa.estado = 1
+                    AND aa.eliminado = 0
+                INNER JOIN asignaturas a
+                    ON a.myuser_id = aa.myuser_id
+                    AND a.id = aa.asignatura_id
+                    AND a.eliminado = 0
+                INNER JOIN maestros m
+                    ON m.myuser_id = aa.myuser_id
+                    AND m.id = aa.maestro_id
+                    AND m.eliminado = 0
+                WHERE h.myuser_id = ?
+                    AND h.estado = 1
+                    AND h.eliminado = 0
+                ORDER BY
+                    FIELD(h.dia, 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'),
+                    h.hora_inicio ASC";
+
+        $stmt = $this->conn->prepare($sql);
+
+        if ($stmt) {
+            $stmt->bind_param("s", $myuser_id);
+
+            if ($stmt->execute()) {
+                $result = $stmt->get_result();
+
+                while ($row = $result->fetch_assoc()) {
+                    $row["id"] = (int)$row["id"];
+                    $row["asignacion_id"] = (int)$row["asignacion_id"];
+                    $row["maestro_id"] = (int)$row["maestro_id"];
+                    $row["asignatura_id"] = (int)$row["asignatura_id"];
+                    $row["estado"] = (int)$row["estado"];
+
+                    $row["day"] = $row["dia"];
+                    $row["start"] = $row["hora_inicio"];
+                    $row["end"] = $row["hora_fin"];
+                    $row["title"] = $row["asignatura"];
+                    $row["group"] = trim($row["grado"] . "° " . $row["grupo"]);
+                    $row["teacher"] = $row["maestro"];
+                    $row["type"] = "class";
+
+                    $horarios[] = $row;
+                }
+
+                $json["status"] = "ok";
+                $json["answer"] = "Horarios consultados correctamente";
+                $json["results"] = $horarios;
+                $json["assignments"] = $asignaciones;
+                $json["total"] = count($horarios);
+                $json["code"] = 200;
+            } else {
+                $json["status"] = "error";
+                $json["answer"] = "No fue posible consultar los horarios";
+                $json["code"] = 500;
+            }
+
+            $stmt->close();
+        } else {
+            $json["status"] = "error";
+            $json["answer"] = "No fue posible preparar la consulta de horarios";
+            $json["code"] = 500;
+        }
+    }
+
+    return $json;
+}
+
+public function guardarHorario($data) {
+    $json = [];
+    $myuser_id = $this->token;
+
+    $id = isset($data["id"]) ? (int)$data["id"] : 0;
+    $asignatura_id = isset($data["asignatura_id"]) ? (int)$data["asignatura_id"] : 0;
+    $maestro_id = isset($data["maestro_id"]) ? (int)$data["maestro_id"] : 0;
+    $grado = isset($data["grado"]) ? trim((string)$data["grado"]) : "";
+    $grupo = isset($data["grupo"]) ? strtoupper(trim((string)$data["grupo"])) : "";
+    $ciclo_escolar = isset($data["ciclo_escolar"]) ? trim((string)$data["ciclo_escolar"]) : "";
+    $dia = isset($data["dia"]) ? trim((string)$data["dia"]) : "";
+    $hora_inicio = isset($data["hora_inicio"]) ? trim((string)$data["hora_inicio"]) : "";
+    $hora_fin = isset($data["hora_fin"]) ? trim((string)$data["hora_fin"]) : "";
+    $aula = isset($data["aula"]) ? trim((string)$data["aula"]) : "";
+    $observaciones = isset($data["observaciones"]) ? trim((string)$data["observaciones"]) : "";
+
+    $valido = true;
+    $asignacion_id = 0;
+
+    if ($hora_inicio !== "" && strlen($hora_inicio) === 5) {
+        $hora_inicio .= ":00";
+    }
+
+    if ($hora_fin !== "" && strlen($hora_fin) === 5) {
+        $hora_fin .= ":00";
+    }
+
+    if (!$this->conn) {
+        $json["status"] = "error";
+        $json["answer"] = "No existe conexión con la base de datos";
+        $json["code"] = 501;
+        $valido = false;
+    }
+
+    if ($valido && $id > 0) {
+        $sql = "SELECT
+                    h.asignacion_id,
+                    aa.asignatura_id,
+                    aa.maestro_id,
+                    aa.grado,
+                    aa.grupo,
+                    aa.ciclo_escolar
+                FROM horarios h
+                INNER JOIN asignaciones_academicas aa
+                    ON aa.myuser_id = h.myuser_id
+                    AND aa.id = h.asignacion_id
+                WHERE h.myuser_id = ?
+                    AND h.id = ?
+                    AND h.eliminado = 0
+                LIMIT 1";
+
+        $stmt = $this->conn->prepare($sql);
+
+        if ($stmt) {
+            $stmt->bind_param("si", $myuser_id, $id);
+
+            if ($stmt->execute()) {
+                $result = $stmt->get_result();
+
+                if ($result->num_rows > 0) {
+                    $actual = $result->fetch_assoc();
+
+                    $asignacion_id = (int)$actual["asignacion_id"];
+                    $asignatura_id = (int)$actual["asignatura_id"];
+                    $maestro_id = (int)$actual["maestro_id"];
+                    $grado = $actual["grado"];
+                    $grupo = $actual["grupo"];
+                    $ciclo_escolar = $actual["ciclo_escolar"];
+                } else {
+                    $json["status"] = "warning";
+                    $json["answer"] = "El horario seleccionado no existe";
+                    $json["code"] = 404;
+                    $valido = false;
+                }
+            } else {
+                $valido = false;
+                $json["status"] = "error";
+                $json["answer"] = "No fue posible consultar el horario";
+                $json["code"] = 500;
+            }
+
+            $stmt->close();
+        }
+    }
+
+    if (
+        $valido &&
+        (
+            $asignatura_id <= 0 ||
+            $maestro_id <= 0 ||
+            $grado === "" ||
+            $grupo === "" ||
+            $ciclo_escolar === "" ||
+            $dia === "" ||
+            $hora_inicio === "" ||
+            $hora_fin === ""
+        )
+    ) {
+        $json["status"] = "warning";
+        $json["answer"] = "Completa materia, maestro, grupo, ciclo, día y horario";
+        $json["code"] = 400;
+        $valido = false;
+    }
+
+    if (
+        $valido &&
+        !in_array(
+            $dia,
+            ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"],
+            true
+        )
+    ) {
+        $json["status"] = "warning";
+        $json["answer"] = "El día seleccionado no es válido";
+        $json["code"] = 400;
+        $valido = false;
+    }
+
+    if ($valido && $hora_inicio >= $hora_fin) {
+        $json["status"] = "warning";
+        $json["answer"] = "La hora final debe ser mayor que la hora de inicio";
+        $json["code"] = 400;
+        $valido = false;
+    }
+
+    if ($valido && $id <= 0) {
+        $sql = "SELECT a.id
+                FROM asignaturas a
+                INNER JOIN maestros m
+                    ON m.myuser_id = a.myuser_id
+                WHERE a.myuser_id = ?
+                    AND a.id = ?
+                    AND a.estado = 1
+                    AND a.eliminado = 0
+                    AND m.id = ?
+                    AND m.estado = 1
+                    AND m.eliminado = 0
+                LIMIT 1";
+
+        $stmt = $this->conn->prepare($sql);
+
+        if ($stmt) {
+            $stmt->bind_param(
+                "sii",
+                $myuser_id,
+                $asignatura_id,
+                $maestro_id
+            );
+
+            if ($stmt->execute()) {
+                if ($stmt->get_result()->num_rows === 0) {
+                    $json["status"] = "warning";
+                    $json["answer"] = "La materia o el maestro seleccionado no está disponible";
+                    $json["code"] = 400;
+                    $valido = false;
+                }
+            } else {
+                $valido = false;
+            }
+
+            $stmt->close();
+        }
+    }
+
+    if ($valido && $id <= 0) {
+        $sql = "SELECT id
+                FROM alumnos
+                WHERE myuser_id = ?
+                    AND grado = ?
+                    AND grupo = ?
+                    AND estado = 1
+                    AND eliminado = 0
+                LIMIT 1";
+
+        $stmt = $this->conn->prepare($sql);
+
+        if ($stmt) {
+            $stmt->bind_param(
+                "sss",
+                $myuser_id,
+                $grado,
+                $grupo
+            );
+
+            if ($stmt->execute()) {
+                if ($stmt->get_result()->num_rows === 0) {
+                    $json["status"] = "warning";
+                    $json["answer"] = "El grado y grupo seleccionado no tiene alumnos activos";
+                    $json["code"] = 400;
+                    $valido = false;
+                }
+            } else {
+                $valido = false;
+            }
+
+            $stmt->close();
+        }
+    }
+
+    if ($valido) {
+        $sql = "SELECT
+                    h.id,
+                    aa.maestro_id,
+                    aa.grado,
+                    aa.grupo
+                FROM horarios h
+                INNER JOIN asignaciones_academicas aa
+                    ON aa.myuser_id = h.myuser_id
+                    AND aa.id = h.asignacion_id
+                WHERE h.myuser_id = ?
+                    AND aa.ciclo_escolar = ?
+                    AND h.dia = ?
+                    AND h.id <> ?
+                    AND h.estado = 1
+                    AND h.eliminado = 0
+                    AND aa.estado = 1
+                    AND aa.eliminado = 0
+                    AND h.hora_inicio < ?
+                    AND h.hora_fin > ?
+                    AND (
+                        aa.maestro_id = ?
+                        OR (
+                            aa.grado = ?
+                            AND aa.grupo = ?
+                        )
+                    )
+                LIMIT 1";
+
+        $stmt = $this->conn->prepare($sql);
+
+        if ($stmt) {
+            $stmt->bind_param(
+                "sssississ",
+                $myuser_id,
+                $ciclo_escolar,
+                $dia,
+                $id,
+                $hora_fin,
+                $hora_inicio,
+                $maestro_id,
+                $grado,
+                $grupo
+            );
+
+            if ($stmt->execute()) {
+                $result = $stmt->get_result();
+
+                if ($result->num_rows > 0) {
+                    $conflicto = $result->fetch_assoc();
+
+                    if ((int)$conflicto["maestro_id"] === $maestro_id) {
+                        $json["answer"] = "El maestro ya tiene otra clase en ese horario";
+                    } else {
+                        $json["answer"] = "El grupo " . $grado . "° " . $grupo . " ya tiene otra clase en ese horario";
+                    }
+
+                    $json["status"] = "warning";
+                    $json["code"] = 409;
+                    $valido = false;
+                }
+            } else {
+                $json["status"] = "error";
+                $json["answer"] = "No fue posible validar los cruces de horario";
+                $json["code"] = 500;
+                $valido = false;
+            }
+
+            $stmt->close();
+        }
+    }
+
+    if ($valido && $id <= 0) {
+        $sql = "SELECT id, maestro_id
+                FROM asignaciones_academicas
+                WHERE myuser_id = ?
+                    AND asignatura_id = ?
+                    AND grado = ?
+                    AND grupo = ?
+                    AND ciclo_escolar = ?
+                    AND estado = 1
+                    AND eliminado = 0
+                LIMIT 1";
+
+        $stmt = $this->conn->prepare($sql);
+
+        if ($stmt) {
+            $stmt->bind_param(
+                "sisss",
+                $myuser_id,
+                $asignatura_id,
+                $grado,
+                $grupo,
+                $ciclo_escolar
+            );
+
+            if ($stmt->execute()) {
+                $result = $stmt->get_result();
+
+                if ($result->num_rows > 0) {
+                    $asignacion = $result->fetch_assoc();
+
+                    if ((int)$asignacion["maestro_id"] !== $maestro_id) {
+                        $json["status"] = "warning";
+                        $json["answer"] = "Esta materia ya está asignada a otro maestro en ese grupo";
+                        $json["code"] = 409;
+                        $valido = false;
+                    } else {
+                        $asignacion_id = (int)$asignacion["id"];
+                    }
+                }
+            } else {
+                $valido = false;
+            }
+
+            $stmt->close();
+        }
+    }
+
+    if ($valido && $id <= 0 && $asignacion_id <= 0) {
+        $sql = "INSERT INTO asignaciones_academicas (
+                    myuser_id,
+                    maestro_id,
+                    asignatura_id,
+                    grado,
+                    grupo,
+                    ciclo_escolar,
+                    estado,
+                    eliminado
+                ) VALUES (?, ?, ?, ?, ?, ?, 1, 0)";
+
+        $stmt = $this->conn->prepare($sql);
+
+        if ($stmt) {
+            $stmt->bind_param(
+                "siisss",
+                $myuser_id,
+                $maestro_id,
+                $asignatura_id,
+                $grado,
+                $grupo,
+                $ciclo_escolar
+            );
+
+            if ($stmt->execute()) {
+                $asignacion_id = (int)$this->conn->insert_id;
+            } else {
+                $json["status"] = "error";
+                $json["answer"] = "No fue posible crear la asignación académica";
+                $json["code"] = 500;
+                $valido = false;
+            }
+
+            $stmt->close();
+        }
+    }
+
+    if ($valido) {
+        if ($id > 0) {
+            $sql = "UPDATE horarios SET
+                        dia = ?,
+                        hora_inicio = ?,
+                        hora_fin = ?,
+                        aula = ?,
+                        observaciones = ?
+                    WHERE myuser_id = ?
+                        AND id = ?
+                        AND eliminado = 0";
+
+            $stmt = $this->conn->prepare($sql);
+
+            if ($stmt) {
+                $stmt->bind_param(
+                    "ssssssi",
+                    $dia,
+                    $hora_inicio,
+                    $hora_fin,
+                    $aula,
+                    $observaciones,
+                    $myuser_id,
+                    $id
+                );
+            }
+        } else {
+            $sql = "INSERT INTO horarios (
+                        myuser_id,
+                        asignacion_id,
+                        dia,
+                        hora_inicio,
+                        hora_fin,
+                        aula,
+                        observaciones,
+                        estado,
+                        eliminado
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 0)";
+
+            $stmt = $this->conn->prepare($sql);
+
+            if ($stmt) {
+                $stmt->bind_param(
+                    "sisssss",
+                    $myuser_id,
+                    $asignacion_id,
+                    $dia,
+                    $hora_inicio,
+                    $hora_fin,
+                    $aula,
+                    $observaciones
+                );
+            }
+        }
+
+        if ($stmt) {
+            if ($stmt->execute()) {
+                $json["status"] = "ok";
+                $json["answer"] = $id > 0
+                    ? "Horario actualizado correctamente"
+                    : "Asignación y horario guardados correctamente";
+                $json["id"] = $id > 0
+                    ? $id
+                    : (int)$this->conn->insert_id;
+                $json["asignacion_id"] = $asignacion_id;
+                $json["code"] = 200;
+            } else {
+                $json["status"] = "error";
+                $json["answer"] = "No fue posible guardar el horario";
+                $json["code"] = 500;
+            }
+
+            $stmt->close();
+        }
+    }
+
+    return $json;
+}
+
+public function eliminarHorario($id) {
+    $json = [];
+    $myuser_id = $this->token;
+    $id = (int)$id;
+
+    if ($id <= 0) {
+        $json["status"] = "warning";
+        $json["answer"] = "El horario seleccionado no es válido";
+        $json["code"] = 400;
+    } else {
+        $sql = "UPDATE horarios
+                SET eliminado = 1, estado = 0
+                WHERE myuser_id = ?
+                    AND id = ?
+                    AND eliminado = 0";
+
+        $stmt = $this->conn->prepare($sql);
+
+        if ($stmt) {
+            $stmt->bind_param("si", $myuser_id, $id);
+
+            if ($stmt->execute() && $stmt->affected_rows > 0) {
+                $json["status"] = "ok";
+                $json["answer"] = "Horario eliminado correctamente";
+                $json["code"] = 200;
+            } else {
+                $json["status"] = "warning";
+                $json["answer"] = "El horario no existe o ya fue eliminado";
+                $json["code"] = 404;
+            }
+
+            $stmt->close();
+        } else {
+            $json["status"] = "error";
+            $json["answer"] = "No fue posible preparar la eliminación";
             $json["code"] = 500;
         }
     }
@@ -3030,6 +3671,10 @@ public function guardarCalificaciones($data) {
     $periodo = isset($data["periodo"]) ? trim((string)$data["periodo"]) : "";
     $ciclo_escolar = isset($data["ciclo_escolar"]) ? trim((string)$data["ciclo_escolar"]) : "";
 
+    $asignacion_id = isset($data["asignacion_id"])
+    ? (int)$data["asignacion_id"]
+    : 0;
+
     $calificacionesJson = isset($data["calificaciones"])
         ? $data["calificaciones"]
         : "[]";
@@ -3057,6 +3702,67 @@ public function guardarCalificaciones($data) {
         $json["code"] = 400;
         $valido = false;
     }
+
+    if ($valido) {
+    $sql = "SELECT
+                aa.maestro_id,
+                aa.asignatura_id,
+                aa.grado,
+                aa.grupo,
+                aa.ciclo_escolar
+            FROM asignaciones_academicas aa
+            INNER JOIN asignaturas a
+                ON a.myuser_id = aa.myuser_id
+                AND a.id = aa.asignatura_id
+                AND a.estado = 1
+                AND a.eliminado = 0
+            INNER JOIN maestros m
+                ON m.myuser_id = aa.myuser_id
+                AND m.id = aa.maestro_id
+                AND m.estado = 1
+                AND m.eliminado = 0
+            WHERE aa.myuser_id = ?
+                AND aa.id = ?
+                AND aa.estado = 1
+                AND aa.eliminado = 0
+            LIMIT 1";
+
+    $stmt = $this->conn->prepare($sql);
+
+    if ($stmt) {
+        $stmt->bind_param(
+            "si",
+            $myuser_id,
+            $asignacion_id
+        );
+
+        if ($stmt->execute()) {
+            $result = $stmt->get_result();
+
+            if ($result->num_rows > 0) {
+                $asignacion = $result->fetch_assoc();
+
+                $maestro_id = (int)$asignacion["maestro_id"];
+                $asignatura_id = (int)$asignacion["asignatura_id"];
+                $ciclo_escolar = $asignacion["ciclo_escolar"];
+                $gradoAsignacion = $asignacion["grado"];
+                $grupoAsignacion = $asignacion["grupo"];
+            } else {
+                $json["status"] = "warning";
+                $json["answer"] = "La asignación académica seleccionada no es válida";
+                $json["code"] = 400;
+                $valido = false;
+            }
+        } else {
+            $json["status"] = "error";
+            $json["answer"] = "No fue posible validar la asignación académica";
+            $json["code"] = 500;
+            $valido = false;
+        }
+
+        $stmt->close();
+    }
+}
 
 
     if ($valido) {
@@ -3400,9 +4106,14 @@ if (
 
     if ($valido) {
         $sql = "SELECT id
-                FROM alumnos
-                WHERE myuser_id = ? AND id = ? AND eliminado = 0
-                LIMIT 1";
+        FROM alumnos
+        WHERE myuser_id = ?
+            AND id = ?
+            AND grado = ?
+            AND grupo = ?
+            AND estado = 1
+            AND eliminado = 0
+        LIMIT 1";
 
         $stmt = $this->conn->prepare($sql);
 
@@ -3410,11 +4121,13 @@ if (
             foreach ($alumnosValidados as $alumno_id => $estadoAlumno) {
                 $idAlumnoValidar = (int)$alumno_id;
 
-                $stmt->bind_param(
-                    "si",
-                    $myuser_id,
-                    $idAlumnoValidar
-                );
+               $stmt->bind_param(
+    "siss",
+    $myuser_id,
+    $idAlumnoValidar,
+    $gradoAsignacion,
+    $grupoAsignacion
+);
 
                 if (!$stmt->execute()) {
                     error_log("guardarCalificaciones alumno execute: " . $stmt->error);

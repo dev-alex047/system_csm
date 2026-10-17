@@ -20,22 +20,8 @@ activeEvaluationKey: null,
     subjects: [],
     teachers: [],
     students: [],
-    schedule: [
-        { id: 1, day: 'Lunes', start: '08:00', end: '09:00', title: 'Matemáticas', group: '5° A', teacher: 'Tania Aide Martinez Martinez', type: 'class' },
-        { id: 2, day: 'Lunes', start: '09:00', end: '10:00', title: 'Español', group: '5° A', teacher: 'Tania Aide Martinez Martinez', type: 'class' },
-        { id: 3, day: 'Lunes', start: '14:30', end: '15:30', title: 'Ajedrez', group: 'General', teacher: 'José Luis Mendoza', type: 'activity' },
-        { id: 4, day: 'Martes', start: '08:00', end: '09:00', title: 'Matemáticas', group: '5° A', teacher: 'Tania Aide Martinez Martinez', type: 'class' },
-        { id: 5, day: 'Martes', start: '10:30', end: '11:30', title: 'Ciencias Naturales', group: '5° B', teacher: 'José Luis Mendoza', type: 'class' },
-        { id: 6, day: 'Martes', start: '15:00', end: '16:00', title: 'Banda de Guerra', group: 'General', teacher: 'Adriana Torres Vega', type: 'activity' },
-        { id: 7, day: 'Miércoles', start: '09:00', end: '10:00', title: 'Español', group: '5° A', teacher: 'Tania Aide Martinez Martinez', type: 'class' },
-        { id: 8, day: 'Miércoles', start: '14:30', end: '15:30', title: 'Ajedrez', group: 'General', teacher: 'José Luis Mendoza', type: 'activity' },
-        { id: 9, day: 'Jueves', start: '08:00', end: '09:00', title: 'Matemáticas', group: '5° A', teacher: 'Tania Aide Martinez Martinez', type: 'class' },
-        { id: 10, day: 'Jueves', start: '10:30', end: '11:30', title: 'Ciencias Naturales', group: '5° B', teacher: 'José Luis Mendoza', type: 'class' },
-        { id: 11, day: 'Jueves', start: '15:00', end: '16:00', title: 'Banda de Guerra', group: 'General', teacher: 'Adriana Torres Vega', type: 'activity' },
-        { id: 12, day: 'Viernes', start: '08:00', end: '09:00', title: 'Matemáticas', group: '5° A', teacher: 'Tania Aide Martinez Martinez', type: 'class' },
-        { id: 13, day: 'Viernes', start: '09:00', end: '10:00', title: 'Español', group: '5° A', teacher: 'Tania Aide Martinez Martinez', type: 'class' },
-        { id: 14, day: 'Viernes', start: '14:00', end: '15:00', title: 'Danza', group: 'General', teacher: 'Tania Aide Martinez Martinez', type: 'activity' }
-    ],
+    assignments: [],
+    schedule: [],
     criteria: [],
     grades: {},
     pendingGradeChanges: {}
@@ -66,6 +52,7 @@ window.addEventListener('DOMContentLoaded', () => {
     getAsignaturas();
     getAlumnos();
     getMaestros();
+    getHorarios();
 
     navigateTo('home', false);
     setTimeout(showPendingEvaluationReminder, 650);
@@ -457,7 +444,6 @@ function bindSettingsForm() {
         if (cycle) document.getElementById('evaluationCycle').value = cycle;
         if (periods.length) state.evaluationPeriods = periods;
 
-        markSaved();
         bootstrap.Modal.getOrCreateInstance(document.getElementById('settingsModal')).hide();
         showToast('Configuración guardada correctamente.');
     });
@@ -548,20 +534,27 @@ function getSchoolSettingsHtml() {
 }
 
 function bindEvaluationEvents() {
-    ['evaluationSubject', 'evaluationGroup', 'evaluationPeriod', 'evaluationCycle'].forEach((id) => {
-        document.getElementById(id).addEventListener('change', function() {
-            if (id === 'evaluationSubject') {
-                cargarCriteriosAsignaturaSeleccionada();
-            }
+    $("#evaluationGroup").on("change", function() {
+    renderEvaluationSubjectOptions();
+    cargarCriteriosAsignaturaSeleccionada();
+    getCalificaciones();
+});
 
-            if (id === 'evaluationGroup') {
-                renderGrades();
-                return;
-            }
+$("#evaluationSubject").on("change", function() {
+    cargarCriteriosAsignaturaSeleccionada();
+    getCalificaciones();
+});
 
-            getCalificaciones();
-        });
-    });
+$("#evaluationPeriod").on("change", function() {
+    getCalificaciones();
+});
+
+$("#evaluationCycle").on("change", function() {
+    renderEvaluationGroupOptions();
+    renderEvaluationSubjectOptions();
+    cargarCriteriosAsignaturaSeleccionada();
+    getCalificaciones();
+});
 
     document.getElementById('btnDownloadTemplate').addEventListener('click', downloadGradeTemplate);
 
@@ -1498,14 +1491,38 @@ for (
     });
 }
 
+var asignaturaId = Number($("#evaluationSubject").val() || 0);
+var grupo = String($("#evaluationGroup").val() || "").trim();
+var ciclo = String($("#evaluationCycle").val() || "").trim();
+
+var asignacion = state.assignments.find(function(item) {
+    return Number(item.asignatura_id) === asignaturaId &&
+        item.group === grupo &&
+        item.ciclo_escolar === ciclo;
+});
+
+if (!asignacion) {
+    Swal.fire({
+        icon: "warning",
+        title: "Asignación no válida",
+        text: "La materia no está asignada a este grupo.",
+        confirmButtonColor: "#1D1D1F"
+    });
+
+    return;
+}
+
 
     var formData = new FormData();
 
     formData.append("action", "guardarCalificacionesActividades");
-    formData.append("asignatura_id", $("#evaluationSubject").val());
+    //formData.append("asignatura_id", $("#evaluationSubject").val());
+    formData.append("asignatura_id", asignacion.asignatura_id);
     formData.append("criterio_id", criterioId);
     formData.append("alumno_id", alumnoId);
-    formData.append("maestro_id", MAESTRO_ID_ACTUAL);
+    //formData.append("maestro_id", MAESTRO_ID_ACTUAL);
+    formData.append("maestro_id", asignacion.maestro_id);
+    formData.append("asignacion_id", asignacion.id);
     formData.append("periodo", $("#evaluationPeriod").val());
     formData.append("ciclo_escolar", $("#evaluationCycle").val());
     formData.append("grupo", $("#evaluationGroup").val());
@@ -2908,6 +2925,176 @@ function getMaestros(mostrarCarga = true) {
     });
 }
 
+function getHorarios(mostrarCarga = true) {
+    var formData = new FormData();
+    formData.append("action", "getHorarios");
+
+    $.ajax({
+        type: "POST",
+        url: "php/index.php",
+        data: formData,
+        dataType: "json",
+        processData: false,
+        contentType: false
+    }).done(function(data) {
+        if (!data || data.status !== "ok") {
+            Swal.fire({
+                icon: "error",
+                title: "No fue posible cargar los horarios",
+                text: data && data.answer ? data.answer : "Ocurrió un problema al consultar los horarios.",
+                confirmButtonColor: "#1D1D1F"
+            });
+            return;
+        }
+
+        state.schedule = Array.isArray(data.results)
+            ? data.results
+            : [];
+
+        state.assignments = Array.isArray(data.assignments)
+            ? data.assignments
+            : [];
+
+        var actual = $("#scheduleGroupFilter").val() || "all";
+
+        var grupos = [...new Set(
+            state.assignments.map(function(item) {
+                return item.group;
+            }).filter(Boolean)
+        )].sort(function(a, b) {
+            return a.localeCompare(b, "es", { numeric: true });
+        });
+
+        $("#scheduleGroupFilter").html(
+            '<option value="all">Todos los grupos</option>' +
+            grupos.map(function(grupo) {
+                return `<option value="${escapeHtml(grupo)}">${escapeHtml(grupo)}</option>`;
+            }).join("")
+        );
+
+        if (actual !== "all" && grupos.includes(actual)) {
+            $("#scheduleGroupFilter").val(actual);
+        }
+
+        renderSchedule();
+        renderDashboard();
+        renderEvaluationGroupOptions();
+        renderEvaluationSubjectOptions();
+        cargarCriteriosAsignaturaSeleccionada();
+        getCalificaciones(null, false);
+    }).fail(function(xhr) {
+        console.error(xhr.responseText);
+
+        if (mostrarCarga) {
+            Swal.fire({
+                icon: "error",
+                title: "Error de conexión",
+                text: "No fue posible consultar los horarios.",
+                confirmButtonColor: "#1D1D1F"
+            });
+        }
+    });
+}
+
+function guardarHorario(form, id) {
+    var formData = new FormData(form);
+    var grupoAcademico = String(formData.get("grupo_academico") || "");
+
+    if (grupoAcademico) {
+        var partes = grupoAcademico.split("|");
+
+        formData.set("grado", partes[0] || "");
+        formData.set("grupo", partes[1] || "");
+        formData.delete("grupo_academico");
+    }
+
+    formData.append("action", "guardarHorario");
+    formData.append("id", id || 0);
+
+    var boton = $(form).find('button[type="submit"]');
+    var contenidoAnterior = boton.html();
+
+    boton.prop("disabled", true).html(`
+        <span class="spinner-border spinner-border-sm me-2"></span>
+        Guardando...
+    `);
+
+    $.ajax({
+        type: "POST",
+        url: "php/index.php",
+        data: formData,
+        dataType: "json",
+        processData: false,
+        contentType: false
+    }).done(function(data) {
+        boton.prop("disabled", false).html(contenidoAnterior);
+
+        if (!data || data.status !== "ok") {
+            Swal.fire({
+                icon: data && data.status === "warning" ? "warning" : "error",
+                title: data && data.status === "warning"
+                    ? "Revisa la asignación"
+                    : "No fue posible guardar",
+                text: data && data.answer
+                    ? data.answer
+                    : "No fue posible guardar el horario.",
+                confirmButtonColor: "#1D1D1F"
+            });
+
+            return;
+        }
+
+        entityModal.hide();
+        getHorarios(false);
+        showToast(data.answer || "Horario guardado correctamente.");
+    }).fail(function(xhr) {
+        boton.prop("disabled", false).html(contenidoAnterior);
+
+        console.error(xhr.responseText);
+
+        Swal.fire({
+            icon: "error",
+            title: "Error de conexión",
+            text: "No fue posible guardar el horario.",
+            confirmButtonColor: "#1D1D1F"
+        });
+    });
+}
+
+function eliminarHorario(id) {
+    var formData = new FormData();
+
+    formData.append("action", "eliminarHorario");
+    formData.append("id", id);
+
+    $.ajax({
+        type: "POST",
+        url: "php/index.php",
+        data: formData,
+        dataType: "json",
+        processData: false,
+        contentType: false
+    }).done(function(data) {
+        if (!data || data.status !== "ok") {
+            Swal.fire({
+                icon: "error",
+                title: "No fue posible eliminar",
+                text: data && data.answer
+                    ? data.answer
+                    : "No fue posible eliminar el horario.",
+                confirmButtonColor: "#1D1D1F"
+            });
+
+            return;
+        }
+
+        getHorarios(false);
+        showToast(data.answer || "Horario eliminado correctamente.");
+    }).fail(function(xhr) {
+        console.error(xhr.responseText);
+    });
+}
+
 function getAlumnos(mostrarCarga = true) {
     var formData = new FormData();
     formData.append("action", "getAlumnos");
@@ -3179,28 +3366,66 @@ function cargarCriteriosAsignaturaSeleccionada() {
 }
 
 function renderEvaluationSubjectOptions() {
-    const select = document.getElementById('evaluationSubject');
-    const current = select.value;
-    select.innerHTML = state.subjects.map((subject) => `<option value="${subject.id}">${escapeHtml(subject.name)}</option>`).join('');
-    if (current && state.subjects.some((subject) => String(subject.id) === current)) select.value = current;
+    var select = document.getElementById('evaluationSubject');
+    var actual = select.value;
+    var grupo = String($("#evaluationGroup").val() || "").trim();
+    var ciclo = String($("#evaluationCycle").val() || "").trim();
+
+    var idsPermitidos = state.assignments
+        .filter(function(item) {
+            return item.group === grupo &&
+                item.ciclo_escolar === ciclo;
+        })
+        .map(function(item) {
+            return Number(item.asignatura_id);
+        });
+
+    var materias = state.subjects.filter(function(subject) {
+        return idsPermitidos.includes(Number(subject.id));
+    });
+
+    select.innerHTML = materias.length
+        ? materias.map(function(subject) {
+            return `<option value="${subject.id}">${escapeHtml(subject.name)}</option>`;
+        }).join("")
+        : '<option value="">Sin materias asignadas</option>';
+
+    if (
+        actual &&
+        materias.some(function(subject) {
+            return String(subject.id) === String(actual);
+        })
+    ) {
+        select.value = actual;
+    }
 }
 
 function renderEvaluationGroupOptions() {
-    const select = document.getElementById('evaluationGroup');
-    const current = select.value;
+    var select = document.getElementById('evaluationGroup');
+    var actual = select.value;
+    var ciclo = String($("#evaluationCycle").val() || "").trim();
 
-    const groups = [...new Set(
-        state.students
-            .map((student) => student.group)
+    var grupos = [...new Set(
+        state.assignments
+            .filter(function(item) {
+                return item.ciclo_escolar === ciclo;
+            })
+            .map(function(item) {
+                return item.group;
+            })
             .filter(Boolean)
-    )].sort((a, b) => a.localeCompare(b, 'es', { numeric: true }));
+    )].sort(function(a, b) {
+        return a.localeCompare(b, 'es', { numeric: true });
+    });
 
-    select.innerHTML = groups.length
-        ? groups.map((group) => `<option value="${escapeHtml(group)}">${escapeHtml(group)}</option>`).join('')
-        : '<option value="">Sin grupos registrados</option>';
+    select.innerHTML = grupos.length
+        ? grupos.map(function(grupo) {
+            return `<option value="${escapeHtml(grupo)}">${escapeHtml(grupo)}</option>`;
+        }).join("")
+        : '<option value="">Sin asignaciones para este ciclo</option>';
 
-    if (current && groups.includes(current)) {
-        select.value = current;
+    if (actual && grupos.includes(actual)) {
+        select.value = actual;
     }
 }
 
@@ -4376,7 +4601,6 @@ function distributeCriteria() {
 
     renderCriteria();
     renderGrades();
-    markSaving();
     showToast('Los porcentajes se distribuyeron automáticamente.');
 }
 
@@ -4628,7 +4852,7 @@ function entityFields(entity, record = {}) {
                 ''
             )
     ),
-    'Déjela vacía si no cuenta con matrícula',
+    '',
     'text',
     'maxlength="60" autocomplete="off" style="text-transform:uppercase"'
 )}
@@ -4703,8 +4927,8 @@ function entityFields(entity, record = {}) {
                             ${editandoAlumno ? '<option value="mantener" selected>Mantener posición actual</option>' : ''}
                             <option value="inicio">Al inicio</option>
                             <option value="final" ${editandoAlumno ? '' : 'selected'}>Al final</option>
-                            <option value="antes">Antes de otro alumno</option>
-                            <option value="despues">Después de otro alumno</option>
+                            <option value="antes">Antes de</option>
+                            <option value="despues">Después de</option>
                         </select>
                     </div>
 
@@ -4779,61 +5003,173 @@ function entityFields(entity, record = {}) {
     }
 
     if (entity === 'schedule') {
-        return `
-            <div class="row g-3">
-                <div class="col-md-6">
-                    ${selectField('day', 'Día', days, record.day)}
-                </div>
+    var editando = Number(record.id || 0) > 0;
 
-                <div class="col-md-6">
-                    ${selectField(
-                        'type',
-                        'Tipo',
-                        [
-                            { value: 'class', label: 'Clase' },
-                            { value: 'activity', label: 'Actividad' }
-                        ],
-                        record.type
-                    )}
-                </div>
+    var gruposHorario = [...new Map(
+        state.students
+            .filter(function(student) {
+                return Number(student.estado) === 1;
+            })
+            .map(function(student) {
+                var key = String(student.grado) + "|" + String(student.grupo);
 
-                <div class="col-md-6">
-                    ${inputField('start', 'Hora de inicio', record.start, '', 'time')}
-                </div>
+                return [
+                    key,
+                    {
+                        value: key,
+                        label: student.group
+                    }
+                ];
+            })
+    ).values()];
 
-                <div class="col-md-6">
-                    ${inputField('end', 'Hora final', record.end, '', 'time')}
-                </div>
+    var materiasHorario = state.subjects
+        .filter(function(subject) {
+            return Number(subject.estado) === 1;
+        })
+        .map(function(subject) {
+            return {
+                value: subject.id,
+                label: subject.name
+            };
+        });
+
+    var maestrosHorario = state.teachers
+        .filter(function(teacher) {
+            return Number(teacher.estado) === 1;
+        })
+        .map(function(teacher) {
+            return {
+                value: teacher.id,
+                label: teacher.name
+            };
+        });
+
+    var grupoActual = record.grado && record.grupo
+        ? record.grado + "|" + record.grupo
+        : "";
+
+    var cicloActual =
+        record.ciclo_escolar ||
+        $("#evaluationCycle").val() ||
+        "2026-2027";
+
+    return `
+        ${
+            editando
+                ? `
+                    <div class="alert alert-light border rounded-4 mb-4">
+                        <div class="small text-muted mb-1">Asignación académica</div>
+                        <div class="fw-bold">${escapeHtml(record.asignatura || record.title || "")}</div>
+                        <div class="text-muted small">
+                            ${escapeHtml(record.group || "")} · ${escapeHtml(record.maestro || record.teacher || "")}
+                        </div>
+
+                        <input type="hidden" name="asignatura_id" value="${record.asignatura_id}">
+                        <input type="hidden" name="maestro_id" value="${record.maestro_id}">
+                        <input type="hidden" name="grado" value="${escapeHtml(record.grado || "")}">
+                        <input type="hidden" name="grupo" value="${escapeHtml(record.grupo || "")}">
+                        <input type="hidden" name="ciclo_escolar" value="${escapeHtml(cicloActual)}">
+                    </div>
+                `
+                : `
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            ${selectField(
+                                'asignatura_id',
+                                'Materia',
+                                materiasHorario,
+                                ''
+                            )}
+                        </div>
+
+                        <div class="col-md-6">
+                            ${selectField(
+                                'grupo_academico',
+                                'Grado y grupo',
+                                gruposHorario,
+                                grupoActual
+                            )}
+                        </div>
+
+                        <div class="col-md-8">
+                            ${selectField(
+                                'maestro_id',
+                                'Maestro',
+                                maestrosHorario,
+                                ''
+                            )}
+                        </div>
+
+                        <div class="col-md-4">
+                            ${inputField(
+                                'ciclo_escolar',
+                                'Ciclo escolar',
+                                cicloActual,
+                                '2026-2027'
+                            )}
+                        </div>
+                    </div>
+                `
+        }
+
+        <div class="border-top pt-3 mt-2 mb-3">
+            <div class="fw-semibold">Horario de clase</div>
+            <div class="small text-muted">Indica cuándo se imparte esta materia.</div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-md-4">
+                ${selectField(
+                    'dia',
+                    'Día',
+                    days,
+                    record.dia || record.day || ''
+                )}
             </div>
 
-            ${inputField(
-                'title',
-                'Materia o actividad',
-                record.title,
-                'Nombre de la asignación'
-            )}
-
-            <div class="row g-3">
-                <div class="col-md-5">
-                    ${selectField(
-                        'group',
-                        'Grupo',
-                        [...groups, 'General'],
-                        record.group
-                    )}
-                </div>
-
-                <div class="col-md-7">
-                    ${selectField(
-                        'teacher',
-                        'Maestro responsable',
-                        state.teachers.map((teacher) => teacher.name),
-                        record.teacher
-                    )}
-                </div>
+            <div class="col-md-4">
+                ${inputField(
+                    'hora_inicio',
+                    'Hora de inicio',
+                    record.hora_inicio || record.start || '',
+                    '',
+                    'time'
+                )}
             </div>
-        `;
-    }
+
+            <div class="col-md-4">
+                ${inputField(
+                    'hora_fin',
+                    'Hora final',
+                    record.hora_fin || record.end || '',
+                    '',
+                    'time'
+                )}
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-md-5">
+                ${optionalInputField(
+                    'aula',
+                    'Aula (opcional)',
+                    record.aula || '',
+                    'Ej. Aula 3'
+                )}
+            </div>
+
+            <div class="col-md-7">
+                ${optionalInputField(
+                    'observaciones',
+                    'Observaciones (opcional)',
+                    record.observaciones || '',
+                    'Información adicional'
+                )}
+            </div>
+        </div>
+    `;
+}
 
     if (entity === 'criterion') {
         return `
@@ -5117,6 +5453,11 @@ function saveEntity(event) {
         return;
     }
 
+    if (entity === 'schedule') {
+        guardarHorario(event.currentTarget, id);
+        return;
+    }
+
     const form = new FormData(event.currentTarget);
     const collection = getEntityCollection(entity);
     const record = id ? collection.find((item) => item.id === id) : { id: nextId(collection) };
@@ -5148,7 +5489,6 @@ function saveEntity(event) {
 
     entityModal.hide();
     renderAll();
-    markSaving();
     showToast(`${capitalize(entityLabel(entity))} guardado correctamente.`);
 }
 
@@ -5175,16 +5515,12 @@ function guardarAlumno(form, id) {
                 <span class="spinner-border spinner-border-sm me-2" role="status"></span>
                 Guardando...
             `);
-
-            markSaving(false);
         }
     }).done(function(data) {
         boton.prop("disabled", false);
         boton.html(contenidoBoton);
 
         if (!data || data.status !== "ok") {
-            markSaveError();
-
             Swal.fire({
                 icon: data && data.status === "warning"
                     ? "warning"
@@ -5218,7 +5554,6 @@ if (posicion === "mantener" && alumnoAnterior && (String(alumnoAnterior.grado ||
 
 if (posicion === "mantener") {
     entityModal.hide();
-    markSaved();
     getAlumnos(false);
     showToast(data.answer || "Alumno actualizado correctamente.");
     return;
@@ -5265,7 +5600,6 @@ $.ajax({
     contentType: false
 }).done(function(dataOrden) {
     entityModal.hide();
-    markSaved();
     getAlumnos(false);
 
     if (!dataOrden || dataOrden.status !== "ok") {
@@ -5282,7 +5616,6 @@ $.ajax({
     showToast("Alumno guardado correctamente.");
 }).fail(function() {
     entityModal.hide();
-    markSaved();
     getAlumnos(false);
 
     Swal.fire({
@@ -5296,8 +5629,6 @@ $.ajax({
     }).fail(function(xhr) {
         boton.prop("disabled", false);
         boton.html(contenidoBoton);
-
-        markSaveError();
 
         console.error(xhr.responseText);
 
@@ -5328,14 +5659,12 @@ function guardarMaestro(form, id) {
         beforeSend: function() {
             boton.prop("disabled", true);
             boton.html(`<span class="spinner-border spinner-border-sm me-2" role="status"></span>Guardando...`);
-            markSaving(false);
         }
     }).done(function(data) {
         boton.prop("disabled", false);
         boton.html(contenidoBoton);
 
         if (!data || data.status !== "ok") {
-            markSaveError();
 
             Swal.fire({
                 icon: data && data.status === "warning" ? "warning" : "error",
@@ -5348,13 +5677,11 @@ function guardarMaestro(form, id) {
         }
 
         entityModal.hide();
-        markSaved();
         getMaestros(false);
         showToast(data.answer || "Maestro guardado correctamente.");
     }).fail(function(xhr) {
         boton.prop("disabled", false);
         boton.html(contenidoBoton);
-        markSaveError();
 
         console.error(xhr.responseText);
 
@@ -5463,16 +5790,12 @@ if (Math.abs(total - 100) > 0.01) {
                 <span class="spinner-border spinner-border-sm me-2" role="status"></span>
                 Guardando...
             `);
-
-            markSaving(false);
         }
     }).done(function(data) {
         boton.prop("disabled", false);
         boton.html(contenidoBoton);
 
         if (!data || data.status !== "ok") {
-            markSaveError();
-
             Swal.fire({
                 icon: data && data.status === "warning" ? "warning" : "error",
                 title: data && data.status === "warning"
@@ -5488,7 +5811,6 @@ if (Math.abs(total - 100) > 0.01) {
         }
 
         entityModal.hide();
-        markSaved();
 
         getAsignaturas(false);
 
@@ -5499,8 +5821,6 @@ if (Math.abs(total - 100) > 0.01) {
     }).fail(function(xhr) {
         boton.prop("disabled", false);
         boton.html(contenidoBoton);
-
-        markSaveError();
 
         console.error(xhr.responseText);
 
@@ -5668,16 +5988,35 @@ function guardarCalificaciones(calificaciones, mensajeExito = "") {
         return $.Deferred().reject().promise();
     }
 
+    var grupo = String($("#evaluationGroup").val() || "").trim();
+
+var asignacion = state.assignments.find(function(item) {
+    return Number(item.asignatura_id) === asignaturaId &&
+        item.group === grupo &&
+        item.ciclo_escolar === ciclo;
+});
+
+if (!asignacion) {
+    Swal.fire({
+        icon: "warning",
+        title: "Asignación no válida",
+        text: "La materia seleccionada no está asignada a este grupo.",
+        confirmButtonColor: "#1D1D1F"
+    });
+
+    return $.Deferred().reject().promise();
+}
+
     var formData = new FormData();
 
     formData.append("action", "guardarCalificaciones");
     formData.append("asignatura_id", asignaturaId);
-    formData.append("maestro_id", MAESTRO_ID_ACTUAL);
+    formData.append("asignacion_id", asignacion.id);
+    //formData.append("maestro_id", MAESTRO_ID_ACTUAL);
+    formData.append("maestro_id", asignacion.maestro_id);
     formData.append("periodo", periodo);
     formData.append("ciclo_escolar", ciclo);
     formData.append("calificaciones", JSON.stringify(calificaciones));
-
-    markSaving(false);
 
     return $.ajax({
         type: "POST",
@@ -5688,7 +6027,6 @@ function guardarCalificaciones(calificaciones, mensajeExito = "") {
         contentType: false
     }).done(function(data) {
         if (!data || data.status !== "ok") {
-            markSaveError();
 
             Swal.fire({
                 icon: data && data.status === "warning" ? "warning" : "error",
@@ -5702,15 +6040,12 @@ function guardarCalificaciones(calificaciones, mensajeExito = "") {
         }
 
         syncCurrentEvaluationGrades();
-        markSaved();
 
         if (mensajeExito) {
             showToast(mensajeExito);
         }
     }).fail(function(xhr) {
         console.error(xhr.responseText);
-
-        markSaveError();
 
         Swal.fire({
             icon: "error",
@@ -5769,6 +6104,11 @@ var texto = (entity === "student" || entity === "teacher" || entity === "subject
         return;
     }
 
+    if (entity === "schedule") {
+        eliminarHorario(id);
+        return;
+    }
+
     const collection = getEntityCollection(entity);
     const index = collection.findIndex(
         (item) => item.id === id
@@ -5785,7 +6125,6 @@ var texto = (entity === "student" || entity === "teacher" || entity === "subject
     }
 
     renderAll();
-    markSaving();
     showToast("Registro eliminado.");
 }
 
@@ -6341,66 +6680,6 @@ function parseCsv(text) {
     }
 
     return rows;
-}
-
-function markSaving(autoFinish = true) {
-    const indicator = document.getElementById('saveStatus');
-
-    if (!indicator) return;
-
-    indicator.classList.remove('error');
-    indicator.classList.add('saving');
-
-    const text = indicator.querySelector('span:last-child');
-
-    if (text) {
-        text.textContent = 'Guardando...';
-    }
-
-    clearTimeout(saveTimer);
-
-    if (autoFinish) {
-        saveTimer = setTimeout(
-            markSaved,
-            650
-        );
-    }
-}
-
-function markSaved() {
-    clearTimeout(saveTimer);
-
-    const indicator = document.getElementById('saveStatus');
-
-    if (!indicator) return;
-
-    indicator.classList.remove(
-        'saving',
-        'error'
-    );
-
-    const text = indicator.querySelector('span:last-child');
-
-    if (text) {
-        text.textContent = 'Guardado';
-    }
-}
-
-function markSaveError() {
-    clearTimeout(saveTimer);
-
-    const indicator = document.getElementById('saveStatus');
-
-    if (!indicator) return;
-
-    indicator.classList.remove('saving');
-    indicator.classList.add('error');
-
-    const text = indicator.querySelector('span:last-child');
-
-    if (text) {
-        text.textContent = 'Error al guardar';
-    }
 }
 
 function showToast(message) {

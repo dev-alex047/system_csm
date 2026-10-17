@@ -73,6 +73,19 @@ switch ($action) {
         $response = $consultas->eliminarAsignatura($idAsignatura);
     break;
 
+    case "getHorarios":
+        $response = $consultas->getHorarios();
+    break;
+    
+    case "guardarHorario":
+        $response = $consultas->guardarHorario($_POST);
+    break;
+    
+    case "eliminarHorario":
+        $idHorario = isset($_POST["id"]) ? (int)$_POST["id"] : 0;
+        $response = $consultas->eliminarHorario($idHorario);
+    break;
+
     case "getActividadesEvaluacion":
         $response = $consultas->getActividadesEvaluacion($_POST);
     break;
