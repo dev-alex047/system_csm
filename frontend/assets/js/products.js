@@ -236,6 +236,7 @@ async function productosVerDetalle(id) {
 
     $('#productDetailTitle').text('Cargando producto...');
     $('#productDetailFields').html('<div class="col-12 text-center py-4"><div class="spinner-border spinner-border-sm text-success"></div> Consultando información...</div>');
+    $('#productDetailSummary').empty();
     $('#productDetailDescription').text('');
     $('#productDetailImage').addClass('d-none').attr('src', '');
     $('#productDetailPlaceholder').removeClass('d-none');
@@ -249,21 +250,38 @@ async function productosVerDetalle(id) {
         if (!p) throw new Error('No se encontró el producto.');
 
         var foto = productosFoto(p.image_path);
-        var campos = [
-            ['Categoría', p.classification],
-            ['Código interno', p.code],
-            ['Código de barras', p.barcode],
-            ['Marca', p.brand],
-            ['Presentación', p.presentation],
-            ['Unidad', p.unit],
-            ['Contenido', p.content],
-            ['Precio de venta', '$' + productosMoneda(p.public_price)],
-            ['Existencias', (Number(p.stock) || 0) + ' unidades'],
-            ['Stock mínimo', p.min_stock],
-            ['Stock máximo', p.max_stock],
-            ['Última compra', p.last_purchase],
-            ['Proveedor (ID)', p.supplier_id ? '#' + p.supplier_id : '']
-        ];
+
+var resumen = [
+    ['Categoría', p.classification || 'Sin categoría'],
+    ['Precio de venta', '$' + productosMoneda(p.public_price)],
+    ['Existencias', (Number(p.stock) || 0) + ' unidades'],
+    ['Código interno', p.code || 'Sin código']
+];
+
+var resumenHTML = '';
+
+$.each(resumen, function (_, campo) {
+    resumenHTML += `<div class="col-6">
+        <div class="csm-detail-field">
+            <small>${productosEscapar(campo[0])}</small>
+            <strong>${productosEscapar(campo[1])}</strong>
+        </div>
+    </div>`;
+});
+
+$('#productDetailSummary').html(resumenHTML);
+
+var campos = [
+    ['Código de barras', p.barcode],
+    ['Marca', p.brand],
+    ['Presentación', p.presentation],
+    ['Unidad', p.unit],
+    ['Contenido', p.content],
+    ['Stock mínimo', p.min_stock],
+    ['Stock máximo', p.max_stock],
+    ['Última compra', p.last_purchase],
+    ['Proveedor', p.supplier_id ? '#' + p.supplier_id : '']
+];
 
         if (productosAdmin) {
             campos.push(
@@ -274,16 +292,23 @@ async function productosVerDetalle(id) {
             );
         }
 
-        var html = '';
+      var html = '';
 
-        $.each(campos, function (_, campo) {
-            var valor = campo[1] === null || campo[1] === undefined || campo[1] === '' ? 'No registrado' : campo[1];
-            html += `<div class="col-12 col-sm-6"><div class="csm-detail-field"><small>${productosEscapar(campo[0])}</small><strong>${productosEscapar(valor)}</strong></div></div>`;
-        });
+$.each(campos, function (_, campo) {
+    var valor = campo[1];
+
+    if (valor === null || valor === undefined || String(valor).trim() === '') return;
+
+    html += `<div class="col-12 col-sm-6 col-lg-4">
+        <div class="csm-detail-field">
+            <small>${productosEscapar(campo[0])}</small>
+            <strong>${productosEscapar(valor)}</strong>
+        </div>
+    </div>`;
+});
 
         $('#productDetailTitle').text(p.name || 'Producto sin nombre');
-        $('#productDetailFields').html(html);
-        $('#productDetailDescription').text(p.description || 'Sin descripción registrada.');
+$('#productDetailFields').html(html || '<div class="col-12"><p class="text-body-secondary small mb-0">No hay información adicional registrada.</p></div>');        $('#productDetailDescription').text(p.description || 'Sin descripción registrada.');
         $('#productDetailEdit').toggleClass('d-none', !productosAdmin).attr('data-id', p.id);
 
         if (foto) {

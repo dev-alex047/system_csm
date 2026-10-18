@@ -107,17 +107,19 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body">
-                <div class="row g-3">
-                    <div class="col-12 col-md-4">
-                        <div class="csm-detail-photo">
-                            <img id="productDetailImage" alt="Fotografía del producto" class="d-none">
-                            <div id="productDetailPlaceholder"><i class="bi bi-box-seam"></i></div>
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-8">
-                        <div class="row g-3" id="productDetailFields"></div>
-                    </div>
-                </div>
+                <div class="row g-3 align-items-stretch">
+    <div class="col-12 col-md-4">
+        <div class="csm-detail-photo">
+            <img id="productDetailImage" alt="Fotografía del producto" class="d-none">
+            <div id="productDetailPlaceholder"><i class="bi bi-box-seam"></i></div>
+        </div>
+    </div>
+    <div class="col-12 col-md-8">
+        <div class="row g-2 h-100" id="productDetailSummary"></div>
+    </div>
+</div>
+
+<div class="row g-3 mt-1" id="productDetailFields"></div>
                 <section class="csm-detail-description mt-3">
                     <h3 class="fs-6 fw-bold mb-2">Descripción del producto</h3>
                     <p id="productDetailDescription" class="mb-0">Sin descripción registrada.</p>

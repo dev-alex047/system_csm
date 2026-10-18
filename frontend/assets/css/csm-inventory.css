@@ -239,9 +239,9 @@ body.csm-inventory-workspace #productTable td {
 }
 
 .csm-table-category {
-    color: var(--inv-green);
+    color: var(--inv-ink);
     font-size: .72rem;
-    font-weight: 750;
+    font-weight: 700;
 }
 
 .csm-table-code {
@@ -331,7 +331,8 @@ body.csm-inventory-workspace #productTable tbody tr:hover {
 .csm-detail-photo {
     display: grid;
     place-items: center;
-    height: 195px;
+    height: 100%;
+min-height: 190px;
     padding: 12px;
     border: 1px solid var(--inv-border);
     border-radius: 13px;
@@ -396,6 +397,9 @@ body.csm-inventory-workspace #productTable tbody tr:hover {
 }
 
 @media (max-width: 767.98px) {
-    .csm-detail-photo { height: 165px; }
+    .csm-detail-photo {
+    height: 165px;
+    min-height: 165px;
+}
     .csm-product-detail-modal .modal-body { padding: 15px; }
 }
