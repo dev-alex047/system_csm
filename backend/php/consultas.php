@@ -531,5 +531,74 @@ public function setCategoria() {
     return $json;
 }
 
+public function eliminarCategoria() {
+    $json = [];
+    $myuser_id = (string)$this->token;
+    $id = filter_var($_POST['id'] ?? null, FILTER_VALIDATE_INT);
+
+    if ($myuser_id === '' || !$id || $id < 1) {
+        $json = ['status' => 'error', 'answer' => 'Identificador de categoría inválido', 'code' => 400];
+    } else {
+        try {
+            $sql = "SELECT tipo FROM categorias
+                    WHERE myuser_id = ? AND id = ? AND eliminado = 0 LIMIT 1";
+
+            $stmt = $this->conn->prepare($sql);
+            if (!$stmt) throw new RuntimeException($this->conn->error);
+            $stmt->bind_param("si", $myuser_id, $id);
+            if (!$stmt->execute()) throw new RuntimeException($stmt->error);
+
+            $categoria = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if (!$categoria) {
+                $json = ['status' => 'error', 'answer' => 'La categoría no existe o ya fue eliminada', 'code' => 404];
+            } else {
+                $asignados = 0;
+
+                if ((int)$categoria['tipo'] === 1) {
+                    $stmt = $this->conn->prepare("SELECT COUNT(*) AS total FROM products WHERE categoria_id = ? AND eliminado = 0");
+                    if (!$stmt) throw new RuntimeException($this->conn->error);
+                    $stmt->bind_param("i", $id);
+                    if (!$stmt->execute()) throw new RuntimeException($stmt->error);
+
+                    $asignados = (int)$stmt->get_result()->fetch_assoc()['total'];
+                    $stmt->close();
+                }
+
+                if ($asignados > 0) {
+                    $json = [
+                        'status' => 'error',
+                        'answer' => 'No puedes eliminar esta categoría porque tiene productos relacionados. Desactívala o reasigna los productos.',
+                        'code' => 409
+                    ];
+                } else {
+                    $sql = "UPDATE categorias SET eliminado = 1, activo = 0
+                            WHERE myuser_id = ? AND id = ? AND eliminado = 0";
+
+                    $stmt = $this->conn->prepare($sql);
+                    if (!$stmt) throw new RuntimeException($this->conn->error);
+                    $stmt->bind_param("si", $myuser_id, $id);
+                    if (!$stmt->execute()) throw new RuntimeException($stmt->error);
+
+                    $eliminada = $stmt->affected_rows > 0;
+                    $stmt->close();
+
+                    $json = [
+                        'status' => $eliminada ? 'ok' : 'error',
+                        'answer' => $eliminada ? 'Categoría eliminada correctamente' : 'La categoría ya fue eliminada',
+                        'code' => $eliminada ? 200 : 404
+                    ];
+                }
+            }
+        } catch (Throwable $e) {
+            error_log('eliminarCategoria: ' . $e->getMessage());
+            $json = ['status' => 'error', 'answer' => 'No fue posible eliminar la categoría', 'code' => 500];
+        }
+    }
+
+    return $json;
+}
+
 }
 ?>
