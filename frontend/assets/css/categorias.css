@@ -1,0 +1,44 @@
+/* ===== AJUSTES PARA CATEGORÍAS DENTRO DE IFRAME ===== */
+
+html,
+body {
+    min-height: 100%;
+    margin: 0;
+    overflow-x: hidden;
+}
+
+body {
+    background: var(--bs-body-bg);
+}
+
+main.csm-categorias-modal {
+    width: 100%;
+    max-width: 100%;
+    min-height: 100vh;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    overflow: visible;
+    background: var(--bs-body-bg);
+    box-sizing: border-box;
+}
+
+#categoriasPanelLista,
+#categoriasPanelFormulario {
+    width: 100%;
+    min-width: 0;
+}
+
+#categoriasTarjetas {
+    width: auto;
+}
+
+.csm-cat-card {
+    min-width: 0;
+}
+
+@media (max-width: 767.98px) {
+    main.csm-categorias-modal {
+        padding: 16px !important;
+    }
+}

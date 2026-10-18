@@ -1,5 +1,8 @@
 
 /* Sistema CSM · Categorías (pantalla independiente dentro de iframe) */
+
+const API_URL = '../backend/php/index.php';
+const SESSION = 1;
 var categoriasEstado = {
     tipo: 1, buscar: '', pagina: 1, limite: 12, paginas: 1, total: 0,
     vista: 'tarjetas', resultados: [], secuencia: 0, formularioSecuencia: 0,
@@ -14,7 +17,7 @@ function categoriasAPI(accion, campos) {
         else formData.append(clave, valor == null ? '' : valor);
     });
     return $.ajax({
-        type: 'POST', url: 'php/index.php', data: formData, dataType: 'json',
+        type: 'POST', url: API_URL, data: formData, dataType: 'json',
         processData: false, contentType: false, xhrFields: { withCredentials: true }
     }).then(function (respuesta) {
         if (!respuesta || respuesta.status !== 'ok') throw new Error(respuesta && respuesta.answer ? respuesta.answer : 'Respuesta inválida del servidor.');

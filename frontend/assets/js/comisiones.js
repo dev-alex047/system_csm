@@ -135,7 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Actualizar indicadores
-        function actualizarResumen() {
+    function actualizarResumen() {
         document.getElementById('contadorTarifas').textContent = String(comisiones.length);
     }
 
