@@ -12,6 +12,7 @@ var categoriasEstado = {
 function categoriasAPI(accion, campos) {
     var formData = new FormData();
     formData.append('action', accion);
+    formData.append('session', SESSION);
     $.each(campos || {}, function (clave, valor) {
         if (valor instanceof File) formData.append(clave, valor, valor.name);
         else formData.append(clave, valor == null ? '' : valor);
