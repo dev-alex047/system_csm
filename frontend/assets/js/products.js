@@ -72,7 +72,21 @@ function productosEstadoStock(p) {
 function productosAcciones(p, tabla) {
     if (!productosAdmin) return '';
 
-    return '<div class="dropdown ' + (tabla ? '' : 'csm-inventory-card-actions') + '"><button type="button" class="csm-inventory-more" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Acciones de ' + productosEscapar(p.name) + '"><i class="bi bi-three-dots-vertical"></i></button><ul class="dropdown-menu dropdown-menu-end"><li><button class="dropdown-item" type="button" data-action="edit"><i class="bi bi-pencil"></i> Editar</button></li><li><button class="dropdown-item" type="button" data-action="ficha"><i class="bi bi-file-earmark-text"></i> Ver ficha</button></li><li><hr class="dropdown-divider"></li><li><button class="dropdown-item text-danger" type="button" data-action="delete"><i class="bi bi-trash"></i> Eliminar</button></li></ul></div>';
+    if (tabla) {
+        return `<div class="csm-table-actions">
+            <button type="button" class="btn btn-sm csm-inv-outline" data-action="edit" title="Editar producto" aria-label="Editar ${productosEscapar(p.name)}"><i class="bi bi-pencil-square"></i></button>
+            <button type="button" class="btn btn-sm btn-outline-danger" data-action="delete" title="Eliminar producto" aria-label="Eliminar ${productosEscapar(p.name)}"><i class="bi bi-trash"></i></button>
+        </div>`;
+    }
+
+    return `<div class="dropdown csm-inventory-card-actions">
+        <button type="button" class="csm-inventory-more" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Acciones de ${productosEscapar(p.name)}"><i class="bi bi-three-dots-vertical"></i></button>
+        <ul class="dropdown-menu dropdown-menu-end">
+            <li><button class="dropdown-item" type="button" data-action="edit"><i class="bi bi-pencil"></i> Editar</button></li>
+            <li><button class="dropdown-item" type="button" data-action="ficha"><i class="bi bi-file-earmark-text"></i> Ver ficha</button></li>
+            <li><button class="dropdown-item" type="button" data-action="delete"><i class="bi bi-trash"></i> Eliminar</button></li>
+        </ul>
+    </div>`;
 }
 
 function productosDibujar() {
@@ -91,13 +105,37 @@ function productosDibujar() {
         var s = productosEstadoStock(p), foto = productosFoto(p.image_path), id = Number(p.id);
         var imagen = foto ? '<img loading="lazy" src="' + productosEscapar(foto) + '" alt="' + productosEscapar(p.name) + '">' : '<div class="csm-inventory-product-placeholder"><i class="bi bi-box-seam"></i></div>';
 
-        tarjetas += `<div class="col" data-id="${id}"><article class="csm-inventory-product h-100"><div class="csm-inventory-product-row"><div class="csm-inventory-product-media">${imagen}</div><div class="csm-inventory-product-content">${productosAcciones(p, false)}<div class="csm-inventory-product-top"><span class="csm-inventory-product-category">${productosEscapar(p.classification || 'Sin clasificación')}</span><h3 class="csm-inventory-product-name" title="${productosEscapar(p.name)}">${productosEscapar(p.name)}</h3><div class="csm-inventory-product-code" title="${productosEscapar(p.code || p.barcode || '')}">Código: ${productosEscapar(p.code || p.barcode || 'Sin código')}</div></div><div class="csm-inventory-product-meta"><div class="csm-inventory-product-price"><small>Precio de venta</small><strong>$${productosMoneda(p.public_price)}</strong></div><div class="csm-inventory-product-stock-group"><span class="csm-inventory-stock ${s.clase}"><i class="bi bi-box"></i> ${s.cantidad}</span><span class="csm-inventory-stock-caption">${s.texto}</span></div></div></div></div></article></div>`;
+        tarjetas += `<div class="col" data-id="${id}"><article class="csm-inventory-product h-100"><div class="csm-inventory-product-row"><div class="csm-inventory-product-media">${imagen}</div><div class="csm-inventory-product-content">${productosAcciones(p, false)}<div class="csm-inventory-product-top"><span class="csm-inventory-product-category">${productosEscapar(p.classification || 'Sin clasificación')}</span>
+<h3 class="csm-inventory-product-name">
+    <button type="button" class="csm-product-name-link" data-action="detail" title="Ver información del producto">${productosEscapar(p.name)}</button>
+</h3>        <div class="csm-inventory-product-code" title="${productosEscapar(p.code || p.barcode || '')}">Código: ${productosEscapar(p.code || p.barcode || 'Sin código')}</div></div><div class="csm-inventory-product-meta"><div class="csm-inventory-product-price"><small>Precio de venta</small><strong>$${productosMoneda(p.public_price)}</strong></div><div class="csm-inventory-product-stock-group"><span class="csm-inventory-stock ${s.clase}"><i class="bi bi-box"></i> ${s.cantidad}</span><span class="csm-inventory-stock-caption">${s.texto}</span></div></div></div></div></article></div>`;
 
-        filas += `<tr data-id="${id}"><td>${id}</td><td>${productosEscapar(p.last_purchase || '')}</td><td>${productosEscapar(p.code || '')}</td><td>${productosEscapar(p.name)}</td><td>${productosEscapar(p.description || '')}</td><td>${productosEscapar(p.unit || '')}</td><td>$${productosMoneda(p.purchase_price)}</td><td>$${productosMoneda(p.min_price)}</td><td>${p.profit_margin == null ? '' : (Number(p.profit_margin) * 100).toFixed(2) + '%'}</td><td>$${productosMoneda(p.public_price)}</td><td>${p.competitor_price == null ? '' : '$' + productosMoneda(p.competitor_price)}</td><td>${foto ? '<img src="' + productosEscapar(foto) + '" class="product-thumbnail" alt="" loading="lazy">' : ''}</td><td><strong>${s.cantidad}</strong><small class="d-block text-body-secondary">${s.texto}</small></td><td>${productosAcciones(p, true)}</td></tr>`;
-    });
+var descripcion = String(p.description || '').trim();
+var resumen = descripcion ? `<div class="csm-table-description">
+    <div class="csm-table-description-text is-collapsed" id="descripcionProducto${id}">${productosEscapar(descripcion)}</div>
+    <button type="button" class="csm-table-more d-none" data-description-toggle aria-controls="descripcionProducto${id}" aria-expanded="false"><span>Ver más</span> <i class="bi bi-chevron-down"></i></button>
+</div>` : '<span class="text-body-secondary">Sin descripción</span>';
+
+filas += `<tr data-id="${id}">
+    <td class="text-body-secondary">${id}</td>
+    <td><button type="button" class="csm-product-name-link" data-action="detail">${productosEscapar(p.name || 'Sin nombre')}</button></td>
+    <td><span class="csm-table-category">${productosEscapar(p.classification || 'Sin categoría')}</span></td>
+    <td class="csm-table-code">${productosEscapar(p.code || p.barcode || '—')}</td>
+    <td><strong class="csm-table-price">$${productosMoneda(p.public_price)}</strong></td>
+    <td><div class="csm-table-stock"><span class="csm-inventory-stock ${s.clase}"><i class="bi bi-box"></i> ${s.cantidad}</span><small>${s.texto}</small></div></td>
+    <td>${resumen}</td>
+    <td class="actions-cell">${productosAcciones(p, true)}</td>
+</tr>`;    });
 
     $('#boxGrid').html(tarjetas || '<div class="col-12"><div class="csm-inventory-empty"><i class="bi bi-search"></i><h3>Sin resultados</h3><p>Prueba con otros filtros.</p></div></div>');
-    $('#productTable tbody').html(filas || '<tr><td colspan="14" class="text-center py-4">No hay productos para mostrar.</td></tr>');
+    $('#productTable tbody').html(filas || '<tr><td colspan="8" class="text-center py-4">No hay productos para mostrar.</td></tr>');
+
+    $('#productTable .csm-table-description').each(function () {
+      var texto = $(this).find('.csm-table-description-text')[0];
+      if (texto && texto.scrollHeight > texto.clientHeight + 2) {
+        $(this).find('[data-description-toggle]').removeClass('d-none');
+      }
+    });
 
     var numeros = [1, e.paginas, e.pagina - 1, e.pagina, e.pagina + 1].filter(function (n) { return n >= 1 && n <= e.paginas; });
     numeros = Array.from(new Set(numeros)).sort(function (a, b) { return a - b; });
@@ -146,7 +184,7 @@ async function productosClasificaciones() {
     try {
         var r = await productosAPI('getClasificaciones'), actual = $('#classificationFilter').val() || '';
 
-        $('#classificationFilter').empty().append(new Option('Todas las clasificaciones', ''));
+        $('#classificationFilter').empty().append(new Option('Todas las categorías', ''));
 
         $.each(Array.isArray(r.results) ? r.results : [], function (_, categoria) {
             $('#classificationFilter').append(new Option(categoria, categoria));
@@ -158,7 +196,7 @@ async function productosClasificaciones() {
 
         $('#classificationFilter').val(actual);
     } catch (err) {
-        console.error('Clasificaciones:', err.message);
+        console.error('Categorías:', err.message);
     }
 }
 
@@ -191,6 +229,71 @@ function productosFotoPreview(ruta) {
     $('#productImagePreview').attr('src', src).toggleClass('d-none', !src);
     $('#btnClearImage').toggleClass('d-none', !src);
     $('#fileUploadHidden, #btnCaptureImage').prop('disabled', !!src);
+}
+
+async function productosVerDetalle(id) {
+    var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('productDetailModal'));
+
+    $('#productDetailTitle').text('Cargando producto...');
+    $('#productDetailFields').html('<div class="col-12 text-center py-4"><div class="spinner-border spinner-border-sm text-success"></div> Consultando información...</div>');
+    $('#productDetailDescription').text('');
+    $('#productDetailImage').addClass('d-none').attr('src', '');
+    $('#productDetailPlaceholder').removeClass('d-none');
+    $('#productDetailEdit').addClass('d-none');
+    modal.show();
+
+    try {
+        var respuesta = await productosAPI('getProducto', { id: id });
+        var p = respuesta.results;
+
+        if (!p) throw new Error('No se encontró el producto.');
+
+        var foto = productosFoto(p.image_path);
+        var campos = [
+            ['Categoría', p.classification],
+            ['Código interno', p.code],
+            ['Código de barras', p.barcode],
+            ['Marca', p.brand],
+            ['Presentación', p.presentation],
+            ['Unidad', p.unit],
+            ['Contenido', p.content],
+            ['Precio de venta', '$' + productosMoneda(p.public_price)],
+            ['Existencias', (Number(p.stock) || 0) + ' unidades'],
+            ['Stock mínimo', p.min_stock],
+            ['Stock máximo', p.max_stock],
+            ['Última compra', p.last_purchase],
+            ['Proveedor (ID)', p.supplier_id ? '#' + p.supplier_id : '']
+        ];
+
+        if (productosAdmin) {
+            campos.push(
+                ['Precio de compra', '$' + productosMoneda(p.purchase_price)],
+                ['Precio mínimo', '$' + productosMoneda(p.min_price)],
+                ['Precio competencia', '$' + productosMoneda(p.competitor_price)],
+                ['Margen', p.profit_margin != null ? (Number(p.profit_margin) * 100).toFixed(2) + '%' : '']
+            );
+        }
+
+        var html = '';
+
+        $.each(campos, function (_, campo) {
+            var valor = campo[1] === null || campo[1] === undefined || campo[1] === '' ? 'No registrado' : campo[1];
+            html += `<div class="col-12 col-sm-6"><div class="csm-detail-field"><small>${productosEscapar(campo[0])}</small><strong>${productosEscapar(valor)}</strong></div></div>`;
+        });
+
+        $('#productDetailTitle').text(p.name || 'Producto sin nombre');
+        $('#productDetailFields').html(html);
+        $('#productDetailDescription').text(p.description || 'Sin descripción registrada.');
+        $('#productDetailEdit').toggleClass('d-none', !productosAdmin).attr('data-id', p.id);
+
+        if (foto) {
+            $('#productDetailImage').attr('src', foto).removeClass('d-none');
+            $('#productDetailPlaceholder').addClass('d-none');
+        }
+    } catch (error) {
+        modal.hide();
+        Swal.fire('Error', error.message, 'error');
+    }
 }
 
 async function productosEditar(id) {
@@ -368,12 +471,18 @@ async function productosPrecioRapido() {
 
 async function productosAccionCard(event) {
     event.preventDefault();
-    if (!productosAdmin) return;
 
-    var accion = $(this).attr('data-action'), id = Number($(this).closest('[data-id]').attr('data-id'));
-    var p = productosEstado.resultados.find(function (fila) { return Number(fila.id) === id; });
+var accion = $(this).attr('data-action'), id = Number($(this).closest('[data-id]').attr('data-id'));
+var p = productosEstado.resultados.find(function (fila) { return Number(fila.id) === id; });
 
-    if (!p) return;
+if (!p) return;
+
+if (accion === 'detail') {
+    await productosVerDetalle(id);
+    return;
+}
+
+if (!productosAdmin) return;
 
     if (accion === 'edit') {
         await productosEditar(id);
@@ -574,8 +683,8 @@ function inicializarProductos() {
     if (!productosAdmin) $('#productCreateMenu, #productOptionsMenu, #inventoryFinancialSection').remove();
 
     if (!$('#btnApplyProductFilters').length) {
-        $('.csm-inventory-filter-body').append('<div class="row g-2 mt-2"><div class="col-12 col-md-8"><button id="btnApplyProductFilters" type="button" class="btn btn-primary csm-inv-primary w-100"><i class="bi bi-search"></i> Buscar productos</button></div><div class="col-12 col-md-4"><button id="btnResetProductFilters" type="button" class="btn csm-inv-outline w-100">Limpiar filtros</button></div></div>');
-    }
+    $('.csm-inventory-filter-body').append('<div class="mt-3"><button id="btnApplyProductFilters" type="button" class="btn btn-primary csm-inv-primary w-100"><i class="bi bi-search"></i> Buscar productos</button></div>');
+}
 
     if (!$('#productPagination').length) {
         $('.csm-inventory-results').append('<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mt-4"><label class="small d-flex align-items-center gap-2 mb-0">Por página <select id="productPageSize" class="form-select form-select-sm" style="width:auto"><option value="24">24</option><option value="48">48</option><option value="96">96</option></select></label><nav id="productPagination" class="d-flex align-items-center flex-wrap gap-2" aria-label="Paginación de productos"></nav></div>');
@@ -589,13 +698,6 @@ function inicializarProductos() {
         productosCargar(1);
     });
 
-    $('#btnResetProductFilters').on('click', function () {
-        $('#boxSearch').val('');
-        $('#classificationFilter').val('');
-        productosEstado.buscar = '';
-        productosEstado.clasificacion = '';
-        productosCargar(1);
-    });
 
     $('#boxSearch').on('keydown', function (e) {
         if (e.key === 'Enter') {
@@ -627,6 +729,25 @@ function inicializarProductos() {
     $('#inventoryFinancialSection').on('show.bs.modal', productosResumenInventario);
     $('#btnAddProduct').on('click', function () { productosEditar(); });
     $('#boxGrid, #productTable').on('click', '[data-action]', productosAccionCard);
+    $('#productTable').on('click', '[data-description-toggle]', function () {
+      var boton = $(this), texto = boton.siblings('.csm-table-description-text');
+      var expandido = boton.attr('aria-expanded') === 'true';
+
+      texto.toggleClass('is-collapsed', expandido);
+      boton.attr('aria-expanded', String(!expandido));
+      boton.find('span').text(expandido ? 'Ver más' : 'Ver menos');
+      boton.find('i').toggleClass('bi-chevron-down', expandido).toggleClass('bi-chevron-up', !expandido);
+    });
+
+    $('#productDetailEdit').on('click', function () {
+    var id = Number($(this).attr('data-id'));
+
+    $('#productDetailModal').one('hidden.bs.modal', function () {
+        if (id > 0) productosEditar(id);
+    });
+
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('productDetailModal')).hide();
+});
     $('#productForm').on('submit', productosGuardar);
     $('#purchasePrice, #profitMargin').on('input', productosCalcularPrecio);
     $('#publicPrice').on('input', productosCalcularMargen);

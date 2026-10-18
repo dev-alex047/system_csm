@@ -57,7 +57,7 @@
           <div class="csm-inventory-filter-body">
             <div class="row g-3 align-items-end">
               <div class="col-12 col-lg-8"><label class="form-label" for="boxSearch">Nombre, código, barras o descripción</label><div class="input-group"><span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span><input id="boxSearch" class="form-control" type="search" placeholder="Buscar productos..." autocomplete="off"></div></div>
-              <div class="col-12 col-lg-4"><label class="form-label" for="classificationFilter">Clasificación</label><select class="form-select" id="classificationFilter"><option value="">Todas las categorías</option></select></div>
+              <div class="col-12 col-lg-4"><label class="form-label" for="classificationFilter">Categoría</label><select class="form-select" id="classificationFilter"><option value="">Todas las categorías</option></select></div>
             </div>
           </div>
         </div>
@@ -74,10 +74,65 @@
   </div>
 </div>
         
-        <div id="tableView" class="d-none"><div class="csm-inventory-table-wrap"><table id="productTable" class="table align-middle mb-0"><thead><tr><th>ID</th><th>FECHA DE COMPRA</th><th>CLAVE O CÓDIGO</th><th>PRODUCTO</th><th>DESCRIPCIÓN</th><th>UNIDAD</th><th>PRECIO DE COMPRA</th><th>PRECIO MÍNIMO</th><th>MARGEN</th><th>PRECIO DE VENTA</th><th>COMPETENCIA</th><th>IMAGEN</th><th>STOCK</th><th>ACCIONES</th></tr></thead><tbody></tbody></table></div></div>
-      </section>
+<div id="tableView" class="d-none">
+    <div class="csm-inventory-table-wrap">
+        <table id="productTable" class="table align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Producto</th>
+                    <th>Categoría</th>
+                    <th>Código</th>
+                    <th>Precio de venta</th>
+                    <th>Existencias</th>
+                    <th>Descripción</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>      </section>
     </main>
   </div>
+
+  <div class="modal fade" id="productDetailModal" tabindex="-1" aria-labelledby="productDetailTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content csm-product-detail-modal">
+            <div class="modal-header">
+                <div>
+                    <small class="csm-detail-eyebrow">INFORMACIÓN DEL PRODUCTO</small>
+                    <h2 class="modal-title fs-5 fw-bold" id="productDetailTitle">Detalles del producto</h2>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-12 col-md-4">
+                        <div class="csm-detail-photo">
+                            <img id="productDetailImage" alt="Fotografía del producto" class="d-none">
+                            <div id="productDetailPlaceholder"><i class="bi bi-box-seam"></i></div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-8">
+                        <div class="row g-3" id="productDetailFields"></div>
+                    </div>
+                </div>
+                <section class="csm-detail-description mt-3">
+                    <h3 class="fs-6 fw-bold mb-2">Descripción del producto</h3>
+                    <p id="productDetailDescription" class="mb-0">Sin descripción registrada.</p>
+                </section>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn csm-inv-outline" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn csm-inv-primary" id="productDetailEdit">
+                    <i class="bi bi-pencil-square"></i> Editar producto
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
   <!-- Los formularios existentes permanecen intactos para conservar sus eventos. -->
    <div class="modal fade csm-inventory-value-modal" id="inventoryFinancialSection" tabindex="-1" aria-labelledby="inventoryValueTitle" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -149,7 +204,7 @@
 <input class="form-control" id="productUnit" type="text"/>
 </div>
 <div class="col-md-3">
-<label class="form-label">Clasificación</label>
+<label class="form-label">Categoría</label>
 <select class="form-select" id="productClassification">
 <option value="FERRETERIA">Ferretería</option>
 <option value="ACEROS">Aceros</option>
