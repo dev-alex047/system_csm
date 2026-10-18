@@ -200,7 +200,10 @@
           <a class="dropdown-item csm-admin-only" href="settings.html"><i class="bi bi-sliders" aria-hidden="true"></i>Configuración</a>
           <a class="dropdown-item csm-admin-only" href="users.html"><i class="bi bi-people" aria-hidden="true"></i>Usuarios</a>
          <button class="dropdown-item csm-admin-only" type="button" id="csmOpenCommissions"><i class="bi bi-percent" aria-hidden="true"></i>Comisiones</button>          <button class="dropdown-item" type="button" id="csmThemeBtn"><i class="bi bi-moon-stars" aria-hidden="true"></i><span id="csmThemeText">Modo oscuro</span></button>
-          <div class="dropdown-divider"></div>
+         <button class="dropdown-item csm-admin-only" type="button" id="csmOpenCategories">
+    <i class="bi bi-tags" aria-hidden="true"></i> Categorías
+</button> 
+         <div class="dropdown-divider"></div>
           <button class="dropdown-item" type="button" id="csmLogoutBtn"><i class="bi bi-box-arrow-right" aria-hidden="true"></i>Cerrar sesión</button>
         </div>
       </div>`;
@@ -250,6 +253,44 @@
             bootstrap.Modal.getOrCreateInstance(modalElement).show();
         });
     }
+    // Abrir el administrador de Categorías en un modal con iframe
+const btnCategorias = document.getElementById('csmOpenCategories');
+
+if (btnCategorias) {
+    btnCategorias.addEventListener('click', () => {
+        let modalElement = document.getElementById('csmCategoriesModal');
+
+        if (!modalElement) {
+            document.body.insertAdjacentHTML('beforeend', `
+                <div class="modal fade csm-categories-window" id="csmCategoriesModal" tabindex="-1" aria-labelledby="csmCategoriesModalTitle" aria-hidden="true">
+                    <div class="modal-dialog modal-xl modal-dialog-centered modal-fullscreen-md-down">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="csmCategoriesModalTitle">
+                                    <i class="bi bi-tags me-2"></i> Administración de categorías
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                            </div>
+                            <div class="modal-body p-0">
+                                <iframe title="Administrador de categorías"></iframe>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `);
+
+            modalElement = document.getElementById('csmCategoriesModal');
+        }
+
+        const iframe = modalElement.querySelector('iframe');
+
+        if (!iframe.getAttribute('src')) {
+            iframe.src = 'categorias.html?modal=1';
+        }
+
+        bootstrap.Modal.getOrCreateInstance(modalElement).show();
+    });
+}
     const themeBtn = document.getElementById('csmThemeBtn');
     const updateThemeText = () => {
       const dark = document.documentElement.getAttribute('data-bs-theme') === 'dark';

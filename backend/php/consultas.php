@@ -306,5 +306,230 @@ class consultas{
         return $json;
     }
 
+    //Categorias
+    public function getCategorias() {
+    $json = [];
+    $myuser_id = (string)$this->token;
+    $tipo = (int)($_POST['tipo'] ?? 1);
+    $pagina = max(1, (int)($_POST['pagina'] ?? 1));
+    $limite = max(1, min(48, (int)($_POST['limite'] ?? 12)));
+    $buscar = trim(substr((string)($_POST['buscar'] ?? ''), 0, 120));
+    $combo = (int)($_POST['combo'] ?? 0) === 1;
+
+    if ($myuser_id === '' || $tipo < 1 || $tipo > 255) {
+        $json = ['status' => 'error', 'answer' => 'Usuario o tipo de categoría inválido', 'code' => 400];
+    } else {
+        try {
+            if ($combo) {
+                $sql = "SELECT id, nombre, imagen FROM categorias
+                        WHERE myuser_id = ? AND tipo = ? AND activo = 1 AND eliminado = 0
+                        ORDER BY nombre ASC LIMIT 500";
+
+                $stmt = $this->conn->prepare($sql);
+                if (!$stmt) throw new RuntimeException($this->conn->error);
+                $stmt->bind_param("si", $myuser_id, $tipo);
+                if (!$stmt->execute()) throw new RuntimeException($stmt->error);
+
+                $resultados = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+                $stmt->close();
+
+                $json = ['status' => 'ok', 'answer' => 'Categorías consultadas correctamente',
+                         'results' => $resultados, 'total' => count($resultados), 'code' => 200];
+            } else {
+                $texto = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $buscar);
+                $like = '%' . $texto . '%';
+                $where = "WHERE myuser_id = ? AND tipo = ? AND eliminado = 0
+                          AND (nombre LIKE ? ESCAPE '!' OR descripcion LIKE ? ESCAPE '!')";
+
+                $stmt = $this->conn->prepare("SELECT COUNT(*) AS total FROM categorias $where");
+                if (!$stmt) throw new RuntimeException($this->conn->error);
+                $stmt->bind_param("siss", $myuser_id, $tipo, $like, $like);
+                if (!$stmt->execute()) throw new RuntimeException($stmt->error);
+
+                $total = (int)$stmt->get_result()->fetch_assoc()['total'];
+                $stmt->close();
+
+                $paginas = max(1, (int)ceil($total / $limite));
+                $pagina = min($pagina, $paginas);
+                $offset = ($pagina - 1) * $limite;
+
+                $sql = "SELECT id, tipo, nombre, descripcion, imagen, activo, fecha_alta
+                        FROM categorias $where
+                        ORDER BY activo DESC, nombre ASC, id DESC LIMIT ? OFFSET ?";
+
+                $stmt = $this->conn->prepare($sql);
+                if (!$stmt) throw new RuntimeException($this->conn->error);
+                $stmt->bind_param("sissii", $myuser_id, $tipo, $like, $like, $limite, $offset);
+                if (!$stmt->execute()) throw new RuntimeException($stmt->error);
+
+                $resultados = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+                $stmt->close();
+
+                $json = ['status' => 'ok', 'answer' => 'Categorías consultadas correctamente',
+                         'results' => $resultados, 'total' => $total, 'pagina' => $pagina,
+                         'limite' => $limite, 'paginas' => $paginas, 'code' => 200];
+            }
+        } catch (Throwable $e) {
+            error_log('getCategorias: ' . $e->getMessage());
+            $json = ['status' => 'error', 'answer' => 'No fue posible consultar las categorías', 'code' => 500];
+        }
+    }
+
+    return $json;
+}
+
+public function getCategoria() {
+    $json = [];
+    $myuser_id = (string)$this->token;
+    $id = filter_var($_POST['id'] ?? null, FILTER_VALIDATE_INT);
+
+    if ($myuser_id === '' || !$id || $id < 1) {
+        $json = ['status' => 'error', 'answer' => 'Identificador de categoría inválido', 'code' => 400];
+    } else {
+        try {
+            $sql = "SELECT id, tipo, nombre, descripcion, imagen, activo, fecha_alta
+                    FROM categorias WHERE myuser_id = ? AND id = ? AND eliminado = 0 LIMIT 1";
+
+            $stmt = $this->conn->prepare($sql);
+            if (!$stmt) throw new RuntimeException($this->conn->error);
+            $stmt->bind_param("si", $myuser_id, $id);
+            if (!$stmt->execute()) throw new RuntimeException($stmt->error);
+
+            $categoria = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            $json = [
+                'status' => $categoria ? 'ok' : 'error',
+                'answer' => $categoria ? 'Categoría encontrada' : 'Categoría no encontrada',
+                'results' => $categoria ?: null,
+                'code' => $categoria ? 200 : 404
+            ];
+        } catch (Throwable $e) {
+            error_log('getCategoria: ' . $e->getMessage());
+            $json = ['status' => 'error', 'answer' => 'No fue posible consultar la categoría', 'code' => 500];
+        }
+    }
+
+    return $json;
+}
+
+public function setCategoria() {
+    $json = [];
+    $myuser_id = (string)$this->token;
+    $idTexto = trim((string)($_POST['id'] ?? ''));
+    $id = $idTexto === '' ? 0 : filter_var($idTexto, FILTER_VALIDATE_INT);
+    $tipo = filter_var($_POST['tipo'] ?? 1, FILTER_VALIDATE_INT);
+    $nombre = trim((string)($_POST['nombre'] ?? ''));
+    $descripcion = trim((string)($_POST['descripcion'] ?? ''));
+    $activo = filter_var($_POST['activo'] ?? 1, FILTER_VALIDATE_INT);
+    $quitarImagen = (int)($_POST['quitar_imagen'] ?? 0) === 1;
+    $archivoNuevo = null;
+    $longitud = function_exists('mb_strlen') ? mb_strlen($nombre, 'UTF-8') : strlen($nombre);
+
+    if ($myuser_id === '' || strlen($myuser_id) > 170 || $id === false || $id < 0 ||
+        $tipo === false || $tipo < 1 || $tipo > 255 || $nombre === '' ||
+        $longitud > 120 || strlen($descripcion) > 10000 || !in_array($activo, [0, 1], true)) {
+        $json = ['status' => 'error', 'answer' => 'Verifica los datos de la categoría', 'code' => 400];
+    } else {
+        try {
+            $actual = null;
+
+            if ($id > 0) {
+                $stmt = $this->conn->prepare("SELECT tipo, imagen FROM categorias WHERE myuser_id = ? AND id = ? AND eliminado = 0 LIMIT 1");
+                if (!$stmt) throw new RuntimeException($this->conn->error);
+                $stmt->bind_param("si", $myuser_id, $id);
+                if (!$stmt->execute()) throw new RuntimeException($stmt->error);
+
+                $actual = $stmt->get_result()->fetch_assoc();
+                $stmt->close();
+
+                if (!$actual) throw new DomainException('La categoría no existe', 404);
+                if ((int)$actual['tipo'] !== (int)$tipo) throw new DomainException('No se puede modificar el tipo de una categoría existente', 400);
+            }
+
+            $stmt = $this->conn->prepare("SELECT id FROM categorias WHERE myuser_id = ? AND tipo = ? AND nombre = ? AND eliminado = 0 AND id <> ? LIMIT 1");
+            if (!$stmt) throw new RuntimeException($this->conn->error);
+            $stmt->bind_param("sisi", $myuser_id, $tipo, $nombre, $id);
+            if (!$stmt->execute()) throw new RuntimeException($stmt->error);
+
+            $duplicada = $stmt->get_result()->num_rows > 0;
+            $stmt->close();
+
+            if ($duplicada) throw new DomainException('Ya existe una categoría con ese nombre', 409);
+
+            $imagen = $quitarImagen ? null : ($actual['imagen'] ?? null);
+
+            if (isset($_FILES['imagen']) && ($_FILES['imagen']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+                $archivo = $_FILES['imagen'];
+
+                if (!is_scalar($archivo['error']) || $archivo['error'] !== UPLOAD_ERR_OK ||
+                    !is_scalar($archivo['size']) || $archivo['size'] <= 0 || $archivo['size'] > 3145728 ||
+                    !is_uploaded_file($archivo['tmp_name'])) {
+                    throw new DomainException('La imagen no es válida o supera los 3 MB', 400);
+                }
+
+                $mime = (new finfo(FILEINFO_MIME_TYPE))->file($archivo['tmp_name']);
+                $extensiones = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+                $medidas = @getimagesize($archivo['tmp_name']);
+
+                if (!isset($extensiones[$mime]) || !$medidas || $medidas[0] > 5000 || $medidas[1] > 5000) {
+                    throw new DomainException('Solo se permiten imágenes JPG, PNG o WebP válidas', 400);
+                }
+
+                $carpeta = __DIR__ . '/uploads/categorias/';
+
+                if (!is_dir($carpeta) && !mkdir($carpeta, 0755, true) && !is_dir($carpeta)) {
+                    throw new RuntimeException('No fue posible crear el directorio de imágenes');
+                }
+
+                $nombreArchivo = bin2hex(random_bytes(16)) . '.' . $extensiones[$mime];
+                $archivoNuevo = $carpeta . $nombreArchivo;
+
+                if (!move_uploaded_file($archivo['tmp_name'], $archivoNuevo)) {
+                    throw new RuntimeException('No fue posible almacenar la fotografía');
+                }
+
+                $imagen = 'uploads/categorias/' . $nombreArchivo;
+            }
+
+            $descripcionBD = $descripcion === '' ? null : $descripcion;
+
+            if ($id > 0) {
+                $sql = "UPDATE categorias SET nombre = ?, descripcion = ?, imagen = ?, activo = ?
+                        WHERE myuser_id = ? AND id = ? AND eliminado = 0";
+                $stmt = $this->conn->prepare($sql);
+                if (!$stmt) throw new RuntimeException($this->conn->error);
+                $stmt->bind_param("sssisi", $nombre, $descripcionBD, $imagen, $activo, $myuser_id, $id);
+            } else {
+                $sql = "INSERT INTO categorias (myuser_id, tipo, nombre, descripcion, imagen, activo)
+                        VALUES (?, ?, ?, ?, ?, ?)";
+                $stmt = $this->conn->prepare($sql);
+                if (!$stmt) throw new RuntimeException($this->conn->error);
+                $stmt->bind_param("sisssi", $myuser_id, $tipo, $nombre, $descripcionBD, $imagen, $activo);
+            }
+
+            if (!$stmt->execute()) throw new RuntimeException($stmt->error);
+            if ($id === 0) $id = (int)$this->conn->insert_id;
+            $stmt->close();
+
+            $json = [
+                'status' => 'ok',
+                'answer' => 'Categoría guardada correctamente',
+                'id' => $id,
+                'code' => 200
+            ];
+        } catch (DomainException $e) {
+            if ($archivoNuevo && is_file($archivoNuevo)) unlink($archivoNuevo);
+            $json = ['status' => 'error', 'answer' => $e->getMessage(), 'code' => $e->getCode()];
+        } catch (Throwable $e) {
+            if ($archivoNuevo && is_file($archivoNuevo)) unlink($archivoNuevo);
+            error_log('setCategoria: ' . $e->getMessage());
+            $json = ['status' => 'error', 'answer' => 'No fue posible guardar la categoría', 'code' => 500];
+        }
+    }
+
+    return $json;
+}
+
 }
 ?>

@@ -46,6 +46,23 @@ if ($action === "") {
             $response = $consultas->eliminarComisiones($id);
         break;
 
+        //categorias
+        case 'getCategorias':
+    $json = $consultas->getCategorias();
+    break;
+
+case 'getCategoria':
+    $json = $consultas->getCategoria();
+    break;
+
+case 'setCategoria':
+    $json = $consultas->setCategoria();
+    break;
+
+case 'eliminarCategoria':
+    $json = $consultas->eliminarCategoria();
+    break;
+
         default:
             $response["status"] = "warning";
             $response["answer"] = "La acción solicitada no es válida.";
