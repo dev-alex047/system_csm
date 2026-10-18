@@ -204,7 +204,7 @@ async function productosProveedores(id) {
     var $select = $('#productSupplier');
 
     try {
-        var r = await productosAPI('', {}, 'suppliers.php');
+        var r = await productosAPI('getProveedores', {}, 'suppliers.php');
         var proveedores = Array.isArray(r) ? r : Array.isArray(r.results) ? r.results : [];
 
         $select.empty().append(new Option('Seleccione proveedor', ''));
@@ -213,7 +213,11 @@ async function productosProveedores(id) {
             $select.append(new Option(p.name || p.nombre || 'Proveedor', String(p.id)));
         });
 
-        $select.val(id ? String(id) : '');
+        if (id && !$select.find('option').filter(function () { return this.value === String(id); }).length) {
+    $select.append(new Option('Proveedor inactivo (#' + id + ')', String(id)));
+}
+
+$select.val(id ? String(id) : '');
     } catch (err) {
         $select.empty().append(new Option('No se pudieron cargar los proveedores', ''));
 
