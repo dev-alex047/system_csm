@@ -42,3 +42,311 @@ main.csm-categorias-modal {
         padding: 16px !important;
     }
 }
+
+
+/* ===== IDENTIDAD VISUAL CSM - CATEGORÍAS ===== */
+.csm-categorias-modal {
+    --cat-green: #117750;
+    --cat-green-hover: #095c3d;
+    --cat-border: var(--bs-border-color);
+    --cat-surface: var(--bs-tertiary-bg);
+    color: var(--bs-body-color);
+}
+
+/* Filtros y buscador */
+.csm-categorias-modal #categoriasPanelLista > .row:first-child {
+    background: var(--cat-surface);
+    border: 1px solid var(--cat-border);
+    border-radius: 16px;
+    padding: 18px 12px;
+    margin: 0 0 22px;
+}
+.csm-categorias-modal .form-label {
+    font-size: .9rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+.csm-categorias-modal .form-control,
+.csm-categorias-modal .form-select,
+.csm-categorias-modal .input-group-text {
+    border-radius: 9px;
+    min-height: 44px;
+}
+.csm-categorias-modal .input-group > :not(:first-child) {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+.csm-categorias-modal .input-group > :not(:last-child) {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+/* Botones principales */
+.csm-categorias-modal .csm-cat-btn {
+    background: var(--cat-green);
+    border: 1px solid var(--cat-green);
+    color: #fff !important;
+    border-radius: 9px;
+    padding: 9px 17px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background .2s, box-shadow .2s, transform .2s;
+}
+.csm-categorias-modal .csm-cat-btn:hover {
+    background: var(--cat-green-hover);
+    border-color: var(--cat-green-hover);
+    box-shadow: 0 4px 12px rgba(17,119,80,.18);
+    transform: translateY(-1px);
+}
+.csm-categorias-modal .csm-cat-btn:disabled {
+    opacity: .6;
+    transform: none;
+    box-shadow: none;
+}
+.csm-categorias-modal .csm-cat-btn:focus-visible {
+    outline: 3px solid rgba(26,143,94,.35);
+    outline-offset: 2px;
+}
+.csm-categorias-modal .csm-cat-view .btn.active {
+    background: var(--cat-green);
+    border-color: var(--cat-green);
+    color: #fff;
+}
+
+/* Estado vacío */
+.csm-categorias-modal .csm-cat-empty {
+    min-height: 265px;
+    border: 1px dashed var(--cat-border);
+    border-radius: 16px;
+    background: var(--cat-surface);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 10px;
+    padding: 28px;
+}
+.csm-categorias-modal .csm-cat-empty > i {
+    font-size: 42px;
+    color: var(--cat-green);
+    line-height: 1;
+}
+.csm-categorias-modal .csm-cat-empty p {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin: 0;
+}
+.csm-categorias-modal .csm-cat-empty small {
+    color: var(--bs-secondary-color);
+    font-size: .88rem;
+}
+
+/* Tarjetas de categorías */
+.csm-categorias-modal .csm-cat-card {
+    background: var(--bs-body-bg);
+    border: 1px solid var(--cat-border);
+    border-radius: 15px;
+    padding: 18px;
+    box-shadow: 0 3px 12px rgba(0,0,0,.035);
+    transition: border-color .2s, box-shadow .2s;
+}
+.csm-categorias-modal .csm-cat-card:hover {
+    border-color: var(--cat-green);
+    box-shadow: 0 5px 18px rgba(0,0,0,.08);
+}
+.csm-categorias-modal .csm-cat-card-photo,
+.csm-categorias-modal .csm-cat-list-photo {
+    width: 62px;
+    height: 62px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(26,143,94,.09);
+    color: var(--cat-green);
+    border-radius: 11px;
+    overflow: hidden;
+    font-size: 25px;
+}
+.csm-categorias-modal .csm-cat-card-photo img,
+.csm-categorias-modal .csm-cat-list-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.csm-categorias-modal .csm-cat-card-title {
+    font-size: 1rem;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+    margin-bottom: 7px;
+}
+.csm-categorias-modal .csm-cat-description {
+    font-size: .88rem;
+    color: var(--bs-secondary-color);
+    margin: 15px 0;
+    min-height: 35px;
+    overflow-wrap: anywhere;
+}
+.csm-categorias-modal .csm-cat-status {
+    display: inline-flex;
+    padding: 4px 10px;
+    border-radius: 30px;
+    background: rgba(26,143,94,.12);
+    color: #117750;
+    font-size: .75rem;
+    font-weight: 700;
+}
+.csm-categorias-modal .csm-cat-status.is-inactive {
+    background: var(--bs-secondary-bg);
+    color: var(--bs-secondary-color);
+}
+
+/* Vista en tabla */
+.csm-categorias-modal .csm-cat-table-wrap {
+    border: 1px solid var(--cat-border);
+    border-radius: 14px;
+    overflow-x: auto;
+}
+.csm-categorias-modal #categoriasTabla th {
+    background: var(--cat-surface);
+    font-size: .82rem;
+    font-weight: 700;
+    padding: 15px;
+    white-space: nowrap;
+}
+.csm-categorias-modal #categoriasTabla td {
+    padding: 14px 15px;
+    font-size: .88rem;
+}
+.csm-categorias-modal .csm-cat-list-photo {
+    width: 44px;
+    height: 44px;
+    font-size: 19px;
+}
+.csm-categorias-modal .csm-cat-list-description {
+    max-width: 260px;
+    overflow-wrap: anywhere;
+    color: var(--bs-secondary-color);
+}
+
+/* Formulario: contenido central y compacto */
+.csm-categorias-modal #categoriasPanelFormulario {
+    max-width: 850px;
+    margin: 0 auto;
+}
+.csm-categorias-modal #categoriasForm {
+    padding: clamp(18px, 3vw, 30px);
+    background: var(--cat-surface);
+    border: 1px solid var(--cat-border);
+    border-radius: 17px;
+}
+.csm-categorias-modal #categoriasForm textarea {
+    min-height: 115px;
+    resize: vertical;
+}
+.csm-categorias-modal #categoriaTipoEtiqueta {
+    opacity: .8;
+    cursor: default;
+}
+.csm-categorias-modal .csm-cat-back {
+    color: var(--cat-green);
+    font-weight: 600;
+    text-decoration: none;
+}
+.csm-categorias-modal .csm-cat-back:hover {
+    color: var(--cat-green-hover);
+    text-decoration: underline;
+}
+
+/* Carga de imagen */
+.csm-categorias-modal .csm-cat-upload {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    border: 1px dashed var(--cat-border);
+    border-radius: 12px;
+    padding: 17px;
+    background: var(--bs-body-bg);
+}
+.csm-categorias-modal .csm-cat-upload .flex-grow-1 {
+    min-width: 0;
+}
+.csm-categorias-modal .csm-cat-preview {
+    width: 105px;
+    height: 105px;
+    flex-shrink: 0;
+    background: rgba(26,143,94,.08);
+    color: var(--cat-green);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+.csm-categorias-modal .csm-cat-preview i {
+    font-size: 35px;
+}
+.csm-categorias-modal .csm-cat-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.csm-categorias-modal input[type="file"]::file-selector-button {
+    background: rgba(26,143,94,.1);
+    color: var(--bs-body-color);
+}
+
+/* Activar / desactivar categoría */
+.csm-categorias-modal .csm-cat-active {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    padding: 19px;
+    background: var(--bs-body-bg);
+    border: 1px solid var(--cat-border);
+    border-radius: 12px;
+}
+.csm-categorias-modal .form-switch .form-check-input {
+    width: 2.8em;
+    height: 1.5em;
+    cursor: pointer;
+}
+.csm-categorias-modal .form-check-input:checked {
+    background-color: var(--cat-green) !important;
+    border-color: var(--cat-green) !important;
+}
+
+/* Modo oscuro */
+[data-bs-theme="dark"] .csm-categorias-modal .csm-cat-status:not(.is-inactive) {
+    color: #65dba5;
+}
+[data-bs-theme="dark"] .csm-categorias-modal .csm-cat-back {
+    color: #65dba5;
+}
+
+/* Adaptación a pantallas pequeñas */
+@media (max-width: 575.98px) {
+    .csm-categorias-modal .csm-cat-upload {
+        align-items: flex-start;
+        gap: 12px;
+    }
+    .csm-categorias-modal .csm-cat-preview {
+        width: 75px;
+        height: 75px;
+    }
+    .csm-categorias-modal .csm-cat-active {
+        padding: 14px;
+        gap: 12px;
+    }
+    .csm-categorias-modal #categoriasForm {
+        padding: 16px;
+    }
+    .csm-categorias-modal #categoriasNuevoBtn {
+        width: 100%;
+    }
+}
