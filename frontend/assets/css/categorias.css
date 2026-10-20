@@ -14,7 +14,7 @@ body {
 main.csm-categorias-modal {
     width: 100%;
     max-width: 100%;
-    min-height: 100vh;
+    min-height: 0;
     margin: 0;
     border: 0;
     border-radius: 0;
@@ -348,5 +348,121 @@ main.csm-categorias-modal {
     }
     .csm-categorias-modal #categoriasNuevoBtn {
         width: 100%;
+    }
+}
+
+
+/* ===== CATEGORÍAS: DISEÑO COMPACTO ===== */
+
+/* Filtros menos altos */
+.csm-categorias-modal #categoriasPanelLista > .row:first-child {
+    padding: 12px 8px;
+    margin-bottom: 14px;
+    border-radius: 12px;
+}
+.csm-categorias-modal .form-control,
+.csm-categorias-modal .form-select,
+.csm-categorias-modal .input-group-text {
+    min-height: 38px;
+}
+.csm-categorias-modal .form-label {
+    margin-bottom: 5px;
+    font-size: .85rem;
+}
+
+/* Tarjetas horizontales y compactas */
+.csm-categorias-modal .csm-cat-card {
+    display: grid;
+    grid-template-columns: 46px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    min-height: 84px;
+    padding: 12px;
+    border-radius: 10px;
+    box-shadow: 0 2px 7px rgba(0,0,0,.04);
+}
+
+/* Imagen pequeña */
+.csm-categorias-modal .csm-cat-card-photo {
+    width: 46px;
+    height: 46px;
+    border-radius: 9px;
+    font-size: 21px;
+}
+.csm-categorias-modal .csm-cat-card-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Información */
+.csm-categorias-modal .csm-cat-card-info {
+    min-width: 0;
+}
+.csm-categorias-modal .csm-cat-card-title {
+    font-size: .88rem;
+    font-weight: 700;
+    margin: 0 0 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.csm-categorias-modal .csm-cat-description {
+    font-size: .76rem;
+    margin: 0 0 5px;
+    min-height: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.csm-categorias-modal .csm-cat-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.csm-categorias-modal .csm-cat-card-meta small {
+    font-size: .7rem;
+}
+.csm-categorias-modal .csm-cat-status {
+    font-size: .66rem;
+    padding: 2px 7px;
+}
+
+/* Botones pequeños a la derecha */
+.csm-categorias-modal .csm-cat-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.csm-categorias-modal .csm-cat-card-actions .btn {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 7px;
+    font-size: .79rem;
+}
+
+/* Barra superior más compacta */
+.csm-categorias-modal #categoriasNuevoBtn {
+    padding: 7px 12px;
+    font-size: .87rem;
+}
+.csm-categorias-modal #categoriasPanelLista > .d-flex.mb-3 {
+    margin-bottom: 12px !important;
+}
+
+/* Espaciado inferior */
+.csm-categorias-modal #categoriasPanelLista > .mt-4 {
+    margin-top: 16px !important;
+}
+
+/* Adaptación a tamaños reducidos */
+@media (max-width: 575.98px) {
+    .csm-categorias-modal .csm-cat-card {
+        padding: 10px;
+        gap: 8px;
     }
 }

@@ -66,12 +66,17 @@ function categoriasDibujar() {
         var acciones = '<button type="button" class="btn btn-sm btn-outline-secondary" data-cat-action="edit" data-id="' + id + '" title="Editar" aria-label="Editar ' + nombre + '"><i class="bi bi-pencil"></i></button>' +
                       '<button type="button" class="btn btn-sm btn-outline-danger" data-cat-action="delete" data-id="' + id + '" title="Eliminar" aria-label="Eliminar ' + nombre + '"><i class="bi bi-trash"></i></button>';
 
-        tarjetas += '<div class="col"><article class="csm-cat-card h-100">' +
-            '<div class="d-flex gap-3"><div class="csm-cat-card-photo">' + foto + '</div>' +
-            '<div class="flex-grow-1" style="min-width:0"><div class="csm-cat-card-title">' + nombre + '</div>' + estado + '</div></div>' +
-            '<p class="csm-cat-description">' + descripcion + '</p>' +
-            '<div class="d-flex justify-content-between align-items-center"><small class="text-body-secondary">#' + id + '</small><div class="d-flex gap-2">' + acciones + '</div></div>' +
-            '</article></div>';
+        
+tarjetas += '<div class="col"><article class="csm-cat-card h-100">' +
+    '<div class="csm-cat-card-photo">' + foto + '</div>' +
+    '<div class="csm-cat-card-info">' +
+        '<div class="csm-cat-card-title" title="' + nombre + '">' + nombre + '</div>' +
+        '<div class="csm-cat-description" title="' + descripcion + '">' + descripcion + '</div>' +
+        '<div class="csm-cat-card-meta">' + estado + '<small class="text-body-secondary">#' + id + '</small></div>' +
+    '</div>' +
+    '<div class="csm-cat-card-actions">' + acciones + '</div>' +
+'</article></div>';
+
 
         filas += '<tr><td><div class="csm-cat-list-photo">' + foto + '</div></td>' +
             '<td><strong>' + nombre + '</strong></td><td><div class="csm-cat-list-description">' + descripcion + '</div></td>' +
