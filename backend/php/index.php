@@ -19,6 +19,7 @@ $response = [];
 if ($action === "") {
     $response["status"] = "ok";
     $response["answer"] = "El endpoint está activo.";
+    $response["action"] = $_POST["action"] ?? "";
     $response["code"] = 200;
 } elseif ($session === "") {
     $response["status"] = "error";
@@ -48,20 +49,20 @@ if ($action === "") {
 
         //categorias
         case 'getCategorias':
-    $json = $consultas->getCategorias();
-    break;
-
-case 'getCategoria':
-    $json = $consultas->getCategoria();
-    break;
-
-case 'setCategoria':
-    $json = $consultas->setCategoria();
-    break;
-
-case 'eliminarCategoria':
-    $json = $consultas->eliminarCategoria();
-    break;
+            $response = $consultas->getCategorias();
+        break;
+        
+        case 'getCategoria':
+            $response = $consultas->getCategoria();
+        break;
+        
+        case 'setCategoria':
+            $response = $consultas->setCategoria();
+        break;
+        
+        case 'eliminarCategoria':
+            $response = $consultas->eliminarCategoria();
+        break;
 
         default:
             $response["status"] = "warning";

@@ -1,5 +1,4 @@
 
-/* Sistema CSM · Categorías (pantalla independiente dentro de iframe) */
 
 const API_URL = '../backend/php/index.php';
 const SESSION = 1;
@@ -221,7 +220,7 @@ async function categoriasEliminar(id) {
 
     var confirmar = await Swal.fire({
         icon: 'warning', title: '¿Eliminar categoría?',
-        text: 'Se ocultará «' + c.nombre + '» sin borrar su registro.',
+        //text: 'Se ocultará «' + c.nombre + '» sin borrar su registro.',
         showCancelButton: true, confirmButtonText: 'Eliminar', cancelButtonText: 'Cancelar',
         confirmButtonColor: '#c93c47'
     });
