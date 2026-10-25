@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let allProducts = [];
   let selectedIndex = -1;
   let debounceTimer = null;
-  let isLoading = false;
+  let busquedaActual = 0;
   // Función para mostrar error
   function showError(msg) {
     if (!errorMessage) return;
@@ -24,64 +24,20 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }, 5000);
   }
-  // Cargar todos los productos al inicio
-  async function loadAllProducts() {
-    if (isLoading || allProducts.length > 0) {
-      return allProducts;
-    }
-    isLoading = true;
-    try {
-      // Usar fetch directo sin apiRequest() para evitar redireccionamiento en 401
-      // Llamar con ?public=1 para permitir acceso sin autenticación
-      const response = await fetch('../backend/api/products.php?public=1', {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
+async function consultarAPI(action, datos = {}) {
+    const response = await fetch('../backend/api/products.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+        body: new URLSearchParams({ action, ...datos }),
         credentials: 'same-origin'
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      const res = await response.json();
-      allProducts = Array.isArray(res) ? res : (res.data || res || []);
-      if (!Array.isArray(allProducts)) {
-        allProducts = [];
-      }
-      if (allProducts.length === 0) {
-        showError('No hay productos disponibles para consultar');
-      }
-      isLoading = false;
-      return allProducts;
-    } catch (e) {
-      isLoading = false;
-      console.error('Error cargando productos:', e);
-      showError('Error al cargar productos: ' + (e.message || 'Intenta nuevamente'));
-      return [];
+    });
+    const json = await response.json();
+    if (!response.ok || json.status !== 'ok') {
+        throw new Error(json.answer || 'No fue posible consultar los productos');
     }
-  }
-  // Normalizar búsqueda (sin acentos, minúsculas)
-  function normalize(str) {
-    return String(str || '')
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '');
-  }
-  // Buscar productos
-  function searchProducts(query) {
-    if (query.length < 2) {
-      hideAutocomplete();
-      return [];
-    }
-    const normalized = normalize(query);
-    const results = allProducts
-      .filter(p => {
-        const code = normalize(p.code || '');
-        const name = normalize(p.name || '');
-        const barcode = normalize(p.barcode || '');
-        return code.includes(normalized) || name.includes(normalized) || barcode.includes(normalized);
-      })
-      .slice(0, 10); // Limitar a 10 resultados
-    return results;
-  }
+    return json.results;
+}
+ 
   // Mostrar sugerencias y la ficha pública sin cambiar los endpoints ni la impresión PDF.
   const searchStatus = document.getElementById('searchStatus');
   function productImage(product) {
@@ -191,14 +147,21 @@ ${description ? `
     hideAutocomplete();
   }
   // Seleccionar producto del autocomplete
-  function selectProduct(product) {
+  async function selectProduct(product) {
     if (!product) return;
-    searchInput.value = product.name || '';
-    displayProduct(product);
-    if (searchStatus) searchStatus.textContent = '';
-    searchInput.blur();
-    if (window.matchMedia('(max-width: 767px)').matches) resultContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
+    try {
+        const detalle = await consultarAPI('getProductoPublico', { id: product.id });
+        searchInput.value = detalle.name || '';
+        displayProduct(detalle);
+        if (searchStatus) searchStatus.textContent = '';
+        searchInput.blur();
+        if (window.matchMedia('(max-width: 767px)').matches) {
+            resultContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    } catch (error) {
+        showError(error.message);
+    }
+}
   // Escapar HTML
   function escapeHtml(str) {
     const div = document.createElement('div');
@@ -302,14 +265,29 @@ ${description ? `
       });
   };
   // Event listeners
-  searchInput.addEventListener('input', (e) => {
+ searchInput.addEventListener('input', (e) => {
     clearTimeout(debounceTimer);
     const query = e.target.value.trim();
-    debounceTimer = setTimeout(() => {
-      const results = searchProducts(query);
-      showAutocomplete(results);
+    const secuencia = ++busquedaActual;
+    allProducts = [];
+    hideAutocomplete();
+
+    if (searchStatus) searchStatus.textContent = query.length < 2 ? '' : 'Buscando...';
+    if (query.length < 2) return;
+
+    debounceTimer = setTimeout(async () => {
+        try {
+            const results = await consultarAPI('buscarProductosPublicos', { buscar: query });
+            if (secuencia !== busquedaActual) return;
+            allProducts = Array.isArray(results) ? results : [];
+            showAutocomplete(allProducts);
+        } catch (error) {
+            if (secuencia !== busquedaActual) return;
+            if (searchStatus) searchStatus.textContent = '';
+            showError(error.message);
+        }
     }, 300);
-  });
+});
   searchInput.addEventListener('keydown', (e) => {
     const items = autocompleteList.querySelectorAll('.autocomplete-item');
     if (e.key === 'Escape') { hideAutocomplete(); return; }
