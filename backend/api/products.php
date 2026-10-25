@@ -6,11 +6,7 @@ require_once __DIR__ . '/auth.php';
 // Connect DB
 $pdo = getPDO();
 
-if(isset($_POST['action'])){
-    $action = $_POST['action'];
-}else{
-
-}
+$action = trim((string)($_POST['action'] ?? ''));
 
 switch ($action) {
     case 'getProducto':

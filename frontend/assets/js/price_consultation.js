@@ -304,8 +304,7 @@ ${description ? `
       e.preventDefault();
       if (selectedIndex >= 0 && selectedIndex < items.length) {
         const index = parseInt(items[selectedIndex].dataset.index);
-        const results = searchProducts(searchInput.value);
-        selectProduct(results[index]);
+        selectProduct(allProducts[index]);
       }
     }
   });
@@ -324,8 +323,5 @@ ${description ? `
     }
   });
   // Cargar productos al iniciar con manejo de errores
-  loadAllProducts().catch(e => {
-    console.error('Error iniciando:', e);
-    showError('Error al inicializar el módulo');
-  });
+
 });
