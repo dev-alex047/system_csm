@@ -2555,6 +2555,8 @@ function renderPendingEvaluation() {
         'pendingEvaluationButton'
     );
 
+    if (!button) return;
+
     const pending = state.pendingEvaluation;
 
     if (!pending) {
