@@ -1,0 +1,48 @@
+
+:root{--verde:#086b47;--verde-claro:#eaf5ee;--fondo:#f4f7f5;--borde:#e1e9e4;--texto:#24332b;--muted:#6b7971}
+body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--fondo);color:var(--texto)}
+.sistema{min-height:100vh;padding:16px 20px}
+.barra-superior{height:70px;background:#fff;border:1px solid var(--borde);border-radius:18px;display:grid;grid-template-columns:52px minmax(0,1fr) 52px;align-items:center;gap:12px;padding:0 15px;box-shadow:0 5px 22px rgba(25,50,35,.035)}
+.btn-icono{width:43px;height:43px;border:1px solid var(--borde);border-radius:13px;background:#fff;font-size:20px;color:#34483c;display:grid;place-items:center;transition:.2s}
+.btn-icono:hover{background:var(--verde-claro);color:var(--verde);border-color:#cde3d5}
+.barra-centro{min-width:0;display:flex;justify-content:center;align-items:center}
+.marca-sistema{display:flex;align-items:center;gap:10px;white-space:nowrap;font-size:17px}
+.marca-icono{background:var(--verde-claro);color:var(--verde);width:32px;height:32px;border-radius:10px;display:grid;place-items:center}
+.contenedor-principal{max-width:1450px;margin:auto}
+.vista-inicio{min-height:calc(100vh - 125px);display:flex;justify-content:center;align-items:center;padding:50px 0}
+.inicio-contenido{width:100%;max-width:950px}
+.etiqueta-verde{font-size:10px;letter-spacing:1.6px;color:var(--verde);font-weight:750}
+.titulo-principal{font-size:clamp(25px,3vw,34px);font-weight:750;margin:10px 0}
+.texto-secundario{font-size:13px;color:var(--muted)}
+.grid-modulos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}
+.tarjeta-modulo{min-height:205px;background:#fff;border:1px solid var(--borde);border-radius:22px;padding:26px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:12px;box-shadow:0 7px 22px rgba(30,50,40,.035);transition:transform .2s,border-color .2s,box-shadow .2s;color:var(--texto)}
+.tarjeta-modulo:hover{transform:translateY(-4px);border-color:#a7d4b8;box-shadow:0 12px 30px rgba(15,80,48,.085)}
+.tarjeta-modulo:focus-visible,.btn-icono:focus-visible,.tab-modulo:focus-visible{outline:3px solid #70c69b;outline-offset:3px}
+.modulo-icono{width:64px;height:64px;background:var(--verde-claro);color:#07935c;border-radius:18px;display:grid;place-items:center;font-size:28px}
+.tarjeta-modulo strong{font-size:19px;font-weight:750}
+.tarjeta-modulo small{font-size:13px;line-height:1.6;color:var(--muted);max-width:270px}
+.nav-submodulos{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;overflow-x:auto;scrollbar-width:none}
+.nav-submodulos::-webkit-scrollbar{display:none}
+.tab-modulo{border:0;background:transparent;padding:12px 17px;border-radius:12px;font-size:12px;font-weight:650;color:#57685e;white-space:nowrap;transition:.2s}
+.tab-modulo:hover{background:var(--verde-claro);color:var(--verde)}
+.tab-modulo.active{background:var(--verde);color:#fff}
+.vista-modulo{padding:25px 0}
+.encabezado-modulo,.contenido-modulo{background:#fff;border:1px solid var(--borde);border-radius:19px;padding:25px;margin-bottom:18px}
+.encabezado-icono{width:52px;height:52px;border-radius:15px;background:var(--verde-claro);color:var(--verde);font-size:23px;display:grid;place-items:center;flex-shrink:0}
+.estado-vacio{text-align:center;padding:65px 15px}
+.estado-vacio>i{font-size:40px;color:#9ab6a5}
+@media(max-width:767px){
+.sistema{padding:10px}
+.barra-superior{height:63px;padding:0 10px;grid-template-columns:42px minmax(0,1fr) 42px;gap:6px;border-radius:14px}
+.btn-icono{width:39px;height:39px;font-size:18px}
+.marca-sistema{font-size:14px}
+.vista-inicio{min-height:calc(100vh - 100px);padding:35px 0}
+.grid-modulos{gap:12px}
+.tarjeta-modulo{min-height:165px;padding:18px 10px;border-radius:16px;gap:8px}
+.modulo-icono{width:48px;height:48px;font-size:22px;border-radius:13px}
+.tarjeta-modulo strong{font-size:15px}
+.tarjeta-modulo small{font-size:11px}
+.tab-modulo{padding:10px;font-size:11px}
+.encabezado-modulo,.contenido-modulo{padding:18px}
+}
+@media(max-width:390px){.grid-modulos{grid-template-columns:1fr}.tarjeta-modulo{min-height:145px}}

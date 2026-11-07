@@ -1,0 +1,150 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f4f7f5">
+    <meta name="description" content="Sistema de control contable, ventas, caja, egresos y cuentas.">
+    <title>Control Contable | Administración</title>
+
+    <!-- Bootstrap 5.3.3 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+
+    <!-- Estilos propios -->
+    <link href="css/app.css" rel="stylesheet">
+</head>
+<body>
+
+<div class="sistema">
+
+    <!-- ========== BARRA SUPERIOR ========== -->
+    <header class="barra-superior">
+        <button type="button" class="btn-icono" id="btnInicio" title="Ir al inicio" aria-label="Ir al inicio">
+            <i class="bi bi-house"></i>
+        </button>
+
+        <div class="barra-centro">
+            <!-- Logo / nombre inicial -->
+            <div class="marca-sistema" id="marcaSistema">
+                <span class="marca-icono"><i class="bi bi-wallet2"></i></span>
+                <strong>Control Contable</strong>
+            </div>
+
+            <!-- Navegación de submódulos -->
+            <nav id="navSubmodulos" class="nav-submodulos d-none" aria-label="Submódulos"></nav>
+        </div>
+
+        <button type="button" class="btn-icono" id="btnConfiguracion" title="Configuración" aria-label="Configuración">
+            <i class="bi bi-gear"></i>
+        </button>
+    </header>
+
+    <!-- ========== CONTENIDO PRINCIPAL ========== -->
+    <main class="contenedor-principal">
+
+        <!-- ========== PANTALLA DE INICIO ========== -->
+        <section id="vistaInicio" class="vista-inicio">
+            <div class="inicio-contenido">
+
+                <div class="text-center mb-4">
+                    <span class="etiqueta-verde">ADMINISTRACIÓN DEL NEGOCIO</span>
+                    <h1 class="titulo-principal">¿Qué deseas hacer?</h1>
+                    <p class="texto-secundario mb-0">Selecciona un módulo para comenzar.</p>
+                </div>
+
+                <div class="grid-modulos">
+
+                    <!-- MÓDULO 1: VENTAS -->
+                    <button type="button" class="tarjeta-modulo js-abrir-modulo" data-modulo="ventas">
+                        <span class="modulo-icono">
+                            <i class="bi bi-receipt"></i>
+                        </span>
+                        <strong>Ventas</strong>
+                        <small>Registro de ventas con nota y ventas rápidas.</small>
+                    </button>
+
+                    <!-- MÓDULO 2: CAJA Y EGRESOS -->
+                    <button type="button" class="tarjeta-modulo js-abrir-modulo" data-modulo="caja">
+                        <span class="modulo-icono">
+                            <i class="bi bi-wallet2"></i>
+                        </span>
+                        <strong>Caja y egresos</strong>
+                        <small>Control de efectivo, arqueos, gastos y salidas.</small>
+                    </button>
+
+                    <!-- MÓDULO 3: CUENTAS -->
+                    <button type="button" class="tarjeta-modulo js-abrir-modulo" data-modulo="cuentas">
+                        <span class="modulo-icono">
+                            <i class="bi bi-people"></i>
+                        </span>
+                        <strong>Cuentas</strong>
+                        <small>Créditos, abonos y pagos pendientes a proveedores.</small>
+                    </button>
+
+                    <!-- MÓDULO 4: PANEL Y REPORTES -->
+                    <button type="button" class="tarjeta-modulo js-abrir-modulo" data-modulo="panel">
+                        <span class="modulo-icono">
+                            <i class="bi bi-bar-chart-line"></i>
+                        </span>
+                        <strong>Panel y reportes</strong>
+                        <small>Indicadores, movimientos y análisis financiero.</small>
+                    </button>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- ========== PANTALLA DE SUBMÓDULOS ========== -->
+        <section id="vistaModulo" class="vista-modulo d-none">
+
+            <!-- Encabezado del submódulo -->
+            <div class="encabezado-modulo">
+                <div class="d-flex align-items-center gap-3">
+
+                    <span class="encabezado-icono">
+                        <i id="iconoPantalla" class="bi bi-receipt"></i>
+                    </span>
+
+                    <div>
+                        <span class="etiqueta-verde" id="categoriaModulo"></span>
+                        <h1 id="tituloPantalla" class="h4 fw-bold mb-1"></h1>
+                        <p id="descripcionPantalla" class="texto-secundario mb-0"></p>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Aquí cargaremos los formularios de cada módulo -->
+            <div class="contenido-modulo" id="contenidoModulo">
+                <div class="estado-vacio">
+                    <i class="bi bi-ui-checks-grid"></i>
+                    <h2 class="h5 mt-3">Área lista para desarrollar</h2>
+                    <p class="texto-secundario mb-0">Aquí construiremos el formulario correspondiente.</p>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+</div>
+
+<!-- ========== LIBRERÍAS JAVASCRIPT ========== -->
+
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+<!-- Bootstrap -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+
+<!-- JavaScript propio -->
+<script src="js/app.js"></script>
+
+</body>
+</html>
