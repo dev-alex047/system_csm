@@ -218,6 +218,15 @@
                             <option value="PARCIALIDADES">Parcialidades</option>
                         </select>
                     </div>
+
+<div class="col-md-6 d-none" id="notaCajaBox">
+    <label class="form-label" for="notaCaja">Caja donde se recibe el efectivo *</label>
+    <select id="notaCaja" data-campo-nota="caja_id" class="form-select">
+        <option value="">Consultando cajas...</option>
+    </select>
+    <div class="form-text">El cobro se agregará al saldo de la caja seleccionada.</div>
+</div>
+
                     <div class="col-md-6 d-none" id="notaReferenciaBox">
                         <label class="form-label" for="notaReferencia">Referencia bancaria (opcional)</label>
                         <input id="notaReferencia" data-campo-nota="referencia" class="form-control" maxlength="100" placeholder="Número de comprobante">

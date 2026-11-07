@@ -168,7 +168,10 @@ if (modulo === "ventas" && submodulo === "rapida") {
 
 /* VENTAS CON NOTA */
 function crearBorradorVentaNota() {
-    return {folio:"",cliente:"",direccion:"",telefono:"",vendedor:"",observaciones:"",forma_pago:"EFECTIVO",referencia:"",abono:"",metodo_abono:"EFECTIVO",referencia_abono:"",items:[],siguienteId:1};
+    
+    return {solicitud_id: generarIdSolicitudVenta(),
+caja_id: "",
+        folio:"",cliente:"",direccion:"",telefono:"",vendedor:"",observaciones:"",forma_pago:"EFECTIVO",referencia:"",abono:"",metodo_abono:"EFECTIVO",referencia_abono:"",items:[],siguienteId:1};
 }
 
 function bindVentaNota() {
@@ -227,6 +230,7 @@ function renderVentaConNota() {
     else state.ventaNota.items.forEach(insertarFilaVentaNota);
     alternarCamposPagoNota();
     actualizarTotalesVentaNota();
+    getCajasVenta();
 }
 
 function agregarItemVentaNota() {
@@ -285,6 +289,13 @@ function alternarCamposPagoNota() {
     $("#notaReferenciaBox").toggleClass("d-none",state.ventaNota.forma_pago !== "TRANSFERENCIA");
     $("#notaParcialidadBox").toggleClass("d-none",!parcial);
     $("#notaRefAbonoBox").toggleClass("d-none",!parcial || state.ventaNota.metodo_abono !== "TRANSFERENCIA");
+
+
+const pagaEfectivo = state.ventaNota.forma_pago === "EFECTIVO" ||
+    (state.ventaNota.forma_pago === "PARCIALIDADES" && state.ventaNota.metodo_abono === "EFECTIVO");
+
+$("#notaCajaBox").toggleClass("d-none", !pagaEfectivo);
+
 }
 
 function actualizarTotalesVentaNota() {
@@ -335,6 +346,15 @@ function validarVentaNota() {
         if (!["EFECTIVO","TRANSFERENCIA"].includes(venta.metodo_abono)) return errorVentaNota("Selecciona cómo se recibió el abono.","#notaMetodoAbono");
     }
 
+
+const requiereCaja = venta.forma_pago === "EFECTIVO" ||
+    (venta.forma_pago === "PARCIALIDADES" && venta.metodo_abono === "EFECTIVO");
+
+if (requiereCaja && (!Number.isInteger(Number(venta.caja_id)) || Number(venta.caja_id) <= 0)) {
+    return errorVentaNota("Selecciona la caja donde recibirás el efectivo.", "#notaCaja");
+}
+
+
     return true;
 }
 
@@ -357,16 +377,30 @@ function revisarVentaNota() {
     $resumen.append($('<p class="fw-bold mb-1"></p>').text("Total: "+monedaMXN(importes.totalCentavos/100)));
     $resumen.append($('<p class="mb-1"></p>').text("Recibido: "+monedaMXN(importes.abonadoCentavos/100)));
     $resumen.append($('<p></p>').text("Saldo pendiente: "+monedaMXN(importes.saldoCentavos/100)));
-    $resumen.append($('<p class="text-secondary mb-0"></p>').text("Vista previa: todavía no se guarda en MySQL."));
 
-    Swal.fire({title:"Revisión de nota",html:$resumen[0],confirmButtonText:"Volver a la captura",confirmButtonColor:"#086b47",width:"630px"});
+
+Swal.fire({
+    title:"Confirmar venta",
+    html:$resumen[0],
+    icon:"question",
+    showCancelButton:true,
+    confirmButtonText:"Guardar venta",
+    cancelButtonText:"Seguir editando",
+    confirmButtonColor:"#086b47",
+    width:"630px"
+}).then(function(resultado) {
+    if (resultado.isConfirmed) guardarVentaNota();
+});
+
 }
+
 
 
 function mostrarContenidoPendiente(nombre) {
     $("#contenidoModulo").html('<div class="estado-vacio"><i class="bi bi-ui-checks-grid"></i><h2 class="h5 mt-3">Área lista para desarrollar</h2><p class="texto-secundario mb-0"></p></div>');
     $("#contenidoModulo .estado-vacio p").text("Aquí construiremos " + nombre.toLowerCase() + ".");
 }
+
 
 // PANEL GENERAL - MYSQL
 
@@ -649,4 +683,148 @@ function revisarVentaRapida() {
     $resumen.append($('<p class="text-secondary mb-0"></p>').text("Esta es una vista previa. La venta todavía no se ha guardado en MySQL."));
 
     Swal.fire({title:"Revisar venta rápida",html:$resumen[0],confirmButtonText:"Volver a la venta",confirmButtonColor:"#086b47",width:"600px"});
+}
+
+
+function generarIdSolicitudVenta() {
+    if (!window.crypto || !window.crypto.getRandomValues) {
+        throw new Error("Se necesita un navegador con generación criptográfica de identificadores.");
+    }
+    const bytes = new Uint8Array(16);
+    window.crypto.getRandomValues(bytes);
+    return Array.from(bytes).map(function(b) {
+        return b.toString(16).padStart(2, "0");
+    }).join("");
+}
+
+
+
+function getCajasVenta() {
+    const $select = $("#notaCaja");
+    if (!$select.length) return;
+
+    $select.empty().append($("<option>",{value:"",text:"Consultando cajas..."})).prop("disabled",true);
+
+    $.ajax({
+        type:"POST",
+        url:"php/index.php",
+        data:{action:"getCajasVenta"},
+        dataType:"json"
+    }).done(function(data) {
+        if (!$("#notaCaja").length) return;
+
+        const $caja = $("#notaCaja").empty();
+        $caja.append($("<option>",{value:"",text:"Selecciona una caja"}));
+
+        if (!data || data.status !== "ok") {
+            Swal.fire("Aviso",data && data.answer ? data.answer : "No fue posible consultar las cajas.","warning");
+            return;
+        }
+
+        const cajas = Array.isArray(data.results) ? data.results : [];
+
+        cajas.forEach(function(item) {
+            $caja.append($("<option>",{value:String(item.id),text:item.name+" · Caja #"+item.id}));
+        });
+
+        if (cajas.some(function(item){return String(item.id) === String(state.ventaNota.caja_id);})) {
+            $caja.val(String(state.ventaNota.caja_id));
+        } else {
+            state.ventaNota.caja_id = "";
+        }
+
+        if (!cajas.length) $caja.find("option:first").text("No hay cajas activas");
+    }).fail(function(xhr) {
+        const data = xhr.responseJSON || {};
+        Swal.fire("Error",data.answer || "No fue posible consultar las cajas.","error");
+    }).always(function(){
+        $("#notaCaja").prop("disabled",false);
+    });
+}
+
+
+function guardarVentaNota() {
+    if (state.guardandoVentaNota) return;
+    if (!validarVentaNota()) return;
+
+    const venta = state.ventaNota;
+    const datos = {
+        solicitud_id:venta.solicitud_id,
+        folio:venta.folio,
+        cliente:venta.cliente,
+        direccion:venta.direccion,
+        telefono:venta.telefono,
+        vendedor:venta.vendedor,
+        observaciones:venta.observaciones,
+        forma_pago:venta.forma_pago,
+        referencia:venta.referencia,
+        abono:venta.abono,
+        metodo_abono:venta.metodo_abono,
+        referencia_abono:venta.referencia_abono,
+        caja_id:venta.caja_id,
+        items:venta.items.map(function(item){
+            return {
+                origen:"MANUAL",
+                codigo:item.codigo,
+                nombre:item.nombre,
+                cantidad:item.cantidad,
+                precio:item.precio
+            };
+        })
+    };
+
+    state.guardandoVentaNota = true;
+
+    Swal.fire({
+        title:"Registrando venta",
+        text:"Guardando nota, artículos y movimientos...",
+        allowOutsideClick:false,
+        allowEscapeKey:false,
+        showConfirmButton:false,
+        didOpen:function(){Swal.showLoading();}
+    });
+
+    $.ajax({
+        type:"POST",
+        url:"php/index.php",
+        data:{
+            action:"guardarVentaNota",
+            venta:JSON.stringify(datos)
+        },
+        dataType:"json"
+    }).done(function(data) {
+        if (!data || data.status !== "ok") {
+            Swal.fire("Aviso",data && data.answer ? data.answer : "No fue posible guardar la venta.","warning");
+            return;
+        }
+
+        const resultado = data.results || {};
+        const folio = resultado.folio || "Sin folio";
+
+        state.ventaNota = crearBorradorVentaNota();
+
+        if (state.moduloActual === "ventas" && state.submoduloActual === "nota") {
+            renderVentaConNota();
+        }
+
+        Swal.fire({
+            icon:"success",
+            title:resultado.duplicada ? "Venta ya registrada" : "Venta guardada",
+            html:"<strong>Folio:</strong> " + $("<div>").text(folio).html() +
+                 "<p class='mb-0 mt-2'>La operación quedó registrada en MySQL.</p>",
+            confirmButtonText:"Aceptar",
+            confirmButtonColor:"#086b47"
+        });
+    }).fail(function(xhr) {
+        const data = xhr.responseJSON || {};
+        Swal.fire({
+            icon:data.status === "warning" ? "warning" : "error",
+            title:"No se pudo confirmar la venta",
+            text:(data.answer || "No fue posible completar la petición.") +
+                 " Puedes reintentar desde el mismo borrador para evitar registros duplicados.",
+            confirmButtonColor:"#086b47"
+        });
+    }).always(function(){
+        state.guardandoVentaNota = false;
+    });
 }

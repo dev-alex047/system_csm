@@ -19,6 +19,16 @@ switch ($action) {
     $response = $consultas->getResumenInicial($_POST);
 break;
 
+
+case "getCajasVenta":
+    $response = $consultas->getCajasVenta();
+break;
+
+case "guardarVentaNota":
+    $response = $consultas->guardarVentaNota($_POST);
+break;
+
+
     default:
         $response["status"] = "warning";
         $response["answer"] = "La acción solicitada no es válida.";
