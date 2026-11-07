@@ -56,6 +56,16 @@ function bindNavigation() {
 
     $("#btnInicio").on("click", mostrarInicio);
     $("#btnConfiguracion").on("click", mostrarConfiguracion);
+
+
+$(document).on("submit", "#formFiltroResumen", function(e) {
+    e.preventDefault();
+    const inicio = $("#resumenFechaInicio").val();
+    const fin = $("#resumenFechaFin").val();
+    if (!inicio || !fin) return;
+    getResumenInicial(inicio, fin);
+});
+
 }
 
 // NAVEGACIÓN
@@ -171,9 +181,9 @@ function getResumenInicial(inicio = "", fin = "") {
     }).done(function(data) {
         if (version !== state.versionVista) return;
         if (!data || data.status !== "ok") {
-            Swal.fire("Aviso",data && data.answer ? data.answer : "No fue posible consultar el resumen.","warning");
-            return;
-        }
+    mostrarErrorConsulta(data && data.answer ? data.answer : "No fue posible consultar el resumen.");
+    return;
+}
         renderResumenInicial(data.results);
     }).fail(function(xhr) {
         if (version !== state.versionVista) return;
@@ -249,51 +259,6 @@ function renderResumenInicial(datos) {
 }
 
 
-function renderResumenInicial(tablas) {
-    const indicadores = [
-        {tabla:"sales",titulo:"Ventas registradas",icono:"bi-receipt"},
-        {tabla:"cash_flows",titulo:"Movimientos de caja",icono:"bi-wallet2"},
-        {tabla:"receivables",titulo:"Registros por cobrar",icono:"bi-person-check"},
-        {tabla:"payables",titulo:"Registros por pagar",icono:"bi-credit-card"}
-    ];
-
-    const $contenedor = $('<div class="row g-3"></div>');
-
-    indicadores.forEach(function(indicador) {
-        const tabla = tablas.find(function(t) {return t.nombre === indicador.tabla;});
-        const total = tabla && tabla.existe ? tabla.total : "—";
-        const $col = $('<div class="col-sm-6 col-xl-3"></div>');
-        const $card = $('<div class="border rounded-4 p-4 bg-white h-100"></div>');
-
-        $card.append($('<i>').addClass('bi ' + indicador.icono + ' fs-3 text-success'));
-        $card.append($('<p class="small text-secondary mt-3 mb-1"></p>').text(indicador.titulo));
-        $card.append($('<h3 class="fw-bold mb-0"></h3>').text(total));
-        $col.append($card);
-        $contenedor.append($col);
-    });
-
-    const $detalle = $('<div class="mt-4"></div>');
-    $detalle.append('<h2 class="h6 fw-bold mb-3">Estructura de las tablas existentes</h2>');
-
-    tablas.forEach(function(tabla) {
-        const $details = $('<details class="border rounded-3 p-3 mb-2"></details>');
-        const estado = tabla.existe ? tabla.motor + " · " + tabla.total + " registros" : "No encontrada";
-
-        $details.append($('<summary class="fw-semibold"></summary>').text(tabla.nombre + " — " + estado));
-
-        if (tabla.existe) {
-            const columnas = (tabla.columnas || []).map(function(c) {
-                return c.nombre + " (" + c.tipo + ")";
-            }).join("\n");
-            $details.append($('<pre class="small mt-3 mb-0" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre>').text(columnas));
-        }
-        $detalle.append($details);
-    });
-
-    $("#contenidoModulo").empty()
-        .append('<p class="text-secondary small mb-3">Cantidad de registros existentes. Estos indicadores todavía no representan importes monetarios.</p>')
-        .append($contenedor, $detalle);
-}
 
 function mostrarErrorConsulta(mensaje) {
     $("#contenidoModulo").html('<div class="alert alert-danger mb-0">No fue posible cargar la información.</div>');
