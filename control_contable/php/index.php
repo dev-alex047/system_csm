@@ -16,8 +16,8 @@ $response = [];
 
 switch ($action) {
     case "getResumenInicial":
-        $response = $consultas->getResumenInicial();
-    break;
+    $response = $consultas->getResumenInicial($_POST);
+break;
 
     default:
         $response["status"] = "warning";

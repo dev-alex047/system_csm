@@ -21,80 +21,84 @@ class consultas{
         return true;
     }
 
-    public function getResumenInicial() {
-        $json = [];
-        $tablas = [];
-        $nombres = ["sales", "sale_items", "cash_registers", "cash_flows", "receivables", "payables", "account_moves", "bank_accounts"];
+ 
+public function getResumenInicial($data = []) {
+    $json = [];
+    $inicio = isset($data["fecha_inicio"]) ? trim((string)$data["fecha_inicio"]) : date("Y-m-01");
+    $fin = isset($data["fecha_fin"]) ? trim((string)$data["fecha_fin"]) : date("Y-m-d");
+    $fechaInicio = DateTime::createFromFormat("!Y-m-d", $inicio);
+    $fechaFin = DateTime::createFromFormat("!Y-m-d", $fin);
 
-        if (!$this->conn) {
-            $json["status"] = "error";
-            $json["answer"] = "No existe conexión con la base de datos.";
-            $json["code"] = 500;
-        } else {
-            foreach ($nombres as $nombre) {
-                $tablas[$nombre] = ["nombre" => $nombre, "existe" => false, "motor" => null, "total" => 0, "columnas" => []];
-            }
+    if (!$this->conn) {
+        $json = ["status"=>"error","answer"=>"No hay conexión con MySQL.","code"=>500];
+    } elseif (!$fechaInicio || !$fechaFin || $fechaInicio->format("Y-m-d") !== $inicio || $fechaFin->format("Y-m-d") !== $fin || $inicio > $fin) {
+        $json = ["status"=>"warning","answer"=>"Selecciona un rango de fechas válido.","code"=>400];
+    } elseif ($fechaInicio->diff($fechaFin)->days > 366) {
+        $json = ["status"=>"warning","answer"=>"El periodo máximo permitido es de 366 días.","code"=>400];
+    } else {
+        try {
+            $consultasPeriodo = [
+                "ventas" => "SELECT COUNT(*) cantidad, COALESCE(SUM(total_amount),0) importe FROM sales WHERE created_at >= ? AND created_at < DATE_ADD(?, INTERVAL 1 DAY)",
+                "salidas" => "SELECT COUNT(*) cantidad, COALESCE(SUM(amount),0) importe FROM account_moves WHERE type = 'SALIDA' AND status = 'PAGADO' AND `date` >= ? AND `date` < DATE_ADD(?, INTERVAL 1 DAY)",
+                "ultimas_ventas" => "SELECT id, client_name, payment_method, total_amount, created_at FROM sales WHERE created_at >= ? AND created_at < DATE_ADD(?, INTERVAL 1 DAY) ORDER BY created_at DESC, id DESC LIMIT 8",
+                "movimientos" => "SELECT id, `date`, type, origin, user_reference_name, amount, status FROM account_moves WHERE `date` >= ? AND `date` < DATE_ADD(?, INTERVAL 1 DAY) ORDER BY `date` DESC, id DESC LIMIT 8"
+            ];
 
-            $sql = "SELECT t.TABLE_NAME, t.ENGINE, c.COLUMN_NAME, c.COLUMN_TYPE
-                    FROM INFORMATION_SCHEMA.TABLES t
-                    INNER JOIN INFORMATION_SCHEMA.COLUMNS c
-                    ON c.TABLE_SCHEMA = t.TABLE_SCHEMA AND c.TABLE_NAME = t.TABLE_NAME
-                    WHERE t.TABLE_SCHEMA = DATABASE()
-                    AND t.TABLE_NAME IN ('sales','sale_items','cash_registers','cash_flows','receivables','payables','account_moves','bank_accounts')
-                    ORDER BY t.TABLE_NAME, c.ORDINAL_POSITION";
+            $resultados = [];
 
-            $result = $this->conn->query($sql);
+            foreach ($consultasPeriodo as $clave => $sql) {
+                $stmt = $this->conn->prepare($sql);
+                if (!$stmt) throw new RuntimeException($this->conn->error);
+                $stmt->bind_param("ss", $inicio, $fin);
+                if (!$stmt->execute()) throw new RuntimeException($stmt->error);
+                $result = $stmt->get_result();
 
-            if (!$result) {
-                error_log("getResumenInicial: " . $this->conn->error);
-                $json["status"] = "error";
-                $json["answer"] = "No fue posible consultar la estructura de las tablas.";
-                $json["code"] = 500;
-            } else {
-                while ($row = $result->fetch_assoc()) {
-                    $nombre = $row["TABLE_NAME"];
-                    $tablas[$nombre]["existe"] = true;
-                    $tablas[$nombre]["motor"] = $row["ENGINE"];
-                    $tablas[$nombre]["columnas"][] = [
-                        "nombre" => $row["COLUMN_NAME"],
-                        "tipo" => $row["COLUMN_TYPE"]
-                    ];
-                }
-                $result->free();
-
-                $valido = true;
-
-                foreach ($tablas as $nombre => &$tabla) {
-                    if (!$tabla["existe"]) continue;
-
-                    $consulta = $this->conn->query("SELECT COUNT(*) AS total FROM `" . $nombre . "`");
-
-                    if (!$consulta) {
-                        error_log("getResumenInicial COUNT " . $nombre . ": " . $this->conn->error);
-                        $valido = false;
-                        break;
-                    }
-
-                    $fila = $consulta->fetch_assoc();
-                    $tabla["total"] = (int)$fila["total"];
-                    $consulta->free();
-                }
-                unset($tabla);
-
-                if ($valido) {
-                    $json["status"] = "ok";
-                    $json["answer"] = "Información consultada correctamente.";
-                    $json["results"] = array_values($tablas);
-                    $json["code"] = 200;
+                if ($clave === "ultimas_ventas" || $clave === "movimientos") {
+                    $resultados[$clave] = [];
+                    while ($fila = $result->fetch_assoc()) $resultados[$clave][] = $fila;
                 } else {
-                    $json["status"] = "error";
-                    $json["answer"] = "No fue posible consultar los registros de las tablas.";
-                    $json["code"] = 500;
+                    $resultados[$clave] = $result->fetch_assoc();
                 }
+                $stmt->close();
             }
-        }
 
-        return $json;
+            $consultasSaldo = [
+                "caja" => "SELECT COUNT(*) cantidad, COALESCE(SUM(current_balance),0) saldo FROM cash_registers WHERE kind = 'CASH' AND is_active = 1",
+                "cobrar" => "SELECT COUNT(*) cantidad, COALESCE(SUM(pending_amount),0) saldo FROM receivables WHERE status <> 'CANCELADO' AND pending_amount > 0",
+                "pagar" => "SELECT COUNT(*) cantidad, COALESCE(SUM(pending_amount),0) saldo FROM payables WHERE status <> 'CANCELADO' AND pending_amount > 0"
+            ];
+
+            foreach ($consultasSaldo as $clave => $sql) {
+                $result = $this->conn->query($sql);
+                if (!$result) throw new RuntimeException($this->conn->error);
+                $resultados[$clave] = $result->fetch_assoc();
+                $result->free();
+            }
+
+            $json["status"] = "ok";
+            $json["answer"] = "Resumen consultado correctamente.";
+            $json["results"] = [
+                "periodo" => ["inicio"=>$inicio,"fin"=>$fin],
+                "ventas" => $resultados["ventas"],
+                "salidas" => $resultados["salidas"],
+                "caja" => $resultados["caja"],
+                "cobrar" => $resultados["cobrar"],
+                "pagar" => $resultados["pagar"],
+                "ultimas_ventas" => $resultados["ultimas_ventas"],
+                "movimientos" => $resultados["movimientos"]
+            ];
+            $json["code"] = 200;
+
+        } catch (Throwable $e) {
+            error_log("getResumenInicial: " . $e->getMessage());
+            $json = ["status"=>"error","answer"=>"No fue posible obtener el resumen contable.","code"=>500];
+        }
     }
+
+    return $json;
+}
+
+
+    
 }
 ?>
