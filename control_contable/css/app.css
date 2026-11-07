@@ -79,3 +79,20 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
 .nota-tabla td::before{content:attr(data-label);display:block;font-size:11px;font-weight:650;color:#66776c;margin-bottom:5px}
 .nota-tabla input,.nota-tabla td:nth-child(2) input{min-width:0;width:100%}
 }
+
+
+
+/* VENTA RÁPIDA */
+.rapida-pago-label{display:flex;align-items:center;gap:13px;width:100%;min-height:82px;padding:16px;border:1px solid #dfe8e2;border-radius:13px;background:#fff;cursor:pointer;transition:.2s}
+.rapida-pago-label>i:first-child{width:44px;height:44px;display:grid;place-items:center;background:#eaf5ee;color:#087849;border-radius:11px;font-size:20px;flex-shrink:0}
+.rapida-pago-label span{flex:1;min-width:0}
+.rapida-pago-label strong{display:block;font-size:13px;color:#24382e}
+.rapida-pago-label small{display:block;font-size:11px;color:#718178;margin-top:3px}
+.rapida-pago-check{font-size:18px;color:#087849;opacity:0}
+.rapida-pago-label:hover{border-color:#88baa0;background:#f8fcf9}
+.rapida-pago-input:checked+.rapida-pago-label{border-color:#087849;background:#edf8f1;box-shadow:0 0 0 1px #087849}
+.rapida-pago-input:checked+.rapida-pago-label .rapida-pago-check{opacity:1}
+.rapida-pago-input:focus-visible+.rapida-pago-label{outline:3px solid #80bfa0;outline-offset:3px}
+.rapida-total-box{background:#eaf5ee;border-radius:14px;padding:22px;text-align:center;color:#086b47}
+.rapida-total-box small{display:block;font-size:12px;margin-bottom:6px;color:#587465}
+.rapida-total-box strong{display:block;font-size:clamp(25px,3vw,32px);font-weight:800;overflow-wrap:anywhere}

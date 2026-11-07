@@ -120,11 +120,11 @@
 
             <!-- Aquí cargaremos los formularios de cada módulo -->
             <div class="contenido-modulo" id="contenidoModulo">
-                <div class="estado-vacio">
+                <!--<div class="estado-vacio">
                     <i class="bi bi-ui-checks-grid"></i>
                     <h2 class="h5 mt-3">Área lista para desarrollar</h2>
                     <p class="texto-secundario mb-0">Aquí construiremos el formulario correspondiente.</p>
-                </div>
+                </div>-->
             </div>
 
         </section>
@@ -299,6 +299,135 @@
         </td>
     </tr>
 </template>
+
+
+<!-- VENTA RÁPIDA -->
+<template id="tplVentaRapida">
+<form id="formVentaRapida" novalidate>
+    <div class="row g-3">
+        <div class="col-xl-8">
+            <section class="nota-bloque mb-3">
+                <div class="nota-seccion-titulo justify-content-between flex-wrap">
+                    <div class="d-flex align-items-center gap-3">
+                        <i class="bi bi-cart3"></i>
+                        <div>
+                            <h2>Venta de mostrador</h2>
+                            <small>Captura los artículos y realiza el cobro.</small>
+                        </div>
+                    </div>
+                    <span class="badge rounded-pill text-success bg-success-subtle border border-success-subtle px-3 py-2">Sin nota</span>
+                </div>
+                <div class="alert alert-light border rounded-3 small mb-0">
+                    <i class="bi bi-clock me-2 text-success"></i>La fecha y hora se asignarán automáticamente al guardar la venta.
+                </div>
+            </section>
+
+            <section class="nota-bloque mb-3">
+                <div class="nota-seccion-titulo justify-content-between flex-wrap">
+                    <div class="d-flex align-items-center gap-3">
+                        <i class="bi bi-basket"></i>
+                        <div>
+                            <h2>Artículos de la venta</h2>
+                            <small>Ingresa código, descripción, cantidad y precio.</small>
+                        </div>
+                    </div>
+                    <button type="button" id="btnAgregarItemRapida" class="btn btn-success btn-sm">
+                        <i class="bi bi-plus-lg me-1"></i>Agregar artículo
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table nota-tabla align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Descripción</th>
+                                <th>Cantidad</th>
+                                <th>Precio unitario</th>
+                                <th>Importe</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detalleVentaRapida"></tbody>
+                    </table>
+                </div>
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-3">
+                    <small class="text-secondary"><i class="bi bi-info-circle me-1"></i>Los artículos manuales no afectan inventario.</small>
+                    <span class="small fw-semibold" id="rapidaCantidadItems">0 artículos</span>
+                </div>
+            </section>
+
+            <section class="nota-bloque mb-3">
+                <div class="nota-seccion-titulo">
+                    <i class="bi bi-credit-card"></i>
+                    <div>
+                        <h2>Forma de cobro</h2>
+                        <small>Selecciona cómo recibes el pago.</small>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <input type="radio" class="btn-check rapida-pago-input" name="metodoVentaRapida" id="rapidaPagoEfectivo" value="EFECTIVO" checked>
+                        <label class="rapida-pago-label" for="rapidaPagoEfectivo">
+                            <i class="bi bi-cash-stack"></i>
+                            <span><strong>Efectivo</strong><small>Pago en caja</small></span>
+                            <i class="bi bi-check-circle-fill rapida-pago-check"></i>
+                        </label>
+                    </div>
+                    <div class="col-sm-6">
+                        <input type="radio" class="btn-check rapida-pago-input" name="metodoVentaRapida" id="rapidaPagoTransferencia" value="TRANSFERENCIA">
+                        <label class="rapida-pago-label" for="rapidaPagoTransferencia">
+                            <i class="bi bi-bank"></i>
+                            <span><strong>Transferencia</strong><small>Pago bancario</small></span>
+                            <i class="bi bi-check-circle-fill rapida-pago-check"></i>
+                        </label>
+                    </div>
+                    <div class="col-12 d-none" id="rapidaReferenciaBox">
+                        <label class="form-label" for="rapidaReferencia">Referencia bancaria (opcional)</label>
+                        <input class="form-control" id="rapidaReferencia" data-campo-rapida="referencia" maxlength="100" placeholder="Número de operación o comprobante">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="rapidaObservaciones">Observaciones (opcional)</label>
+                        <textarea class="form-control" id="rapidaObservaciones" data-campo-rapida="observaciones" rows="2" maxlength="500" placeholder="Comentarios adicionales"></textarea>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="col-xl-4">
+            <aside class="nota-bloque nota-resumen">
+                <div class="nota-seccion-titulo">
+                    <i class="bi bi-calculator"></i>
+                    <div><h2>Resumen de cobro</h2><small>Importe calculado automáticamente.</small></div>
+                </div>
+                <div class="rapida-total-box mb-4">
+                    <small>Total a cobrar</small>
+                    <strong id="rapidaTotal" aria-live="polite">$0.00</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-3 gap-2">
+                    <span class="text-secondary small">Artículos</span>
+                    <strong id="rapidaItemsResumen">0</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-3 gap-2">
+                    <span class="text-secondary small">Método</span>
+                    <strong id="rapidaMetodoResumen">Efectivo</strong>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between align-items-center gap-2 mb-4">
+                    <span class="fw-semibold">Saldo pendiente</span>
+                    <strong class="text-success">$0.00</strong>
+                </div>
+                <button type="submit" class="btn btn-success w-100 py-2 fw-semibold">
+                    <i class="bi bi-check2-circle me-2"></i>Revisar venta
+                </button>
+                <button type="button" id="btnLimpiarVentaRapida" class="btn btn-outline-secondary w-100 mt-2">Nueva venta / Limpiar</button>
+                <p class="text-secondary small text-center mt-3 mb-0">Vista previa. Todavía no se guarda en MySQL.</p>
+            </aside>
+        </div>
+    </div>
+</form>
+</template>
+
 
 
 <!-- ========== LIBRERÍAS JAVASCRIPT ========== -->

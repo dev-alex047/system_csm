@@ -38,11 +38,13 @@ const state = {
     versionVista: 0
 };
 state.ventaNota = crearBorradorVentaNota();
+state.ventaRapida = crearBorradorVentaRapida();
 
 // INICIALIZACIÓN
 window.addEventListener("DOMContentLoaded", function() {
     bindNavigation();
     bindVentaNota();
+    bindVentaRapida();
     mostrarInicio();
 });
 
@@ -148,6 +150,11 @@ function mostrarConfiguracion() {
 function cargarContenidoModulo(modulo, submodulo, item) {
     if (modulo === "ventas" && submodulo === "nota") {
     renderVentaConNota();
+    return;
+}
+
+if (modulo === "ventas" && submodulo === "rapida") {
+    renderVentaRapida();
     return;
 }
     if (modulo === "panel" && submodulo === "resumen") {
@@ -467,4 +474,179 @@ function renderResumenInicial(datos) {
 function mostrarErrorConsulta(mensaje) {
     $("#contenidoModulo").html('<div class="alert alert-danger mb-0">No fue posible cargar la información.</div>');
     Swal.fire({icon:"error",title:"Error de consulta",text:mensaje,confirmButtonColor:"#086b47"});
+}
+
+
+/* =========================
+   VENTAS RÁPIDAS
+========================= */
+
+function crearBorradorVentaRapida() {
+    return {forma_pago:"EFECTIVO",referencia:"",observaciones:"",items:[],siguienteId:1};
+}
+
+function bindVentaRapida() {
+    $(document).on("click","#btnAgregarItemRapida",function(){
+        agregarItemVentaRapida();
+    });
+
+    $(document).on("click",".btnEliminarItemRapida",function(){
+        const id = Number($(this).closest("tr").attr("data-item-id"));
+        state.ventaRapida.items = state.ventaRapida.items.filter(function(item){return item.id !== id;});
+        $(this).closest("tr").remove();
+        if (!state.ventaRapida.items.length) agregarItemVentaRapida();
+        actualizarTotalesVentaRapida();
+    });
+
+    $(document).on("input","#detalleVentaRapida [data-item-campo]",function(){
+        const id = Number($(this).closest("tr").attr("data-item-id"));
+        const item = state.ventaRapida.items.find(function(x){return x.id === id;});
+        if (!item) return;
+        item[$(this).attr("data-item-campo")] = this.value;
+        $(this).removeClass("is-invalid");
+        actualizarTotalesVentaRapida();
+    });
+
+    $(document).on("change","input[name='metodoVentaRapida']",function(){
+        state.ventaRapida.forma_pago = this.value;
+        alternarReferenciaVentaRapida();
+        actualizarTotalesVentaRapida();
+    });
+
+    $(document).on("input","#formVentaRapida [data-campo-rapida]",function(){
+        state.ventaRapida[$(this).attr("data-campo-rapida")] = this.value;
+    });
+
+    $(document).on("submit","#formVentaRapida",function(e){
+        e.preventDefault();
+        revisarVentaRapida();
+    });
+
+    $(document).on("click","#btnLimpiarVentaRapida",function(){
+        Swal.fire({title:"¿Iniciar una nueva venta?",text:"Se descartará la captura actual.",icon:"question",showCancelButton:true,confirmButtonText:"Sí, limpiar",cancelButtonText:"Cancelar",confirmButtonColor:"#086b47"}).then(function(r){
+            if (r.isConfirmed) {
+                state.ventaRapida = crearBorradorVentaRapida();
+                if (state.moduloActual === "ventas" && state.submoduloActual === "rapida") renderVentaRapida();
+            }
+        });
+    });
+}
+
+function renderVentaRapida() {
+    const template = document.getElementById("tplVentaRapida");
+    if (!template) {console.error("No existe tplVentaRapida");return;}
+
+    $("#contenidoModulo").empty().append(template.content.cloneNode(true));
+    $("#formVentaRapida [data-campo-rapida]").each(function(){
+        $(this).val(state.ventaRapida[$(this).attr("data-campo-rapida")]);
+    });
+
+    $("input[name='metodoVentaRapida']").filter(function(){
+        return this.value === state.ventaRapida.forma_pago;
+    }).prop("checked",true);
+
+    if (!state.ventaRapida.items.length) agregarItemVentaRapida();
+    else state.ventaRapida.items.forEach(insertarFilaVentaRapida);
+
+    alternarReferenciaVentaRapida();
+    actualizarTotalesVentaRapida();
+}
+
+function agregarItemVentaRapida() {
+    const item = {id:state.ventaRapida.siguienteId++,origen:"MANUAL",product_id:null,codigo:"",nombre:"",cantidad:"1",precio:""};
+    state.ventaRapida.items.push(item);
+    insertarFilaVentaRapida(item);
+    actualizarTotalesVentaRapida();
+    $("#detalleVentaRapida tr:last [data-item-campo='nombre']").trigger("focus");
+}
+
+function insertarFilaVentaRapida(item) {
+    const template = document.getElementById("tplFilaVentaNota");
+    if (!template) {console.error("No existe tplFilaVentaNota");return;}
+    const fila = template.content.firstElementChild.cloneNode(true);
+
+    $(fila).attr("data-item-id",item.id);
+    $(fila).find("[data-item-campo]").each(function(){
+        $(this).val(item[$(this).attr("data-item-campo")]);
+    });
+    $(fila).find(".btnEliminarItemNota").removeClass("btnEliminarItemNota").addClass("btnEliminarItemRapida");
+    $("#detalleVentaRapida").append(fila);
+}
+
+function alternarReferenciaVentaRapida() {
+    $("#rapidaReferenciaBox").toggleClass("d-none",state.ventaRapida.forma_pago !== "TRANSFERENCIA");
+}
+
+function obtenerTotalVentaRapida() {
+    let centavos = 0;
+    state.ventaRapida.items.forEach(function(item){
+        const importe = importeItemVentaNota(item);
+        if (importe !== null) centavos += importe;
+    });
+    return centavos;
+}
+
+function actualizarTotalesVentaRapida() {
+    if (!$("#formVentaRapida").length) return;
+
+    $("#detalleVentaRapida tr").each(function(){
+        const id = Number($(this).attr("data-item-id"));
+        const item = state.ventaRapida.items.find(function(x){return x.id === id;});
+        const importe = item ? importeItemVentaNota(item) : null;
+        $(this).find(".nota-importe-fila").text(importe === null ? "—" : monedaMXN(importe / 100));
+    });
+
+    const total = obtenerTotalVentaRapida();
+    const cantidad = state.ventaRapida.items.filter(function(x){return x.nombre.trim() !== "";}).length;
+
+    $("#rapidaTotal").text(monedaMXN(total / 100));
+    $("#rapidaCantidadItems").text(cantidad + (cantidad === 1 ? " artículo" : " artículos"));
+    $("#rapidaItemsResumen").text(cantidad);
+    $("#rapidaMetodoResumen").text(state.ventaRapida.forma_pago === "EFECTIVO" ? "Efectivo" : "Transferencia");
+}
+
+function errorVentaRapida(mensaje,selector) {
+    if (selector) $(selector).addClass("is-invalid").trigger("focus");
+    Swal.fire({icon:"warning",title:"Revisa la venta",text:mensaje,confirmButtonColor:"#086b47"});
+    return false;
+}
+
+function validarVentaRapida() {
+    const venta = state.ventaRapida;
+    if (!venta.items.length) return errorVentaRapida("Agrega al menos un artículo.");
+
+    for (let i = 0; i < venta.items.length; i++) {
+        const item = venta.items[i];
+        const fila = '#detalleVentaRapida tr[data-item-id="' + item.id + '"]';
+        if (!item.nombre.trim()) return errorVentaRapida("Captura la descripción del artículo " + (i+1) + ".",fila+' [data-item-campo="nombre"]');
+        if (numeroNotaValido(item.cantidad,0.01,100000) === null) return errorVentaRapida("Cantidad inválida en el artículo " + (i+1) + ".",fila+' [data-item-campo="cantidad"]');
+        if (numeroNotaValido(item.precio,0,1000000) === null) return errorVentaRapida("Precio inválido en el artículo " + (i+1) + ".",fila+' [data-item-campo="precio"]');
+    }
+
+    const total = obtenerTotalVentaRapida();
+    if (total <= 0 || total > 9999999999) return errorVentaRapida("El total debe ser mayor que cero y no exceder $99,999,999.99.");
+    if (!["EFECTIVO","TRANSFERENCIA"].includes(venta.forma_pago)) return errorVentaRapida("Selecciona efectivo o transferencia.");
+    return true;
+}
+
+function revisarVentaRapida() {
+    if (!validarVentaRapida()) return;
+
+    const venta = state.ventaRapida;
+    const $resumen = $('<div class="text-start small"></div>');
+    const $lista = $('<div class="border rounded-3 p-3 my-3"></div>');
+
+    venta.items.forEach(function(item){
+        $lista.append($('<div class="py-1"></div>').text(item.cantidad+" × "+item.nombre.trim()+" · "+monedaMXN(importeItemVentaNota(item)/100)));
+    });
+
+    $resumen.append($('<p class="mb-2"></p>').text("Forma de cobro: "+(venta.forma_pago === "EFECTIVO" ? "Efectivo" : "Transferencia")));
+    if (venta.forma_pago === "TRANSFERENCIA" && venta.referencia.trim()) {
+        $resumen.append($('<p></p>').text("Referencia: "+venta.referencia.trim()));
+    }
+    $resumen.append($lista);
+    $resumen.append($('<h3 class="h5 fw-bold text-success"></h3>').text("Total: "+monedaMXN(obtenerTotalVentaRapida()/100)));
+    $resumen.append($('<p class="text-secondary mb-0"></p>').text("Esta es una vista previa. La venta todavía no se ha guardado en MySQL."));
+
+    Swal.fire({title:"Revisar venta rápida",html:$resumen[0],confirmButtonText:"Volver a la venta",confirmButtonColor:"#086b47",width:"600px"});
 }
