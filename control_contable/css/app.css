@@ -46,3 +46,36 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
 .encabezado-modulo,.contenido-modulo{padding:18px}
 }
 @media(max-width:390px){.grid-modulos{grid-template-columns:1fr}.tarjeta-modulo{min-height:145px}}
+
+
+
+/* VENTAS CON NOTA */
+.nota-bloque{background:#fff;border:1px solid #e1e9e4;border-radius:18px;padding:22px}
+.nota-seccion-titulo{display:flex;align-items:center;gap:13px;margin-bottom:23px}
+.nota-seccion-titulo>i,.nota-seccion-titulo>div>i{width:44px;height:44px;display:grid;place-items:center;flex-shrink:0;background:#eaf5ee;color:#087849;border-radius:12px;font-size:20px}
+.nota-seccion-titulo h2{font-size:15px;font-weight:750;margin:0 0 4px}
+.nota-seccion-titulo small{display:block;font-size:12px;color:#718178}
+.nota-bloque .form-label{font-size:12px;font-weight:650;color:#34463b;margin-bottom:7px}
+.nota-bloque .form-control,.nota-bloque .form-select{min-height:42px;border-radius:10px;border-color:#dfe8e2;font-size:13px}
+.nota-bloque .form-control:focus,.nota-bloque .form-select:focus{border-color:#80bfa0;box-shadow:0 0 0 .2rem rgba(8,107,71,.09)}
+.nota-solo-lectura{background:#f5f8f6;color:#84938a;display:flex;align-items:center}
+.nota-bloque .btn-success{--bs-btn-bg:#086b47;--bs-btn-border-color:#086b47;--bs-btn-hover-bg:#065839;--bs-btn-hover-border-color:#065839}
+.nota-tabla{font-size:12px}
+.nota-tabla thead th{background:#edf6f0;color:#405348;padding:13px 9px;font-size:11px;white-space:nowrap;border:0}
+.nota-tabla td{padding:10px 6px}
+.nota-tabla input{min-width:85px}
+.nota-tabla td:nth-child(2) input{min-width:170px}
+.nota-tabla .form-control{min-height:38px}
+.nota-resumen{position:sticky;top:98px}
+.nota-saldo{font-size:21px;color:#086b47}
+@media(max-width:1199px){.nota-resumen{position:static}}
+@media(max-width:767px){
+.nota-bloque{padding:16px;border-radius:14px}
+.nota-seccion-titulo{align-items:flex-start;gap:10px}
+.nota-tabla thead{display:none}
+.nota-tabla,.nota-tabla tbody,.nota-tabla tr,.nota-tabla td{display:block;width:100%}
+.nota-tabla tr{border:1px solid #e1e9e4;border-radius:12px;padding:10px;margin-bottom:12px}
+.nota-tabla td{border:0;padding:6px 4px}
+.nota-tabla td::before{content:attr(data-label);display:block;font-size:11px;font-weight:650;color:#66776c;margin-bottom:5px}
+.nota-tabla input,.nota-tabla td:nth-child(2) input{min-width:0;width:100%}
+}

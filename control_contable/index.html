@@ -132,6 +132,175 @@
     </main>
 </div>
 
+
+<!-- VENTAS CON NOTA -->
+<template id="tplVentaNota">
+<form id="formVentaNota" novalidate>
+    <div class="row g-3">
+        <div class="col-xl-8">
+
+            <section class="nota-bloque mb-3">
+                <div class="nota-seccion-titulo">
+                    <i class="bi bi-person-vcard"></i>
+                    <div><h2>Datos de la nota</h2><small>Cliente y responsable de la venta.</small></div>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label" for="notaFolio">Número de nota</label>
+                        <input id="notaFolio" data-campo-nota="folio" class="form-control" maxlength="50" placeholder="Automático al guardar">
+                        <div class="form-text">Opcional. Puedes indicar un folio específico.</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="notaVendedor">Vendedor *</label>
+                        <input id="notaVendedor" data-campo-nota="vendedor" class="form-control" maxlength="100" placeholder="Nombre del vendedor" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Fecha y hora</label>
+                        <div class="form-control nota-solo-lectura">Al guardar la nota</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="notaCliente">Cliente *</label>
+                        <input id="notaCliente" data-campo-nota="cliente" class="form-control" maxlength="100" placeholder="Nombre completo o razón social" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="notaTelefono">Teléfono (opcional)</label>
+                        <input id="notaTelefono" data-campo-nota="telefono" class="form-control" maxlength="50" inputmode="tel" placeholder="Número de contacto">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="notaDireccion">Dirección de entrega (opcional)</label>
+                        <input id="notaDireccion" data-campo-nota="direccion" class="form-control" maxlength="255" placeholder="Calle, número, colonia y referencias">
+                    </div>
+                </div>
+            </section>
+
+            <section class="nota-bloque mb-3">
+                <div class="nota-seccion-titulo justify-content-between flex-wrap">
+                    <div class="d-flex align-items-center gap-3">
+                        <i class="bi bi-basket"></i>
+                        <div><h2>Artículos de la venta</h2><small>Agrega productos o conceptos manualmente.</small></div>
+                    </div>
+                    <button type="button" id="btnAgregarItemNota" class="btn btn-success btn-sm">
+                        <i class="bi bi-plus-lg me-1"></i>Agregar artículo
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table nota-tabla align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Descripción del producto</th>
+                                <th>Cantidad</th>
+                                <th>Precio unitario</th>
+                                <th>Importe</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detalleVentaNota"></tbody>
+                    </table>
+                </div>
+                <p class="text-secondary small mt-3 mb-0">
+                    <i class="bi bi-info-circle me-1"></i>Captura manual sin descontar inventario.
+                </p>
+            </section>
+
+            <section class="nota-bloque mb-3">
+                <div class="nota-seccion-titulo">
+                    <i class="bi bi-credit-card"></i>
+                    <div><h2>Forma de pago</h2><small>Indica cómo se realizará el cobro.</small></div>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label" for="notaFormaPago">Modalidad *</label>
+                        <select id="notaFormaPago" data-campo-nota="forma_pago" class="form-select">
+                            <option value="EFECTIVO">Efectivo</option>
+                            <option value="TRANSFERENCIA">Transferencia</option>
+                            <option value="CREDITO">Crédito</option>
+                            <option value="PARCIALIDADES">Parcialidades</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 d-none" id="notaReferenciaBox">
+                        <label class="form-label" for="notaReferencia">Referencia bancaria (opcional)</label>
+                        <input id="notaReferencia" data-campo-nota="referencia" class="form-control" maxlength="100" placeholder="Número de comprobante">
+                    </div>
+                    <div class="col-12 d-none" id="notaParcialidadBox">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="notaAbono">Abono inicial *</label>
+                                <input id="notaAbono" data-campo-nota="abono" type="number" min="0.01" step="0.01" inputmode="decimal" class="form-control" placeholder="0.00">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="notaMetodoAbono">Método del abono</label>
+                                <select id="notaMetodoAbono" data-campo-nota="metodo_abono" class="form-select">
+                                    <option value="EFECTIVO">Efectivo</option>
+                                    <option value="TRANSFERENCIA">Transferencia</option>
+                                </select>
+                            </div>
+                            <div class="col-12 d-none" id="notaRefAbonoBox">
+                                <label class="form-label" for="notaRefAbono">Referencia del abono (opcional)</label>
+                                <input id="notaRefAbono" data-campo-nota="referencia_abono" class="form-control" maxlength="100" placeholder="Referencia de transferencia">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="notaObservaciones">Observaciones (opcional)</label>
+                        <textarea id="notaObservaciones" data-campo-nota="observaciones" class="form-control" rows="2" maxlength="500" placeholder="Indicaciones o comentarios"></textarea>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="col-xl-4">
+            <aside class="nota-bloque nota-resumen">
+                <div class="nota-seccion-titulo">
+                    <i class="bi bi-calculator"></i>
+                    <div><h2>Resumen de venta</h2><small>Importes calculados automáticamente.</small></div>
+                </div>
+                <div class="d-flex justify-content-between mb-3">
+                    <span class="text-secondary">Total</span><strong id="notaTotal" aria-live="polite">$0.00</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-3">
+                    <span class="text-secondary">Recibido</span><strong id="notaAbonado">$0.00</strong>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between align-items-center gap-2">
+                    <strong>Saldo pendiente</strong><strong class="nota-saldo" id="notaSaldo">$0.00</strong>
+                </div>
+                <div class="alert alert-light border small mt-4">
+                    La nota es un borrador. Todavía no se registra en MySQL.
+                </div>
+                <button type="submit" class="btn btn-success w-100 py-2 fw-semibold">
+                    <i class="bi bi-clipboard-check me-2"></i>Revisar nota
+                </button>
+                <button type="button" id="btnLimpiarVentaNota" class="btn btn-outline-secondary w-100 mt-2">Limpiar formulario</button>
+            </aside>
+        </div>
+    </div>
+</form>
+</template>
+
+<!-- RENGLÓN REUTILIZABLE -->
+<template id="tplFilaVentaNota">
+    <tr>
+        <td data-label="Código">
+            <input class="form-control form-control-sm" data-item-campo="codigo" maxlength="80" placeholder="Opcional" aria-label="Código del artículo">
+        </td>
+        <td data-label="Descripción">
+            <input class="form-control form-control-sm" data-item-campo="nombre" maxlength="200" placeholder="Nombre del artículo" aria-label="Nombre del artículo">
+        </td>
+        <td data-label="Cantidad">
+            <input type="number" class="form-control form-control-sm" data-item-campo="cantidad" min="0.01" step="0.01" inputmode="decimal" aria-label="Cantidad">
+        </td>
+        <td data-label="Precio unitario">
+            <input type="number" class="form-control form-control-sm" data-item-campo="precio" min="0" step="0.01" inputmode="decimal" placeholder="0.00" aria-label="Precio unitario">
+        </td>
+        <td data-label="Importe"><strong class="nota-importe-fila text-nowrap">—</strong></td>
+        <td data-label="Acción">
+            <button type="button" class="btn btn-outline-danger btn-sm btnEliminarItemNota" title="Quitar artículo" aria-label="Quitar artículo"><i class="bi bi-trash"></i></button>
+        </td>
+    </tr>
+</template>
+
+
 <!-- ========== LIBRERÍAS JAVASCRIPT ========== -->
 
 <!-- jQuery -->
