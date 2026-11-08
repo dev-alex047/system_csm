@@ -412,6 +412,103 @@ public function guardarVentaNota($data) {
 }
 
 
+private function getDatosNotaVentaPdf($idVenta)
+{
+    $json = array();
+
+    $stmt = $this->conn->prepare("SELECT id, note_folio, client_name, client_address, client_phone, seller_name, payment_method, bank_reference, total_amount, initial_paid, pending_amount, notes, created_at FROM sales WHERE id = ? AND sale_kind = 'NOTA' LIMIT 1");
+    if (!$stmt) {
+        return null;
+    }
+
+    $stmt->bind_param("i", $idVenta);
+
+    if (!$stmt->execute()) {
+        $stmt->close();
+        return null;
+    }
+
+    $result = $stmt->get_result();
+    $venta = $result->fetch_assoc();
+    $stmt->close();
+
+    if (!$venta) {
+        return null;
+    }
+
+    $stmtItems = $this->conn->prepare("SELECT quantity, price, total, manual_name, manual_code FROM sale_items WHERE sale_id = ? ORDER BY id ASC");
+    if (!$stmtItems) {
+        return null;
+    }
+
+    $stmtItems->bind_param("i", $idVenta);
+
+    if (!$stmtItems->execute()) {
+        $stmtItems->close();
+        return null;
+    }
+
+    $resultItems = $stmtItems->get_result();
+    $venta["items"] = array();
+
+    while ($item = $resultItems->fetch_assoc()) {
+        $venta["items"][] = $item;
+    }
+
+    $stmtItems->close();
+
+    return $venta;
+}
+
+public function generarPdfNotaVenta($idVenta)
+{
+    $json = array();
+
+    if (!$this->conn) {
+        $json["status"] = "error";
+        $json["answer"] = "No hay conexión con MySQL.";
+        $json["code"] = 500;
+        return $json;
+    }
+
+    if ($idVenta <= 0) {
+        $json["status"] = "warning";
+        $json["answer"] = "ID de venta inválido.";
+        $json["code"] = 400;
+        return $json;
+    }
+
+    try {
+        $venta = $this->getDatosNotaVentaPdf($idVenta);
+
+        if (!$venta) {
+            $json["status"] = "warning";
+            $json["answer"] = "No se encontró la nota de venta.";
+            $json["code"] = 404;
+            return $json;
+        }
+
+        $pdf = new PDFNotaVenta();
+        $archivo = $pdf->generarArchivo($venta);
+
+        $json["status"] = "ok";
+        $json["answer"] = "Nota de venta generada correctamente.";
+        $json["results"] = array(
+            "id" => (int)$venta["id"],
+            "folio" => $venta["note_folio"],
+            "archivo" => $archivo["ruta_web"],
+            "nombre" => $archivo["nombre"]
+        );
+        $json["code"] = 200;
+    } catch (Throwable $e) {
+        error_log("generarPdfNotaVenta: " . $e->getMessage());
+        $json["status"] = "error";
+        $json["answer"] = "No fue posible generar la nota de venta.";
+        $json["code"] = 500;
+    }
+
+    return $json;
+}
     
 }
 ?>

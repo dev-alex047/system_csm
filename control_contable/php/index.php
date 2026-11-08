@@ -9,6 +9,7 @@ error_reporting(E_ALL);
 
 require_once __DIR__ . "/conexion.php";
 require_once __DIR__ . "/consultas.php";
+require_once __DIR__ . "/PDFNotaVenta.php";
 
 $action = isset($_POST["action"]) ? trim((string)$_POST["action"]) : "";
 $consultas = new consultas();
@@ -16,18 +17,21 @@ $response = [];
 
 switch ($action) {
     case "getResumenInicial":
-    $response = $consultas->getResumenInicial($_POST);
-break;
+        $response = $consultas->getResumenInicial($_POST);
+        break;
+        
+    case "getCajasVenta":
+        $response = $consultas->getCajasVenta();
+        break;
+        
+    case "guardarVentaNota":
+        $response = $consultas->guardarVentaNota($_POST);
+        break;
 
-
-case "getCajasVenta":
-    $response = $consultas->getCajasVenta();
-break;
-
-case "guardarVentaNota":
-    $response = $consultas->guardarVentaNota($_POST);
-break;
-
+    case "generarPdfNotaVenta":
+        $idVenta = isset($_POST["id"]) ? (int)$_POST["id"] : 0;
+        $response = $consultas->generarPdfNotaVenta($idVenta);
+        break;
 
     default:
         $response["status"] = "warning";

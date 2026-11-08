@@ -810,10 +810,16 @@ function guardarVentaNota() {
         Swal.fire({
             icon:"success",
             title:resultado.duplicada ? "Venta ya registrada" : "Venta guardada",
-            html:"<strong>Folio:</strong> " + $("<div>").text(folio).html() +
-                 "<p class='mb-0 mt-2'>La operación quedó registrada en MySQL.</p>",
+            html:"<strong>Folio:</strong> " + $("<div>").text(folio).html() + "<p class='mb-0 mt-2'>La operación quedó registrada en MySQL.</p>",
             confirmButtonText:"Aceptar",
-            confirmButtonColor:"#086b47"
+            confirmButtonColor:"#086b47",
+            showDenyButton:true,
+            denyButtonText:"Generar nota PDF",
+            denyButtonColor:"#6c757d"
+        }).then(function(r) {
+            if (r.isDenied) {
+                generarPdfNotaVenta(resultado.id);
+            }
         });
     }).fail(function(xhr) {
         const data = xhr.responseJSON || {};
@@ -826,5 +832,52 @@ function guardarVentaNota() {
         });
     }).always(function(){
         state.guardandoVentaNota = false;
+    });
+}
+
+function generarPdfNotaVenta(idVenta) {
+    if (!idVenta || Number(idVenta) <= 0) {
+        Swal.fire("Aviso", "No se recibió un ID de venta válido.", "warning");
+        return;
+    }
+
+    Swal.fire({
+        title: "Generando nota",
+        text: "Preparando PDF de la nota de venta...",
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false,
+        didOpen: function() {
+            Swal.showLoading();
+        }
+    });
+
+    $.ajax({
+        type: "POST",
+        url: "php/index.php",
+        data: {
+            action: "generarPdfNotaVenta",
+            id: idVenta
+        },
+        dataType: "json"
+    }).done(function(data) {
+        if (!data || data.status !== "ok") {
+            Swal.fire("Aviso", data && data.answer ? data.answer : "No fue posible generar la nota.", "warning");
+            return;
+        }
+
+        if (data.results && data.results.archivo) {
+            window.open(data.results.archivo, "_blank");
+        }
+
+        Swal.fire({
+            icon: "success",
+            title: "Nota generada",
+            text: "La nota de venta se generó correctamente.",
+            confirmButtonColor: "#086b47"
+        });
+    }).fail(function(xhr) {
+        const data = xhr.responseJSON || {};
+        Swal.fire("Error", data.answer || "No fue posible generar el PDF.", "error");
     });
 }
