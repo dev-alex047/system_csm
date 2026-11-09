@@ -821,6 +821,7 @@ function guardarVentaNota() {
                 generarPdfNotaVenta(resultado.id);
             }
         });
+        
     }).fail(function(xhr) {
         const data = xhr.responseJSON || {};
         Swal.fire({
