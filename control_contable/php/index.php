@@ -29,10 +29,32 @@ switch ($action) {
         $response = $consultas->guardarVentaNota($_POST);
         break;
 
+    
+case "guardarVentaRapida":
+    $response = $consultas->guardarVentaRapida($_POST);
+break;
+
+
     case "generarPdfNotaVenta":
         $idVenta = isset($_POST["id"]) ? (int)$_POST["id"] : 0;
         $response = $consultas->generarPdfNotaVenta($idVenta);
         break;
+
+    case "getControlCaja":
+    $response = $consultas->getControlCaja($_POST);
+    break;
+case "abrirCaja":
+    $response = $consultas->abrirCaja($_POST);
+    break;
+case "cerrarCaja":
+    $response = $consultas->cerrarCaja($_POST);
+    break;
+case "getEgresos":
+    $response = $consultas->getEgresos();
+    break;
+case "guardarEgreso":
+    $response = $consultas->guardarEgreso($_POST);
+    break;
 
     default:
         $response["status"] = "warning";

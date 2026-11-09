@@ -151,8 +151,9 @@ public function getCajasVenta() {
         $json = ['status'=>'error','answer'=>'No existe conexión con MySQL.','code'=>500];
     } else {
         try {
-            $stmt = $this->ejecutarSqlVenta("SELECT id, name, current_balance FROM cash_registers WHERE kind = 'CASH' AND is_active = 1 ORDER BY name ASC");
+                        
             $cajas = [];
+            $stmt = $this->ejecutarSqlVenta("SELECT r.id,r.name,r.current_balance FROM cash_registers r WHERE r.kind='CASH' AND r.is_active=1 AND EXISTS (SELECT 1 FROM cash_shifts s WHERE s.cash_register_id=r.id AND s.status='ABIERTO') ORDER BY r.name ASC");
             $result = $stmt->get_result();
 
             while ($fila = $result->fetch_assoc()) {
@@ -289,7 +290,13 @@ public function guardarVentaNota($data) {
                     $stmt = $this->ejecutarSqlVenta("SELECT id FROM cash_registers WHERE id = ? AND kind = 'CASH' AND is_active = 1 FOR UPDATE", 'i', [$idCajaVenta]);
                     $cajaValida = $stmt->get_result()->fetch_assoc();
                     $stmt->close();
+                    
                     if (!$cajaValida) throw new InvalidArgumentException('La caja seleccionada ya no está activa.');
+                    
+                    $stmt = $this->ejecutarSqlVenta("SELECT id FROM cash_shifts WHERE cash_register_id = ? AND status = 'ABIERTO' LIMIT 1", "i", [$idCajaVenta]);
+$turnoAbierto = $stmt->get_result()->fetch_assoc();
+$stmt->close();
+if (!$turnoAbierto) throw new InvalidArgumentException("Debes abrir un turno de caja antes de recibir efectivo.");
                 }
 
                 $stmt = $this->ejecutarSqlVenta(
@@ -519,6 +526,927 @@ public function generarPdfNotaVenta($idVenta)
 
     return $json;
 }
+
+
+public function guardarVentaRapida($data) {
+    $json = [];
+    $transaccion = false;
+    $token = '';
+
+    try {
+        $venta = isset($data["venta"]) && is_string($data["venta"]) ? json_decode($data["venta"], true) : null;
+        if (!is_array($venta)) throw new InvalidArgumentException("Datos de venta inválidos.");
+
+        $token = $this->textoVenta($venta, "solicitud_id", 32);
+        if (!preg_match('/^[a-f0-9]{32}$/D', $token)) throw new InvalidArgumentException("Identificador de solicitud inválido.");
+
+        $forma = $this->textoVenta($venta, "forma_pago", 30);
+        $referencia = $this->textoVenta($venta, "referencia", 80);
+        $observaciones = $this->textoVenta($venta, "observaciones", 500);
+        $cajaId = isset($venta["caja_id"]) && ctype_digit((string)$venta["caja_id"]) ? (int)$venta["caja_id"] : 0;
+
+        if (!in_array($forma, ["EFECTIVO", "TRANSFERENCIA"], true)) throw new InvalidArgumentException("Solo se admite efectivo o transferencia.");
+        if ($forma === "EFECTIVO" && $cajaId <= 0) throw new InvalidArgumentException("Selecciona una caja para recibir efectivo.");
+        if ($forma !== "TRANSFERENCIA") $referencia = "";
+        if (!isset($venta["items"]) || !is_array($venta["items"]) || count($venta["items"]) < 1 || count($venta["items"]) > 100) throw new InvalidArgumentException("Agrega entre 1 y 100 artículos.");
+
+        $items = [];
+        $totalCentavos = 0;
+
+        foreach ($venta["items"] as $i => $item) {
+            if (!is_array($item) || ($item["origen"] ?? "") !== "MANUAL") throw new InvalidArgumentException("Origen de artículo no válido.");
+
+            $nombre = $this->textoVenta($item, "nombre", 200);
+            $codigo = $this->textoVenta($item, "codigo", 80);
+            $cantidad100 = $this->centavosVenta($item["cantidad"] ?? "");
+            $precioCentavos = $this->centavosVenta($item["precio"] ?? "");
+
+            if ($nombre === "" || $cantidad100 === null || $cantidad100 < 1 || $cantidad100 > 10000000 || $precioCentavos === null || $precioCentavos > 100000000) {
+                throw new InvalidArgumentException("Revisa el artículo " . ($i + 1) . ".");
+            }
+
+            $importeCentavos = intdiv($cantidad100 * $precioCentavos + 50, 100);
+            $totalCentavos += $importeCentavos;
+
+            if ($totalCentavos > 9999999999) throw new InvalidArgumentException("El total supera el máximo permitido.");
+
+            $items[] = [
+                "nombre" => $nombre,
+                "codigo" => $codigo,
+                "cantidad" => number_format($cantidad100 / 100, 2, ".", ""),
+                "precio" => number_format($precioCentavos / 100, 2, ".", ""),
+                "importe" => number_format($importeCentavos / 100, 2, ".", "")
+            ];
+        }
+
+        if ($totalCentavos <= 0) throw new InvalidArgumentException("El total debe ser mayor que cero.");
+
+        $total = number_format($totalCentavos / 100, 2, ".", "");
+        $usuario = (int)$this->usuarioOperador;
+        if ($usuario <= 0) throw new InvalidArgumentException("Configura el operador.");
+
+        $stmt = $this->ejecutarSqlVenta(
+            "SELECT id, sale_kind, ticket_barcode, total_amount, payment_method FROM sales WHERE request_token = ? LIMIT 1",
+            "s", [$token]
+        );
+        $anterior = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if ($anterior) {
+            if ($anterior["sale_kind"] !== "RAPIDA" || $anterior["payment_method"] !== $forma || $this->centavosVenta($anterior["total_amount"]) !== $totalCentavos) {
+                throw new InvalidArgumentException("Este identificador ya se utilizó para otra operación.");
+            }
+
+            $json["status"] = "ok";
+            $json["answer"] = "Esta venta ya estaba registrada; no se duplicó.";
+            $json["results"] = [
+                "id" => (int)$anterior["id"],
+                "referencia" => $anterior["ticket_barcode"],
+                "total" => $anterior["total_amount"],
+                "forma_pago" => $forma,
+                "duplicada" => true
+            ];
+            $json["code"] = 200;
+        } else {
+            $stmt = $this->ejecutarSqlVenta("SELECT id FROM users WHERE id = ? LIMIT 1", "i", [$usuario]);
+            $existeUsuario = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+            if (!$existeUsuario) throw new InvalidArgumentException("El operador configurado no existe.");
+
+            if (!$this->conn->begin_transaction()) throw new RuntimeException("No se pudo iniciar la transacción.");
+            $transaccion = true;
+
+            $fecha = date("Y-m-d H:i:s");
+            $idCajaVenta = $forma === "EFECTIVO" ? $cajaId : null;
+
+            if ($idCajaVenta !== null) {
+                $stmt = $this->ejecutarSqlVenta(
+                    "SELECT id FROM cash_registers WHERE id = ? AND kind = 'CASH' AND is_active = 1 FOR UPDATE",
+                    "i", [$idCajaVenta]
+                );
+                $caja = $stmt->get_result()->fetch_assoc();
+                $stmt->close();
+
+                if (!$caja) throw new InvalidArgumentException("La caja no existe o está inactiva.");
+
+                $stmt = $this->ejecutarSqlVenta(
+                    "SELECT id FROM cash_shifts WHERE cash_register_id = ? AND status = 'ABIERTO' LIMIT 1 FOR UPDATE",
+                    "i", [$idCajaVenta]
+                );
+                $turno = $stmt->get_result()->fetch_assoc();
+                $stmt->close();
+
+                if (!$turno) throw new InvalidArgumentException("Abre un turno de caja antes de cobrar en efectivo.");
+            }
+
+            $stmt = $this->ejecutarSqlVenta(
+                "INSERT INTO sales (user_id,client_name,client_address,client_phone,payment_method,bank_reference,cash_register_id,pending_amount,total_amount,ticket_barcode,notes,created_at,updated_at,sale_kind,note_folio,seller_name,initial_paid,request_token) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "isssssisssssssssss",
+                [$usuario, "Mostrador", "", "", $forma, $referencia, $idCajaVenta, "0.00", $total, null, $observaciones, $fecha, $fecha, "RAPIDA", null, "Mostrador", $total, $token]
+            );
+            $stmt->close();
+
+            $idVenta = (int)$this->conn->insert_id;
+            $numero = "VR-" . str_pad((string)$idVenta, 8, "0", STR_PAD_LEFT);
+
+            $stmt = $this->ejecutarSqlVenta(
+                "UPDATE sales SET ticket_barcode = ? WHERE id = ?",
+                "si", [$numero, $idVenta]
+            );
+            $stmt->close();
+
+            $stmtItem = $this->conn->prepare(
+                "INSERT INTO sale_items (sale_id,product_id,quantity,price,total,item_origin,manual_name,manual_code) VALUES (?,NULL,?,?,?,'MANUAL',?,?)"
+            );
+            if (!$stmtItem) throw new RuntimeException($this->conn->error, (int)$this->conn->errno);
+
+            $cantidad = $precio = $importe = "0.00";
+            $nombreArticulo = $codigoArticulo = "";
+
+            if (!$stmtItem->bind_param("isssss", $idVenta, $cantidad, $precio, $importe, $nombreArticulo, $codigoArticulo)) {
+                throw new RuntimeException("No se pudieron preparar los artículos.");
+            }
+
+            foreach ($items as $item) {
+                $cantidad = $item["cantidad"];
+                $precio = $item["precio"];
+                $importe = $item["importe"];
+                $nombreArticulo = $item["nombre"];
+                $codigoArticulo = $item["codigo"];
+
+                if (!$stmtItem->execute()) {
+                    $error = new RuntimeException($stmtItem->error, (int)$stmtItem->errno);
+                    $stmtItem->close();
+                    throw $error;
+                }
+            }
+            $stmtItem->close();
+
+            $origen = $forma === "EFECTIVO" ? "CAJA" : "BANCO";
+            $referenciaMovimiento = $referencia !== "" ? $referencia : $numero;
+
+            $stmt = $this->ejecutarSqlVenta(
+                "INSERT INTO account_moves (`date`,`type`,`origin`,cash_register_id,user_reference_name,reference,amount,user_id,link_type,link_id,ticket_number,status,note,notes,created_at,updated_at) VALUES (?,'VENTA',?,?,?,?,?,?,'VENTA',?,?,'PAGADO',?,?,?,?)",
+                "ssisssiisssss",
+                [$fecha, $origen, $idCajaVenta, "Mostrador", $referenciaMovimiento, $total, $usuario, $idVenta, $numero, "Cobro de venta rápida", $observaciones, $fecha, $fecha]
+            );
+            $stmt->close();
+
+            if ($idCajaVenta !== null) {
+                $stmt = $this->ejecutarSqlVenta(
+                    "INSERT INTO cash_flows (cash_register_id,user_id,amount,`type`,description,reference,created_at) VALUES (?,?,?,'IN',?,?,?)",
+                    "iissss",
+                    [$idCajaVenta, $usuario, $total, "Cobro venta rápida " . $numero, $numero, $fecha]
+                );
+                $stmt->close();
+
+                $stmt = $this->ejecutarSqlVenta(
+                    "UPDATE cash_registers SET current_balance = current_balance + ?, updated_at = ? WHERE id = ? AND kind = 'CASH' AND is_active = 1",
+                    "ssi", [$total, $fecha, $idCajaVenta]
+                );
+
+                if ($stmt->affected_rows !== 1) throw new RuntimeException("No se pudo actualizar el saldo de la caja.");
+                $stmt->close();
+            }
+
+            if (!$this->conn->commit()) throw new RuntimeException("No fue posible confirmar la venta.");
+            $transaccion = false;
+
+            $json["status"] = "ok";
+            $json["answer"] = "Venta rápida registrada correctamente.";
+            $json["results"] = [
+                "id" => $idVenta,
+                "referencia" => $numero,
+                "total" => $total,
+                "forma_pago" => $forma,
+                "duplicada" => false
+            ];
+            $json["code"] = 200;
+        }
+    } catch (InvalidArgumentException $e) {
+        if ($transaccion) $this->conn->rollback();
+
+        $json["status"] = "warning";
+        $json["answer"] = $e->getMessage();
+        $json["code"] = 400;
+    } catch (Throwable $e) {
+        if ($transaccion) $this->conn->rollback();
+        error_log("guardarVentaRapida: " . $e->getMessage());
+
+        $json["status"] = "error";
+        $json["answer"] = "No fue posible guardar la venta rápida.";
+        $json["code"] = 500;
+
+        if ((int)$e->getCode() === 1062 && $token !== "") {
+            try {
+                $stmt = $this->ejecutarSqlVenta(
+                    "SELECT id,sale_kind,ticket_barcode,total_amount,payment_method FROM sales WHERE request_token = ? LIMIT 1",
+                    "s", [$token]
+                );
+                $repetida = $stmt->get_result()->fetch_assoc();
+                $stmt->close();
+
+                if ($repetida && $repetida["sale_kind"] === "RAPIDA" && $repetida["payment_method"] === $forma && $this->centavosVenta($repetida["total_amount"]) === $totalCentavos) {
+                    $json["status"] = "ok";
+                    $json["answer"] = "La venta ya estaba registrada; no se duplicó.";
+                    $json["results"] = [
+                        "id" => (int)$repetida["id"],
+                        "referencia" => $repetida["ticket_barcode"],
+                        "total" => $repetida["total_amount"],
+                        "forma_pago" => $forma,
+                        "duplicada" => true
+                    ];
+                    $json["code"] = 200;
+                } else {
+                    $json["status"] = "warning";
+                    $json["answer"] = "Identificador único utilizado por otra operación.";
+                    $json["code"] = 409;
+                }
+            } catch (Throwable $otroError) {
+                error_log("Verificar duplicado venta rápida: " . $otroError->getMessage());
+            }
+        }
+    }
+
+    return $json;
+}
+
+
+private function resumenMovimientosCaja($cajaId, $inicioId, $finId = null) {
+    $json = [];
+    $extra = $finId === null ? "" : " AND id <= ?";
+    $parametros = [$cajaId, $inicioId];
+    $tipos = "ii";
+
+    if ($finId !== null) {
+        $parametros[] = $finId;
+        $tipos .= "i";
+    }
+
+    $sql = "SELECT COALESCE(SUM(CASE WHEN `type` = 'IN' THEN amount ELSE 0 END),0) AS ingresos,
+            COALESCE(SUM(CASE WHEN `type` = 'OUT' THEN amount ELSE 0 END),0) AS salidas,
+            COALESCE(MAX(id),0) AS ultimo
+            FROM cash_flows WHERE cash_register_id = ? AND id > ?" . $extra;
+
+    $stmt = $this->ejecutarSqlVenta($sql, $tipos, $parametros);
+    $resultado = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    $json["ingresos"] = $resultado["ingresos"];
+    $json["salidas"] = $resultado["salidas"];
+    $json["ultimo"] = (int)$resultado["ultimo"];
+
+    return $json;
+}
+
+public function getControlCaja($data = []) {
+    $json = [];
+
+    if (!$this->conn) {
+        $json["status"] = "error";
+        $json["answer"] = "No hay conexión con MySQL.";
+        $json["code"] = 500;
+    } else {
+        try {
+            $stmt = $this->ejecutarSqlVenta("SELECT id, name, current_balance FROM cash_registers WHERE kind = 'CASH' AND is_active = 1 ORDER BY name ASC");
+            $cajas = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            $stmt->close();
+
+            $id = isset($data["caja_id"]) ? (int)$data["caja_id"] : 0;
+            if ($id <= 0 && !empty($cajas)) {
+                $id = (int)$cajas[0]["id"];
+            }
+
+            $existe = false;
+            foreach ($cajas as $caja) {
+                if ((int)$caja["id"] === $id) {
+                    $existe = true;
+                    break;
+                }
+            }
+
+            if ($id > 0 && !$existe) {
+                throw new InvalidArgumentException("Selecciona una caja activa.");
+            }
+
+            $turno = null;
+            $movimientos = [];
+
+            if ($id > 0) {
+                $stmt = $this->ejecutarSqlVenta("SELECT * FROM cash_shifts WHERE cash_register_id = ? ORDER BY id DESC LIMIT 1", "i", [$id]);
+                $turno = $stmt->get_result()->fetch_assoc();
+                $stmt->close();
+
+                if ($turno) {
+                    $inicioId = (int)$turno["opening_flow_id"];
+                    $finId = null;
+
+                    if ($turno["status"] === "CERRADO") {
+                        if ($turno["closing_flow_id"] === null) {
+                            throw new RuntimeException("El turno cerrado no tiene un movimiento final válido.");
+                        }
+                        $finId = (int)$turno["closing_flow_id"];
+                    }
+
+                    $totales = $this->resumenMovimientosCaja($id, $inicioId, $finId);
+
+                    if ($turno["status"] === "ABIERTO") {
+                        $ingresos = $this->centavosVenta($totales["ingresos"]);
+                        $salidas = $this->centavosVenta($totales["salidas"]);
+                        $fondo = $this->centavosVenta($turno["opening_balance"]);
+
+                        if ($ingresos === null || $salidas === null || $fondo === null) {
+                            throw new RuntimeException("No fue posible calcular los importes del turno.");
+                        }
+
+                        $turno["ingresos"] = $totales["ingresos"];
+                        $turno["salidas"] = $totales["salidas"];
+                        $turno["esperado"] = number_format(($fondo + $ingresos - $salidas) / 100, 2, ".", "");
+                    } else {
+                        $turno["ingresos"] = $turno["income_cash"];
+                        $turno["salidas"] = $turno["expense_cash"];
+                        $turno["esperado"] = $turno["expected_balance"];
+                    }
+
+                    $extra = $finId === null ? "" : " AND id <= ?";
+                    $parametros = [$id, $inicioId];
+                    $tipos = "ii";
+
+                    if ($finId !== null) {
+                        $parametros[] = $finId;
+                        $tipos .= "i";
+                    }
+
+                    $sql = "SELECT id, created_at, `type`, description, reference, amount
+                            FROM cash_flows WHERE cash_register_id = ? AND id > ?" . $extra . "
+                            ORDER BY id DESC LIMIT 15";
+
+                    $stmt = $this->ejecutarSqlVenta($sql, $tipos, $parametros);
+                    $movimientos = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+                    $stmt->close();
+                }
+            }
+
+            $json["status"] = "ok";
+            $json["answer"] = "Control de caja consultado correctamente.";
+            $json["results"] = [
+                "cajas" => $cajas,
+                "caja_id" => $id,
+                "turno" => $turno,
+                "movimientos" => $movimientos
+            ];
+            $json["code"] = 200;
+
+        } catch (InvalidArgumentException $e) {
+            $json["status"] = "warning";
+            $json["answer"] = $e->getMessage();
+            $json["code"] = 400;
+        } catch (Throwable $e) {
+            error_log("getControlCaja: " . $e->getMessage());
+            $json["status"] = "error";
+            $json["answer"] = "No fue posible consultar el control de caja.";
+            $json["code"] = 500;
+        }
+    }
+
+    return $json;
+}
+
+public function abrirCaja($data) {
+    $json = [];
+    $transaccion = false;
+
+    if (!$this->conn) {
+        $json["status"] = "error";
+        $json["answer"] = "No hay conexión con MySQL.";
+        $json["code"] = 500;
+    } else {
+        try {
+            $id = isset($data["caja_id"]) ? (int)$data["caja_id"] : 0;
+            $fondoCentavos = $this->centavosVenta(isset($data["fondo"]) ? $data["fondo"] : "");
+
+            if ($id <= 0 || $fondoCentavos === null) {
+                throw new InvalidArgumentException("Selecciona una caja y un fondo inicial válido.");
+            }
+
+            if ($this->usuarioOperador <= 0) {
+                throw new InvalidArgumentException("Configura el usuario operador.");
+            }
+
+            $stmt = $this->ejecutarSqlVenta("SELECT id FROM users WHERE id = ? LIMIT 1", "i", [$this->usuarioOperador]);
+            $usuario = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if (!$usuario) {
+                throw new InvalidArgumentException("El usuario operador no existe.");
+            }
+
+            if (!$this->conn->begin_transaction()) {
+                throw new RuntimeException("No fue posible iniciar la transacción.");
+            }
+            $transaccion = true;
+
+            $stmt = $this->ejecutarSqlVenta("SELECT id, current_balance FROM cash_registers WHERE id = ? AND kind = 'CASH' AND is_active = 1 FOR UPDATE", "i", [$id]);
+            $caja = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if (!$caja) {
+                throw new InvalidArgumentException("La caja seleccionada no existe o está inactiva.");
+            }
+
+            $stmt = $this->ejecutarSqlVenta("SELECT id FROM cash_shifts WHERE cash_register_id = ? AND status = 'ABIERTO' LIMIT 1", "i", [$id]);
+            $turnoAbierto = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if ($turnoAbierto) {
+                throw new InvalidArgumentException("Esta caja ya tiene un turno abierto.");
+            }
+
+            $saldoActual = $this->centavosVenta($caja["current_balance"]);
+
+            if ($saldoActual === null) {
+                throw new RuntimeException("El saldo registrado de la caja no es válido.");
+            }
+
+            $fecha = date("Y-m-d H:i:s");
+            $fondo = number_format($fondoCentavos / 100, 2, ".", "");
+
+            if ($saldoActual !== $fondoCentavos) {
+                $diferencia = $fondoCentavos - $saldoActual;
+                $tipo = $diferencia > 0 ? "IN" : "OUT";
+                $monto = number_format(abs($diferencia) / 100, 2, ".", "");
+                $descripcion = "Ajuste del fondo al abrir turno";
+
+                $stmt = $this->ejecutarSqlVenta(
+                    "INSERT INTO cash_flows (cash_register_id, user_id, amount, `type`, description, reference, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    "iisssss",
+                    [$id, $this->usuarioOperador, $monto, $tipo, $descripcion, "AJUSTE_APERTURA", $fecha]
+                );
+                $stmt->close();
+
+                $stmt = $this->ejecutarSqlVenta(
+                    "UPDATE cash_registers SET current_balance = ?, updated_at = ? WHERE id = ? AND kind = 'CASH' AND is_active = 1",
+                    "ssi",
+                    [$fondo, $fecha, $id]
+                );
+
+                if ($stmt->affected_rows !== 1) {
+                    throw new RuntimeException("No se pudo actualizar el fondo inicial de la caja.");
+                }
+                $stmt->close();
+            }
+
+            $stmt = $this->ejecutarSqlVenta("SELECT COALESCE(MAX(id), 0) AS ultimo FROM cash_flows WHERE cash_register_id = ?", "i", [$id]);
+            $ultimoMovimiento = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            $base = (int)$ultimoMovimiento["ultimo"];
+
+            $stmt = $this->ejecutarSqlVenta(
+                "INSERT INTO cash_shifts (cash_register_id, user_id, opened_at, opening_balance, opening_flow_id, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'ABIERTO', ?, ?)",
+                "iississ",
+                [$id, $this->usuarioOperador, $fecha, $fondo, $base, $fecha, $fecha]
+            );
+            $stmt->close();
+
+            $turnoId = (int)$this->conn->insert_id;
+
+            if (!$this->conn->commit()) {
+                throw new RuntimeException("No fue posible confirmar la apertura de caja.");
+            }
+            $transaccion = false;
+
+            $json["status"] = "ok";
+            $json["answer"] = "Caja abierta correctamente.";
+            $json["results"] = [
+                "turno_id" => $turnoId,
+                "caja_id" => $id,
+                "fondo_inicial" => $fondo,
+                "fecha_apertura" => $fecha,
+                "estado" => "ABIERTO"
+            ];
+            $json["code"] = 200;
+
+        } catch (InvalidArgumentException $e) {
+            if ($transaccion) {
+                $this->conn->rollback();
+            }
+            $json["status"] = "warning";
+            $json["answer"] = $e->getMessage();
+            $json["code"] = 400;
+        } catch (Throwable $e) {
+            if ($transaccion) {
+                $this->conn->rollback();
+            }
+            error_log("abrirCaja: " . $e->getMessage());
+            $json["status"] = "error";
+            $json["answer"] = "No fue posible abrir la caja.";
+            $json["code"] = 500;
+        }
+    }
+
+    return $json;
+}
+
+public function cerrarCaja($data) {
+    $json = [];
+    $transaccion = false;
+
+    if (!$this->conn) {
+        $json["status"] = "error";
+        $json["answer"] = "No hay conexión con MySQL.";
+        $json["code"] = 500;
+    } else {
+        try {
+            $idCaja = isset($data["caja_id"]) ? (int)$data["caja_id"] : 0;
+            $contadoCentavos = $this->centavosVenta(isset($data["contado"]) ? $data["contado"] : "");
+
+            if ($idCaja <= 0 || $contadoCentavos === null) {
+                throw new InvalidArgumentException("Selecciona una caja e ingresa el efectivo contado.");
+            }
+
+            if (!$this->conn->begin_transaction()) {
+                throw new RuntimeException("No fue posible iniciar la transacción.");
+            }
+            $transaccion = true;
+
+            $stmt = $this->ejecutarSqlVenta(
+                "SELECT id, current_balance FROM cash_registers WHERE id = ? AND kind = 'CASH' AND is_active = 1 FOR UPDATE",
+                "i", [$idCaja]
+            );
+            $caja = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if (!$caja) {
+                throw new InvalidArgumentException("La caja seleccionada no existe o está inactiva.");
+            }
+
+            $stmt = $this->ejecutarSqlVenta(
+                "SELECT * FROM cash_shifts WHERE cash_register_id = ? AND status = 'ABIERTO' LIMIT 1 FOR UPDATE",
+                "i", [$idCaja]
+            );
+            $turno = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if (!$turno) {
+                throw new InvalidArgumentException("Esta caja no tiene un turno abierto.");
+            }
+
+            $totales = $this->resumenMovimientosCaja($idCaja, (int)$turno["opening_flow_id"]);
+            $ingresos = $this->centavosVenta($totales["ingresos"]);
+            $salidas = $this->centavosVenta($totales["salidas"]);
+            $fondo = $this->centavosVenta($turno["opening_balance"]);
+            $saldoActual = $this->centavosVenta($caja["current_balance"]);
+
+            if ($ingresos === null || $salidas === null || $fondo === null || $saldoActual === null) {
+                throw new RuntimeException("No fue posible verificar los importes de caja.");
+            }
+
+            $esperadoCentavos = $fondo + $ingresos - $salidas;
+
+            if ($esperadoCentavos < 0 || $esperadoCentavos !== $saldoActual) {
+                throw new RuntimeException("El saldo registrado no coincide con los movimientos de caja.");
+            }
+
+            $diferenciaCentavos = $contadoCentavos - $esperadoCentavos;
+            $ultimoMovimiento = max((int)$totales["ultimo"], (int)$turno["opening_flow_id"]);
+            $fecha = date("Y-m-d H:i:s");
+
+            $ingresosFormato = number_format($ingresos / 100, 2, ".", "");
+            $salidasFormato = number_format($salidas / 100, 2, ".", "");
+            $esperadoFormato = number_format($esperadoCentavos / 100, 2, ".", "");
+            $contadoFormato = number_format($contadoCentavos / 100, 2, ".", "");
+            $diferenciaFormato = number_format($diferenciaCentavos / 100, 2, ".", "");
+
+            $stmt = $this->ejecutarSqlVenta(
+                "UPDATE cash_shifts SET status = 'CERRADO', closed_at = ?, closing_flow_id = ?, income_cash = ?, expense_cash = ?, expected_balance = ?, counted_balance = ?, difference_amount = ?, updated_at = ? WHERE id = ? AND status = 'ABIERTO'",
+                "sissssssi",
+                [$fecha, $ultimoMovimiento, $ingresosFormato, $salidasFormato, $esperadoFormato, $contadoFormato, $diferenciaFormato, $fecha, (int)$turno["id"]]
+            );
+
+            if ($stmt->affected_rows !== 1) {
+                throw new RuntimeException("No fue posible cerrar el turno.");
+            }
+            $stmt->close();
+
+            if (!$this->conn->commit()) {
+                throw new RuntimeException("No fue posible confirmar el cierre de caja.");
+            }
+            $transaccion = false;
+
+            $estadoArqueo = "CUADRADO";
+            if ($diferenciaCentavos > 0) $estadoArqueo = "SOBRANTE";
+            if ($diferenciaCentavos < 0) $estadoArqueo = "FALTANTE";
+
+            $json["status"] = "ok";
+            $json["answer"] = "Corte de caja registrado correctamente.";
+            $json["results"] = [
+                "turno_id" => (int)$turno["id"],
+                "caja_id" => $idCaja,
+                "fondo_inicial" => $turno["opening_balance"],
+                "ingresos" => $ingresosFormato,
+                "salidas" => $salidasFormato,
+                "esperado" => $esperadoFormato,
+                "contado" => $contadoFormato,
+                "diferencia" => $diferenciaFormato,
+                "arqueo" => $estadoArqueo,
+                "fecha_cierre" => $fecha,
+                "estado" => "CERRADO"
+            ];
+            $json["code"] = 200;
+
+        } catch (InvalidArgumentException $e) {
+            if ($transaccion) $this->conn->rollback();
+            $json["status"] = "warning";
+            $json["answer"] = $e->getMessage();
+            $json["code"] = 400;
+        } catch (Throwable $e) {
+            if ($transaccion) $this->conn->rollback();
+            error_log("cerrarCaja: " . $e->getMessage());
+            $json["status"] = "error";
+            $json["answer"] = "No fue posible realizar el cierre de caja.";
+            $json["code"] = 500;
+        }
+    }
+
+    return $json;
+}
+
+public function getEgresos() {
+    $json = [];
+
+    if (!$this->conn) {
+        $json["status"] = "error";
+        $json["answer"] = "No hay conexión con MySQL.";
+        $json["code"] = 500;
+    } else {
+        try {
+            $stmt = $this->ejecutarSqlVenta(
+                "SELECT r.id, r.name, r.current_balance
+                 FROM cash_registers r
+                 WHERE r.kind = 'CASH' AND r.is_active = 1
+                 AND EXISTS (
+                     SELECT 1 FROM cash_shifts s
+                     WHERE s.cash_register_id = r.id AND s.status = 'ABIERTO'
+                 ) ORDER BY r.name ASC"
+            );
+
+            $cajas = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            $stmt->close();
+
+            $stmt = $this->ejecutarSqlVenta(
+                "SELECT id, `date`, origin, cash_register_id, user_reference_name,
+                 expense_category, reference, amount, ticket_number, note, notes
+                 FROM account_moves
+                 WHERE `type` = 'SALIDA' AND status = 'PAGADO'
+                 ORDER BY `date` DESC, id DESC LIMIT 20"
+            );
+
+            $egresos = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            $stmt->close();
+
+            $json["status"] = "ok";
+            $json["answer"] = "Egresos consultados correctamente.";
+            $json["results"] = [
+                "cajas" => $cajas,
+                "egresos" => $egresos
+            ];
+            $json["code"] = 200;
+
+        } catch (Throwable $e) {
+            error_log("getEgresos: " . $e->getMessage());
+            $json["status"] = "error";
+            $json["answer"] = "No fue posible consultar los egresos.";
+            $json["code"] = 500;
+        }
+    }
+
+    return $json;
+}
+
+public function guardarEgreso($data) {
+    $json = [];
+    $transaccion = false;
+    $token = "";
+
+    if (!$this->conn) {
+        $json["status"] = "error";
+        $json["answer"] = "No hay conexión con MySQL.";
+        $json["code"] = 500;
+    } else {
+        try {
+            $token = $this->textoVenta($data, "solicitud_id", 32);
+            $beneficiario = $this->textoVenta($data, "beneficiario", 100);
+            $categoria = $this->textoVenta($data, "categoria", 30);
+            $metodo = $this->textoVenta($data, "metodo", 20);
+            $referencia = $this->textoVenta($data, "referencia", 80);
+            $notas = $this->textoVenta($data, "notas", 500);
+            $montoCentavos = $this->centavosVenta(isset($data["monto"]) ? $data["monto"] : "");
+            $idCaja = isset($data["caja_id"]) ? (int)$data["caja_id"] : 0;
+
+            $categorias = [
+                "PROVEEDORES" => "Proveedores / Materiales",
+                "COMBUSTIBLE" => "Combustible",
+                "MANTENIMIENTO" => "Reparaciones / Mantenimiento",
+                "OPERATIVOS" => "Gastos operativos varios"
+            ];
+
+            if (!preg_match('/^[a-f0-9]{32}$/D', $token)) {
+                throw new InvalidArgumentException("Identificador de solicitud inválido.");
+            }
+            if ($beneficiario === "") {
+                throw new InvalidArgumentException("Indica el beneficiario o proveedor.");
+            }
+            if (!isset($categorias[$categoria])) {
+                throw new InvalidArgumentException("Selecciona una categoría de gasto válida.");
+            }
+            if (!in_array($metodo, ["EFECTIVO", "TRANSFERENCIA"], true)) {
+                throw new InvalidArgumentException("Selecciona una forma de salida válida.");
+            }
+            if ($montoCentavos === null || $montoCentavos <= 0) {
+                throw new InvalidArgumentException("El monto del gasto debe ser mayor que cero.");
+            }
+            if ($metodo === "EFECTIVO" && $idCaja <= 0) {
+                throw new InvalidArgumentException("Selecciona la caja de donde saldrá el efectivo.");
+            }
+
+            $stmt = $this->ejecutarSqlVenta(
+                "SELECT id, ticket_number FROM account_moves WHERE request_token = ? LIMIT 1",
+                "s", [$token]
+            );
+            $anterior = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if ($anterior) {
+                $json["status"] = "ok";
+                $json["answer"] = "Este egreso ya estaba registrado; no se duplicó.";
+                $json["results"] = [
+                    "id" => (int)$anterior["id"],
+                    "folio" => $anterior["ticket_number"],
+                    "duplicado" => true
+                ];
+                $json["code"] = 200;
+            } else {
+                if (!$this->conn->begin_transaction()) {
+                    throw new RuntimeException("No fue posible iniciar la transacción.");
+                }
+                $transaccion = true;
+
+                $fecha = date("Y-m-d H:i:s");
+                $monto = number_format($montoCentavos / 100, 2, ".", "");
+                $origen = $metodo === "EFECTIVO" ? "CAJA" : "BANCO";
+                $idCajaMovimiento = $metodo === "EFECTIVO" ? $idCaja : null;
+
+                if ($idCajaMovimiento !== null) {
+                    $stmt = $this->ejecutarSqlVenta(
+                        "SELECT id, current_balance FROM cash_registers
+                         WHERE id = ? AND kind = 'CASH' AND is_active = 1 FOR UPDATE",
+                        "i", [$idCaja]
+                    );
+                    $caja = $stmt->get_result()->fetch_assoc();
+                    $stmt->close();
+
+                    if (!$caja) {
+                        throw new InvalidArgumentException("La caja no existe o está inactiva.");
+                    }
+
+                    $stmt = $this->ejecutarSqlVenta(
+                        "SELECT id FROM cash_shifts
+                         WHERE cash_register_id = ? AND status = 'ABIERTO' LIMIT 1",
+                        "i", [$idCaja]
+                    );
+                    $turno = $stmt->get_result()->fetch_assoc();
+                    $stmt->close();
+
+                    if (!$turno) {
+                        throw new InvalidArgumentException("Debes abrir un turno antes de registrar un gasto en efectivo.");
+                    }
+
+                    $saldoCaja = $this->centavosVenta($caja["current_balance"]);
+
+                    if ($saldoCaja === null) {
+                        throw new RuntimeException("El saldo de caja es inválido.");
+                    }
+                    if ($saldoCaja < $montoCentavos) {
+                        throw new InvalidArgumentException("La caja no tiene efectivo suficiente para registrar este gasto.");
+                    }
+                }
+
+                $notaMovimiento = $categorias[$categoria];
+
+                $stmt = $this->ejecutarSqlVenta(
+                    "INSERT INTO account_moves
+                    (`date`, `type`, `origin`, cash_register_id, user_reference_name,
+                    reference, amount, user_id, link_type, link_id, ticket_number,
+                    status, note, notes, created_at, updated_at, expense_category, request_token)
+                    VALUES (?, 'SALIDA', ?, ?, ?, ?, ?, ?, NULL, NULL, NULL,
+                    'PAGADO', ?, ?, ?, ?, ?, ?)",
+                    "ssisssissssss",
+                    [$fecha, $origen, $idCajaMovimiento, $beneficiario,
+                    $referencia, $monto, $this->usuarioOperador,
+                    $notaMovimiento, $notas, $fecha, $fecha, $categoria, $token]
+                );
+                $stmt->close();
+
+                $idEgreso = (int)$this->conn->insert_id;
+                $folio = "EG-" . str_pad((string)$idEgreso, 8, "0", STR_PAD_LEFT);
+
+                $stmt = $this->ejecutarSqlVenta(
+                    "UPDATE account_moves SET ticket_number = ? WHERE id = ?",
+                    "si", [$folio, $idEgreso]
+                );
+                $stmt->close();
+
+                if ($idCajaMovimiento !== null) {
+                    $descripcion = "Egreso " . $folio . " - " . $beneficiario;
+
+                    $stmt = $this->ejecutarSqlVenta(
+                        "INSERT INTO cash_flows
+                        (cash_register_id, user_id, amount, `type`, description, reference, created_at)
+                        VALUES (?, ?, ?, 'OUT', ?, ?, ?)",
+                        "iissss",
+                        [$idCaja, $this->usuarioOperador, $monto, $descripcion, $folio, $fecha]
+                    );
+                    $stmt->close();
+
+                    $stmt = $this->ejecutarSqlVenta(
+                        "UPDATE cash_registers
+                         SET current_balance = current_balance - ?, updated_at = ?
+                         WHERE id = ? AND kind = 'CASH' AND is_active = 1
+                         AND current_balance >= ?",
+                        "ssis", [$monto, $fecha, $idCaja, $monto]
+                    );
+
+                    if ($stmt->affected_rows !== 1) {
+                        throw new RuntimeException("No fue posible descontar el saldo de la caja.");
+                    }
+                    $stmt->close();
+                }
+
+                if (!$this->conn->commit()) {
+                    throw new RuntimeException("No fue posible confirmar el egreso.");
+                }
+                $transaccion = false;
+
+                $json["status"] = "ok";
+                $json["answer"] = "Egreso registrado correctamente.";
+                $json["results"] = [
+                    "id" => $idEgreso,
+                    "folio" => $folio,
+                    "beneficiario" => $beneficiario,
+                    "categoria" => $categoria,
+                    "metodo" => $metodo,
+                    "monto" => $monto,
+                    "caja_id" => $idCajaMovimiento,
+                    "fecha" => $fecha,
+                    "duplicado" => false
+                ];
+                $json["code"] = 200;
+            }
+
+        } catch (InvalidArgumentException $e) {
+            if ($transaccion) $this->conn->rollback();
+            $json["status"] = "warning";
+            $json["answer"] = $e->getMessage();
+            $json["code"] = 400;
+        } catch (Throwable $e) {
+            if ($transaccion) $this->conn->rollback();
+            error_log("guardarEgreso: " . $e->getMessage());
+
+            $json["status"] = "error";
+            $json["answer"] = "No fue posible registrar el egreso.";
+            $json["code"] = 500;
+
+            if ((int)$e->getCode() === 1062 && $token !== "") {
+                try {
+                    $stmt = $this->ejecutarSqlVenta(
+                        "SELECT id, ticket_number FROM account_moves WHERE request_token = ? LIMIT 1",
+                        "s", [$token]
+                    );
+                    $repetido = $stmt->get_result()->fetch_assoc();
+                    $stmt->close();
+
+                    if ($repetido) {
+                        $json["status"] = "ok";
+                        $json["answer"] = "Este egreso ya estaba registrado; no se duplicó.";
+                        $json["results"] = [
+                            "id" => (int)$repetido["id"],
+                            "folio" => $repetido["ticket_number"],
+                            "duplicado" => true
+                        ];
+                        $json["code"] = 200;
+                    }
+                } catch (Throwable $otroError) {
+                    error_log("Verificar egreso duplicado: " . $otroError->getMessage());
+                }
+            }
+        }
+    }
+
+    return $json;
+}
+
+
     
 }
 ?>

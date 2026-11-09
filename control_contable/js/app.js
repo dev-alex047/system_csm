@@ -45,6 +45,7 @@ window.addEventListener("DOMContentLoaded", function() {
     bindNavigation();
     bindVentaNota();
     bindVentaRapida();
+    bindCajaEgresos();
     mostrarInicio();
 });
 
@@ -157,6 +158,8 @@ if (modulo === "ventas" && submodulo === "rapida") {
     renderVentaRapida();
     return;
 }
+if (modulo === "caja" && submodulo === "arqueo") { renderControlCaja(); return; }
+if (modulo === "caja" && submodulo === "egresos") { renderEgresos(); return; }
     if (modulo === "panel" && submodulo === "resumen") {
         getResumenInicial();
         return;
@@ -515,9 +518,19 @@ function mostrarErrorConsulta(mensaje) {
    VENTAS RÁPIDAS
 ========================= */
 
+
 function crearBorradorVentaRapida() {
-    return {forma_pago:"EFECTIVO",referencia:"",observaciones:"",items:[],siguienteId:1};
+    return {
+        solicitud_id:generarIdSolicitudVenta(),
+        caja_id:"",
+        forma_pago:"EFECTIVO",
+        referencia:"",
+        observaciones:"",
+        items:[],
+        siguienteId:1
+    };
 }
+
 
 function bindVentaRapida() {
     $(document).on("click","#btnAgregarItemRapida",function(){
@@ -564,6 +577,13 @@ function bindVentaRapida() {
             }
         });
     });
+
+
+$(document).on("change","#rapidaCaja",function(){
+    state.ventaRapida.caja_id = this.value;
+    $(this).removeClass("is-invalid");
+});
+
 }
 
 function renderVentaRapida() {
@@ -584,6 +604,7 @@ function renderVentaRapida() {
 
     alternarReferenciaVentaRapida();
     actualizarTotalesVentaRapida();
+    getCajasVentaRapida();
 }
 
 function agregarItemVentaRapida() {
@@ -607,9 +628,13 @@ function insertarFilaVentaRapida(item) {
     $("#detalleVentaRapida").append(fila);
 }
 
+
 function alternarReferenciaVentaRapida() {
-    $("#rapidaReferenciaBox").toggleClass("d-none",state.ventaRapida.forma_pago !== "TRANSFERENCIA");
+    const efectivo = state.ventaRapida.forma_pago === "EFECTIVO";
+    $("#rapidaCajaBox").toggleClass("d-none",!efectivo);
+    $("#rapidaReferenciaBox").toggleClass("d-none",efectivo);
 }
+
 
 function obtenerTotalVentaRapida() {
     let centavos = 0;
@@ -661,6 +686,13 @@ function validarVentaRapida() {
     if (total <= 0 || total > 9999999999) return errorVentaRapida("El total debe ser mayor que cero y no exceder $99,999,999.99.");
     if (!["EFECTIVO","TRANSFERENCIA"].includes(venta.forma_pago)) return errorVentaRapida("Selecciona efectivo o transferencia.");
     return true;
+
+
+if (venta.forma_pago === "EFECTIVO" &&
+    (!Number.isInteger(Number(venta.caja_id)) || Number(venta.caja_id) <= 0)) {
+    return errorVentaRapida("Selecciona una caja para recibir el efectivo.","#rapidaCaja");
+}
+
 }
 
 function revisarVentaRapida() {
@@ -680,9 +712,111 @@ function revisarVentaRapida() {
     }
     $resumen.append($lista);
     $resumen.append($('<h3 class="h5 fw-bold text-success"></h3>').text("Total: "+monedaMXN(obtenerTotalVentaRapida()/100)));
-    $resumen.append($('<p class="text-secondary mb-0"></p>').text("Esta es una vista previa. La venta todavía no se ha guardado en MySQL."));
+    //$resumen.append($('<p class="text-secondary mb-0"></p>').text("Esta es una vista previa. La venta todavía no se ha guardado en MySQL."));
 
-    Swal.fire({title:"Revisar venta rápida",html:$resumen[0],confirmButtonText:"Volver a la venta",confirmButtonColor:"#086b47",width:"600px"});
+Swal.fire({
+    title:"Confirmar venta rápida",
+    html:$resumen[0],
+    icon:"question",
+    showCancelButton:true,
+    confirmButtonText:"Guardar y cobrar",
+    cancelButtonText:"Seguir editando",
+    confirmButtonColor:"#086b47",
+    width:"600px"
+}).then(function(resultado) {
+    if (resultado.isConfirmed) guardarVentaRapida();
+});
+
+}
+
+
+function guardarVentaRapida() {
+    if (state.guardandoVentaRapida) return;
+    if (!validarVentaRapida()) return;
+
+    const venta = state.ventaRapida;
+    const datos = {
+        solicitud_id:venta.solicitud_id,
+        caja_id:venta.caja_id,
+        forma_pago:venta.forma_pago,
+        referencia:venta.forma_pago === "TRANSFERENCIA" ? venta.referencia : "",
+        observaciones:venta.observaciones,
+        items:venta.items.map(function(item){
+            return {
+                origen:"MANUAL",
+                codigo:item.codigo,
+                nombre:item.nombre,
+                cantidad:item.cantidad,
+                precio:item.precio
+            };
+        })
+    };
+
+    state.guardandoVentaRapida = true;
+
+    Swal.fire({
+        title:"Registrando venta",
+        text:"Guardando artículos y movimiento de cobro...",
+        allowOutsideClick:false,
+        allowEscapeKey:false,
+        showConfirmButton:false,
+        didOpen:function(){Swal.showLoading();}
+    });
+
+    $.ajax({
+        type:"POST",
+        url:"php/index.php",
+        data:{
+            action:"guardarVentaRapida",
+            venta:JSON.stringify(datos)
+        },
+        dataType:"json"
+    }).done(function(data) {
+        if (!data || data.status !== "ok") {
+            Swal.fire({
+                icon:"warning",
+                title:"No se pudo guardar",
+                text:data && data.answer ? data.answer : "No fue posible registrar la venta.",
+                confirmButtonColor:"#086b47"
+            });
+            return;
+        }
+
+        const resultado = data.results || {};
+        const referencia = resultado.referencia || "Registrada";
+        const total = resultado.total || "0.00";
+
+        state.ventaRapida = crearBorradorVentaRapida();
+
+        if (state.moduloActual === "ventas" && state.submoduloActual === "rapida") {
+            renderVentaRapida();
+        }
+
+        Swal.fire({
+            icon:"success",
+            title:resultado.duplicada ? "Venta ya registrada" : "Venta guardada",
+            html:"<p class='mb-2'>Referencia interna: <strong id='referenciaVentaRapida'></strong></p>" +
+                 "<p class='mb-0'>Total cobrado: <strong id='totalVentaRapida'></strong></p>",
+            confirmButtonText:"Nueva venta",
+            confirmButtonColor:"#086b47",
+            didOpen:function(){
+                $("#referenciaVentaRapida").text(referencia);
+                $("#totalVentaRapida").text(monedaMXN(total));
+            }
+        });
+    }).fail(function(xhr) {
+        const data = xhr.responseJSON || {};
+
+        Swal.fire({
+            icon:data.status === "warning" ? "warning" : "error",
+            title:"No se pudo confirmar la venta",
+            text:(data.answer || "No fue posible completar la petición.") +
+                 " Si necesitas reintentar, conserva este borrador para evitar duplicados.",
+            confirmButtonColor:"#086b47"
+        });
+    }).always(function(){
+        state.guardandoVentaRapida = false;
+    });
 }
 
 
@@ -932,4 +1066,198 @@ function generarPdfNotaVenta(idVenta) {
     });
 });
 
+}
+
+/* CONTROL DE CAJA Y EGRESOS */
+state.cajaId = 0;
+state.peticionCaja = 0;
+state.guardandoEgreso = false;
+state.tokenEgreso = generarIdSolicitudVenta();
+
+function bindCajaEgresos() {
+    $(document).on("change","#cajaSeleccionada",function(){state.cajaId = Number(this.value)||0; consultarControlCaja();});
+    $(document).on("submit","#formAperturaCaja",function(e){
+        e.preventDefault();
+        operarCaja("abrirCaja",{caja_id:state.cajaId,fondo:$("#fondoCaja").val()},"¿Confirmar apertura de caja?");
+    });
+    $(document).on("submit","#formCierreCaja",function(e){
+        e.preventDefault();
+        const contado = $("#contadoCaja").val();
+        if (numeroNotaValido(contado,0,99999999.99) === null) return Swal.fire("Aviso","Captura el efectivo contado.","warning");
+        const diferencia = Math.round(Number(contado)*100)-Math.round(Number($("#cajaEsperado").attr("data-valor"))*100);
+        operarCaja("cerrarCaja",{caja_id:state.cajaId,contado:contado},"¿Cerrar turno? Diferencia: "+monedaMXN(diferencia/100));
+    });
+    $(document).on("change","#egresoMetodo",alternarMetodoEgreso);
+    $(document).on("submit","#formEgreso",function(e){e.preventDefault(); confirmarEgreso();});
+}
+
+function renderControlCaja() {
+    const tpl = document.getElementById("tplControlCaja");
+    if (!tpl) return console.error("Falta tplControlCaja");
+    $("#contenidoModulo").empty().append(tpl.content.cloneNode(true));
+    consultarControlCaja();
+}
+
+function consultarControlCaja() {
+    const version = state.versionVista, solicitud = ++state.peticionCaja;
+    $.ajax({url:"php/index.php",type:"POST",dataType:"json",data:{action:"getControlCaja",caja_id:state.cajaId}}).done(function(r){
+        if (version !== state.versionVista || solicitud !== state.peticionCaja) return;
+        if (!r || r.status !== "ok") return Swal.fire("Aviso",r && r.answer || "No se pudo consultar la caja.","warning");
+        const d = r.results, turno = d.turno;
+        state.cajaId = Number(d.caja_id)||0;
+        const $sel = $("#cajaSeleccionada").empty();
+        d.cajas.forEach(function(c){$("<option>").val(c.id).text(c.name+" · #"+c.id).appendTo($sel);});
+        $sel.val(String(state.cajaId));
+        $("#sinCajas").toggleClass("d-none",d.cajas.length>0);
+        $("#panelAbrirCaja").toggleClass("d-none",!state.cajaId || !!(turno && turno.status==="ABIERTO"));
+        $("#panelCerrarCaja").toggleClass("d-none",!turno || turno.status!=="ABIERTO");
+        const caja = d.cajas.find(function(c){return Number(c.id)===state.cajaId;});
+        $("#fondoCaja").val(caja ? Number(caja.current_balance).toFixed(2) : "0.00");
+        const datos = turno ? [
+            ["Fondo inicial",turno.opening_balance],
+            ["Entradas en efectivo",turno.ingresos],
+            ["Salidas en efectivo",turno.salidas],
+            ["Efectivo esperado",turno.esperado]
+        ] : [["Saldo registrado",caja ? caja.current_balance : 0]];
+        const $res = $("#cajaResumen").empty();
+        datos.forEach(function(f){
+            const $card = $('<div class="col-sm-6 col-lg-3"></div>');
+            $card.append($('<div class="border bg-white rounded-4 p-3 h-100"></div>')
+                .append($('<small class="text-secondary"></small>').text(f[0]))
+                .append($('<h3 class="h5 fw-bold mt-2 mb-0"></h3>').text(monedaMXN(f[1]))));
+            $res.append($card);
+        });
+        $("#cajaEsperado").text(monedaMXN(turno ? turno.esperado : 0)).attr("data-valor",turno ? turno.esperado : 0);
+        $("#cajaEstado").text(!turno ? "Sin turnos registrados" : turno.status==="ABIERTO" ? "Turno #"+turno.id+" abierto desde "+turno.opened_at : "Último turno cerrado · "+turno.closed_at);
+        $("#cajaUltimoCierre").text(turno && turno.status==="CERRADO" ? "Último arqueo: "+monedaMXN(turno.counted_balance)+" · Diferencia: "+monedaMXN(turno.difference_amount) : "");
+        const $tbody = $("#tablaFlujosCaja").empty();
+        if (!d.movimientos.length) $tbody.append('<tr><td colspan="4" class="text-center text-secondary py-3">Sin movimientos en este turno</td></tr>');
+        d.movimientos.forEach(function(m){
+            const $tr = $("<tr>");
+            $tr.append($("<td>").text(m.created_at),$("<td>").text(m.description),$("<td>").text(m.type==="IN"?"Entrada":"Salida"),$('<td class="text-end fw-semibold">').text(monedaMXN(m.amount)));
+            $tbody.append($tr);
+        });
+    }).fail(function(x){
+        if (version===state.versionVista) Swal.fire("Error",x.responseJSON && x.responseJSON.answer || "Error de conexión.","error");
+    });
+}
+
+function operarCaja(action,data,titulo) {
+    if (!data.caja_id || (action==="abrirCaja" && numeroNotaValido(data.fondo,0,99999999.99)===null)) return Swal.fire("Aviso","Revisa la caja y el monto.","warning");
+    Swal.fire({title:titulo,icon:"question",showCancelButton:true,confirmButtonText:"Confirmar",cancelButtonText:"Cancelar",confirmButtonColor:"#086b47"}).then(function(r){
+        if (!r.isConfirmed) return;
+        $.ajax({url:"php/index.php",type:"POST",dataType:"json",data:Object.assign({action:action},data)}).done(function(resp){
+            if (!resp || resp.status!=="ok") return Swal.fire("Aviso",resp && resp.answer || "Operación no realizada.","warning");
+            if (state.moduloActual==="caja" && state.submoduloActual==="arqueo") consultarControlCaja();
+            Swal.fire("Correcto",resp.answer,"success");
+        }).fail(function(x){Swal.fire("Error",x.responseJSON && x.responseJSON.answer || "Error al guardar.","error");});
+    });
+}
+
+function renderEgresos() {
+    const tpl = document.getElementById("tplEgresos");
+    if (!tpl) return console.error("Falta tplEgresos");
+    $("#contenidoModulo").empty().append(tpl.content.cloneNode(true));
+    alternarMetodoEgreso();
+    consultarEgresos();
+}
+
+function alternarMetodoEgreso() {
+    const efectivo = $("#egresoMetodo").val()==="EFECTIVO";
+    $("#egresoCajaBox").toggleClass("d-none",!efectivo);
+    $("#egresoReferenciaBox").toggleClass("d-none",efectivo);
+}
+
+function consultarEgresos() {
+    const version = state.versionVista;
+    $.ajax({url:"php/index.php",type:"POST",dataType:"json",data:{action:"getEgresos"}}).done(function(r){
+        if (version!==state.versionVista) return;
+        if (!r || r.status!=="ok") return Swal.fire("Aviso",r && r.answer || "No se pudieron consultar egresos.","warning");
+        const $caja = $("#egresoCaja").empty().append('<option value="">Selecciona una caja abierta</option>');
+        r.results.cajas.forEach(function(c){$("<option>").val(c.id).text(c.name+" · #"+c.id).appendTo($caja);});
+        const $tabla = $("#tablaEgresos").empty();
+        if (!r.results.egresos.length) $tabla.append('<tr><td colspan="6" class="text-center text-secondary py-3">Sin egresos registrados</td></tr>');
+        r.results.egresos.forEach(function(m){
+            const $tr = $("<tr>");
+            [m.date,m.ticket_number,m.user_reference_name,m.expense_category,m.origin,monedaMXN(m.amount)].forEach(function(v){$tr.append($("<td>").text(v||"—"));});
+            $tabla.append($tr);
+        });
+    }).fail(function(x){
+        if (version===state.versionVista) Swal.fire("Error",x.responseJSON && x.responseJSON.answer || "Error de conexión.","error");
+    });
+}
+
+function confirmarEgreso() {
+    if (state.guardandoEgreso) return;
+    const d = {
+        action:"guardarEgreso",solicitud_id:state.tokenEgreso,
+        beneficiario:$("#egresoBeneficiario").val().trim(),categoria:$("#egresoCategoria").val(),
+        metodo:$("#egresoMetodo").val(),caja_id:$("#egresoCaja").val(),
+        monto:$("#egresoMonto").val(),referencia:$("#egresoReferencia").val().trim(),
+        notas:$("#egresoNotas").val().trim()
+    };
+    if (!d.beneficiario || !d.categoria || numeroNotaValido(d.monto,0.01,99999999.99)===null || (d.metodo==="EFECTIVO" && !d.caja_id)) {
+        return Swal.fire("Aviso","Completa beneficiario, categoría, importe y caja si pagas en efectivo.","warning");
+    }
+    Swal.fire({title:"¿Registrar gasto de "+monedaMXN(d.monto)+"?",text:d.beneficiario+" · "+d.metodo,icon:"question",showCancelButton:true,confirmButtonText:"Registrar gasto",cancelButtonText:"Cancelar",confirmButtonColor:"#086b47"}).then(function(c){
+        if (!c.isConfirmed || state.guardandoEgreso) return;
+        state.guardandoEgreso = true;
+        $.ajax({url:"php/index.php",type:"POST",dataType:"json",data:d}).done(function(r){
+            if (!r || r.status!=="ok") return Swal.fire("Aviso",r && r.answer || "No se registró el gasto.","warning");
+            state.tokenEgreso = generarIdSolicitudVenta();
+            if ($("#formEgreso").length) {$("#formEgreso")[0].reset(); alternarMetodoEgreso(); consultarEgresos();}
+            Swal.fire("Gasto registrado","Folio "+r.results.folio,"success");
+        }).fail(function(x){
+            Swal.fire("Error",x.responseJSON && x.responseJSON.answer || "No se pudo confirmar el registro. Puedes reintentar sin duplicar.","error");
+        }).always(function(){state.guardandoEgreso=false;});
+    });
+}
+
+
+function getCajasVentaRapida() {
+    const $select = $("#rapidaCaja");
+    if (!$select.length) return;
+
+    $select.empty().append($("<option>",{value:"",text:"Consultando cajas..."})).prop("disabled",true);
+
+    $.ajax({
+        type:"POST",
+        url:"php/index.php",
+        data:{action:"getCajasVenta"},
+        dataType:"json"
+    }).done(function(data) {
+        if (!$("#rapidaCaja").length) return;
+
+        const $caja = $("#rapidaCaja").empty();
+        $caja.append($("<option>",{value:"",text:"Selecciona una caja"}));
+
+        if (!data || data.status !== "ok") {
+            Swal.fire("Aviso",data && data.answer ? data.answer : "No fue posible consultar las cajas.","warning");
+            return;
+        }
+
+        const cajas = Array.isArray(data.results) ? data.results : [];
+
+        cajas.forEach(function(item){
+            $caja.append($("<option>",{
+                value:String(item.id),
+                text:item.name+" · Caja #"+item.id
+            }));
+        });
+
+        const seleccionada = String(state.ventaRapida.caja_id);
+
+        if (cajas.some(function(item){return String(item.id) === seleccionada;})) {
+            $caja.val(seleccionada);
+        } else {
+            state.ventaRapida.caja_id = "";
+        }
+
+        if (!cajas.length) $caja.find("option:first").text("No hay cajas activas");
+    }).fail(function(xhr) {
+        const data = xhr.responseJSON || {};
+        Swal.fire("Error",data.answer || "No fue posible consultar las cajas.","error");
+    }).always(function(){
+        $("#rapidaCaja").prop("disabled",false);
+    });
 }

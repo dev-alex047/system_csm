@@ -391,6 +391,15 @@
                             <i class="bi bi-check-circle-fill rapida-pago-check"></i>
                         </label>
                     </div>
+
+<div class="col-12 d-none" id="rapidaCajaBox">
+    <label class="form-label" for="rapidaCaja">Caja donde se recibirá el efectivo *</label>
+    <select id="rapidaCaja" class="form-select">
+        <option value="">Consultando cajas...</option>
+    </select>
+    <div class="form-text">El importe se sumará al saldo de la caja seleccionada.</div>
+</div>
+
                     <div class="col-12 d-none" id="rapidaReferenciaBox">
                         <label class="form-label" for="rapidaReferencia">Referencia bancaria (opcional)</label>
                         <input class="form-control" id="rapidaReferencia" data-campo-rapida="referencia" maxlength="100" placeholder="Número de operación o comprobante">
@@ -435,6 +444,93 @@
         </div>
     </div>
 </form>
+</template>
+
+<template id="tplControlCaja">
+    <section class="nota-bloque mb-3">
+        <div class="nota-seccion-titulo"><i class="bi bi-wallet2"></i><div><h2>Control de efectivo</h2><small>Consulta, abre y cierra tus turnos de caja.</small></div></div>
+        <div class="row g-3 align-items-end">
+            <div class="col-md-6"><label class="form-label" for="cajaSeleccionada">Seleccionar caja</label><select id="cajaSeleccionada" class="form-select"></select></div>
+            <div class="col-md-6"><span id="cajaEstado" class="small text-secondary"></span></div>
+        </div>
+        <div id="sinCajas" class="alert alert-warning mt-3 d-none">No hay cajas activas configuradas.</div>
+    </section>
+    <div class="row g-3 mb-3" id="cajaResumen"></div>
+    <div class="row g-3 mb-3">
+        <div class="col-lg-6">
+            <section class="nota-bloque h-100" id="panelAbrirCaja">
+                <div class="nota-seccion-titulo"><i class="bi bi-play-circle"></i><div><h2>Apertura de caja</h2><small>Registra el dinero inicial del turno.</small></div></div>
+                <form id="formAperturaCaja">
+                    <label for="fondoCaja" class="form-label">Fondo inicial ($)</label>
+                    <input id="fondoCaja" class="form-control" type="number" min="0" step="0.01" required>
+                    <p class="form-text">Si el fondo difiere del saldo anterior, se registrará un ajuste antes de abrir el turno.</p>
+                    <button type="submit" class="btn btn-success mt-2"><i class="bi bi-unlock me-2"></i>Abrir caja</button>
+                </form>
+            </section>
+        </div>
+        <div class="col-lg-6">
+            <section class="nota-bloque h-100 d-none" id="panelCerrarCaja">
+                <div class="nota-seccion-titulo"><i class="bi bi-lock"></i><div><h2>Arqueo y cierre</h2><small>Verifica el dinero físico al terminar.</small></div></div>
+                <p>Efectivo esperado: <strong id="cajaEsperado" data-valor="0">$0.00</strong></p>
+                <form id="formCierreCaja">
+                    <label for="contadoCaja" class="form-label">Efectivo contado ($)</label>
+                    <input id="contadoCaja" class="form-control" type="number" min="0" step="0.01" required>
+                    <button type="submit" class="btn btn-success mt-3"><i class="bi bi-check-circle me-2"></i>Cerrar caja</button>
+                </form>
+            </section>
+        </div>
+    </div>
+    <p class="small text-secondary" id="cajaUltimoCierre"></p>
+    <section class="nota-bloque">
+        <div class="nota-seccion-titulo"><i class="bi bi-list-ul"></i><div><h2>Movimientos del turno</h2><small>Entradas y salidas de efectivo registradas.</small></div></div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle small">
+                <thead><tr><th>Fecha</th><th>Concepto</th><th>Tipo</th><th class="text-end">Importe</th></tr></thead>
+                <tbody id="tablaFlujosCaja"></tbody>
+            </table>
+        </div>
+    </section>
+</template>
+
+<template id="tplEgresos">
+    <div class="row g-3">
+        <div class="col-xl-7">
+            <section class="nota-bloque">
+                <div class="nota-seccion-titulo"><i class="bi bi-arrow-up-right-circle"></i><div><h2>Registrar gasto o salida</h2><small>Control manual de los egresos del negocio.</small></div></div>
+                <form id="formEgreso" novalidate>
+                    <div class="row g-3">
+                        <div class="col-md-6"><label for="egresoBeneficiario" class="form-label">Beneficiario / proveedor *</label><input id="egresoBeneficiario" class="form-control" maxlength="100" required></div>
+                        <div class="col-md-6"><label for="egresoCategoria" class="form-label">Categoría *</label>
+                            <select id="egresoCategoria" class="form-select" required>
+                                <option value="">Selecciona una categoría</option>
+                                <option value="PROVEEDORES">Proveedores / Materiales</option>
+                                <option value="COMBUSTIBLE">Combustible</option>
+                                <option value="MANTENIMIENTO">Reparaciones / Mantenimiento</option>
+                                <option value="OPERATIVOS">Gastos operativos varios</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6"><label for="egresoMetodo" class="form-label">Forma de salida *</label><select id="egresoMetodo" class="form-select"><option value="EFECTIVO">Efectivo</option><option value="TRANSFERENCIA">Transferencia bancaria</option></select></div>
+                        <div class="col-md-6"><label for="egresoMonto" class="form-label">Monto ($) *</label><input id="egresoMonto" type="number" min="0.01" step="0.01" class="form-control" required></div>
+                        <div class="col-12" id="egresoCajaBox"><label for="egresoCaja" class="form-label">Caja de donde sale el efectivo *</label><select id="egresoCaja" class="form-select"></select></div>
+                        <div class="col-12 d-none" id="egresoReferenciaBox"><label for="egresoReferencia" class="form-label">Referencia bancaria (opcional)</label><input id="egresoReferencia" class="form-control" maxlength="80"></div>
+                        <div class="col-12"><label for="egresoNotas" class="form-label">Descripción / observaciones</label><textarea id="egresoNotas" class="form-control" maxlength="500" rows="3"></textarea></div>
+                        <div class="col-12"><button type="submit" class="btn btn-success"><i class="bi bi-check-circle me-2"></i>Registrar egreso</button></div>
+                    </div>
+                </form>
+            </section>
+        </div>
+        <div class="col-xl-5">
+            <section class="nota-bloque">
+                <div class="nota-seccion-titulo"><i class="bi bi-clock-history"></i><div><h2>Últimos egresos</h2><small>Gastos y salidas registrados recientemente.</small></div></div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle small">
+                        <thead><tr><th>Fecha</th><th>Folio</th><th>Beneficiario</th><th>Categoría</th><th>Origen</th><th>Monto</th></tr></thead>
+                        <tbody id="tablaEgresos"></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
 </template>
 
 
