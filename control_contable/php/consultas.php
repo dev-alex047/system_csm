@@ -1486,6 +1486,7 @@ public function getCuentas($data = []) {
             if ($estado === "PENDIENTE") $where .= " AND status='PENDIENTE' AND pending_amount>0";
             if ($estado === "VENCIDO") $where .= " AND status='PENDIENTE' AND pending_amount>0 AND due_date<CURDATE()";
             if ($estado === "PAGADO") $where .= " AND status='PAGADO'";
+            if ($estado === "HOY") $where .= " AND status='PENDIENTE' AND pending_amount>0 AND due_date=CURDATE()";
             if ($estado === "CANCELADO") $where .= " AND status='CANCELADO'";
 
             $sql = "SELECT id, `$nombre` AS nombre, total_amount, paid_amount, pending_amount, status, due_date, document_reference, description, created_at FROM `$tabla`".$where." ORDER BY CASE WHEN status='PENDIENTE' THEN 0 ELSE 1 END, due_date IS NULL, due_date ASC, id DESC LIMIT 200";
