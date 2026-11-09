@@ -9,7 +9,7 @@ error_reporting(E_ALL);
 
 require_once __DIR__ . "/conexion.php";
 require_once __DIR__ . "/consultas.php";
-require_once __DIR__ . "/PDFNotaVenta.php";
+require_once __DIR__ . "/notaVenta.php";
 
 $action = isset($_POST["action"]) ? trim((string)$_POST["action"]) : "";
 $consultas = new consultas();

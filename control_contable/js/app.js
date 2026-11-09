@@ -807,20 +807,21 @@ function guardarVentaNota() {
             renderVentaConNota();
         }
 
-        Swal.fire({
-            icon:"success",
-            title:resultado.duplicada ? "Venta ya registrada" : "Venta guardada",
-            html:"<strong>Folio:</strong> " + $("<div>").text(folio).html() + "<p class='mb-0 mt-2'>La operación quedó registrada en MySQL.</p>",
-            confirmButtonText:"Aceptar",
-            confirmButtonColor:"#086b47",
-            showDenyButton:true,
-            denyButtonText:"Generar nota PDF",
-            denyButtonColor:"#6c757d"
-        }).then(function(r) {
-            if (r.isDenied) {
-                generarPdfNotaVenta(resultado.id);
-            }
-        });
+        
+Swal.fire({
+    icon:"success",
+    title:resultado.duplicada ? "Venta ya registrada" : "Venta guardada",
+    html:"<strong>Folio:</strong> " + $("<div>").text(folio).html() +
+         "<p class='mb-0 mt-2'>La operación quedó registrada en MySQL.</p>",
+    showCancelButton:true,
+    confirmButtonText:'<i class="bi bi-file-earmark-pdf me-2"></i>Generar nota PDF',
+    cancelButtonText:"Cerrar",
+    confirmButtonColor:"#086b47",
+    reverseButtons:true
+}).then(function(r) {
+    if (r.isConfirmed) generarPdfNotaVenta(resultado.id);
+});
+
         
     }).fail(function(xhr) {
         const data = xhr.responseJSON || {};
@@ -861,22 +862,55 @@ function generarPdfNotaVenta(idVenta) {
             id: idVenta
         },
         dataType: "json"
-    }).done(function(data) {
-        if (!data || data.status !== "ok") {
-            Swal.fire("Aviso", data && data.answer ? data.answer : "No fue posible generar la nota.", "warning");
-            return;
-        }
+    
+}).done(function(data) {
+    if (!data || data.status !== "ok") {
+        Swal.fire("Aviso", data && data.answer ? data.answer : "No fue posible generar la nota.", "warning");
+        return;
+    }
 
-        if (data.results && data.results.archivo) {
-            window.open(data.results.archivo, "_blank");
-        }
+    const resultado = data.results || {};
 
-        Swal.fire({
-            icon: "success",
-            title: "Nota generada",
-            text: "La nota de venta se generó correctamente.",
-            confirmButtonColor: "#086b47"
-        });
+    if (!resultado.archivo) {
+        Swal.fire("Error", "PHP no devolvió la ubicación del PDF.", "error");
+        return;
+    }
+
+    const url = new URL(resultado.archivo, window.location.href);
+    const carpeta = new URL("pdf_generados/notas_venta/", window.location.href);
+
+    if (url.origin !== carpeta.origin || !url.pathname.startsWith(carpeta.pathname)) {
+        Swal.fire("Error", "La ruta del PDF no es válida.", "error");
+        return;
+    }
+
+    const $acciones = $('<div class="d-flex flex-column gap-2 mt-3"></div>');
+
+    $("<a>", {
+        class: "btn btn-success py-2",
+        text: "Ver e imprimir nota"
+    }).attr({
+        href: url.href,
+        target: "_blank",
+        rel: "noopener noreferrer"
+    }).appendTo($acciones);
+
+    $("<a>", {
+        class: "btn btn-outline-success py-2",
+        text: "Descargar PDF"
+    }).attr({
+        href: url.href,
+        download: resultado.nombre || "nota_venta.pdf"
+    }).appendTo($acciones);
+
+    Swal.fire({
+        icon: "success",
+        title: "Nota generada",
+        html: $acciones[0],
+        confirmButtonText: "Cerrar",
+        confirmButtonColor: "#086b47"
+    });
+
     }).fail(function(xhr) {
         const data = xhr.responseJSON || {};
         Swal.fire("Error", data.answer || "No fue posible generar el PDF.", "error");

@@ -177,9 +177,14 @@ class notaVenta extends FPDF
         $this->Cell(126, 5, utf8_decode("Recibí / Firma"), 0, 1, "C");
 
         $carpetaFisica = __DIR__ . "/../pdf_generados/notas_venta/";
-        if (!is_dir($carpetaFisica)) {
-            mkdir($carpetaFisica, 0775, true);
-        }
+        
+if (!is_dir($carpetaFisica) && !mkdir($carpetaFisica, 0750, true) && !is_dir($carpetaFisica)) {
+    throw new RuntimeException("No fue posible crear el directorio de las notas.");
+}
+
+if (!is_writable($carpetaFisica)) {
+    throw new RuntimeException("El directorio de notas no tiene permisos de escritura.");
+}
 
         $folioArchivo = $this->limpiarNombreArchivo($venta["note_folio"] !== "" ? $venta["note_folio"] : ("venta_" . $venta["id"]));
         $nombreArchivo = "nota_" . $folioArchivo . "_" . date("Ymd_His") . ".pdf";
