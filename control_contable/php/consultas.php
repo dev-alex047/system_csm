@@ -1813,23 +1813,31 @@ public function getAbonosCuentas($data = []) {
                 $b=DateTime::createFromFormat("!Y-m-d",$fin);
                 if (!$a || !$b || $a->format("Y-m-d")!==$inicio || $b->format("Y-m-d")!==$fin || $inicio>$fin) throw new InvalidArgumentException("El rango de fechas no es válido.");
             }
-            $consulta="SELECT a.id,a.account_id,r.`$col` AS nombre,a.amount,a.method,a.reference,a.created_at,'REGISTRADO' AS origen FROM account_settlements a JOIN `$tabla` r ON r.id=a.account_id WHERE a.account_type=?";
-            $tipos="s"; $params=[$tipo];
-            if ($tipo==="COBRAR") {
-                $consulta.=" UNION ALL SELECT -s.id,r.id,r.client_name,s.initial_paid,CASE WHEN s.cash_register_id IS NOT NULL THEN 'EFECTIVO' ELSE 'TRANSFERENCIA' END,COALESCE(NULLIF(s.bank_reference,''),s.note_folio),s.created_at,'INICIAL' FROM receivables r JOIN sales s ON s.id=r.sale_id WHERE s.initial_paid>0";
-            }
-            $sql="SELECT h.* FROM ($consulta) h WHERE 1=1";
-            if ($buscar!=="") {
-                $sql.=" AND (h.nombre LIKE ? OR COALESCE(h.reference,'') LIKE ? OR CAST(h.account_id AS CHAR) LIKE ?)";
-                $patron="%".$buscar."%";$tipos.="sss";array_push($params,$patron,$patron,$patron);
-            }
-            if ($inicio!=="") {
-                $sql.=" AND h.created_at>=? AND h.created_at<DATE_ADD(?,INTERVAL 1 DAY)";
-                $tipos.="ss";array_push($params,$inicio,$fin);
-            }
-            $sql.=" ORDER BY h.created_at DESC,h.id DESC LIMIT 200";
-            $stmt=$this->ejecutarSqlVenta($sql,$tipos,$params);
-            $movimientos=$stmt->get_result()->fetch_all(MYSQLI_ASSOC);$stmt->close();
+            
+$sql="SELECT a.id,a.account_id,r.`$col` AS nombre,a.amount,a.method,a.reference,a.created_at,'REGISTRADO' AS origen FROM account_settlements a INNER JOIN `$tabla` r ON r.id=a.account_id WHERE a.account_type=?";
+$tipos="s"; $params=[$tipo];
+if ($buscar!=="") {$sql.=" AND (r.`$col` LIKE ? OR COALESCE(a.reference,'') LIKE ? OR CAST(a.account_id AS CHAR) LIKE ?)";$patron="%".$buscar."%";$tipos.="sss";array_push($params,$patron,$patron,$patron);}
+if ($inicio!=="") {$sql.=" AND a.created_at>=? AND a.created_at<DATE_ADD(?,INTERVAL 1 DAY)";$tipos.="ss";array_push($params,$inicio,$fin);}
+$sql.=" ORDER BY a.created_at DESC,a.id DESC LIMIT 200";
+$stmt=$this->ejecutarSqlVenta($sql,$tipos,$params);
+$movimientos=$stmt->get_result()->fetch_all(MYSQLI_ASSOC);$stmt->close();
+
+if ($tipo==="COBRAR") {
+    $sql="SELECT -s.id AS id,r.id AS account_id,r.client_name AS nombre,s.initial_paid AS amount,CASE WHEN s.cash_register_id IS NOT NULL THEN 'EFECTIVO' ELSE 'TRANSFERENCIA' END AS method,COALESCE(NULLIF(s.bank_reference,''),s.note_folio) AS reference,s.created_at,'INICIAL' AS origen FROM receivables r INNER JOIN sales s ON s.id=r.sale_id WHERE s.initial_paid>0";
+    $tipos="";$params=[];
+    if ($buscar!=="") {$sql.=" AND (r.client_name LIKE ? OR COALESCE(s.bank_reference,s.note_folio,'') LIKE ? OR CAST(r.id AS CHAR) LIKE ?)";$patron="%".$buscar."%";$tipos.="sss";$params=[$patron,$patron,$patron];}
+    if ($inicio!=="") {$sql.=" AND s.created_at>=? AND s.created_at<DATE_ADD(?,INTERVAL 1 DAY)";$tipos.="ss";array_push($params,$inicio,$fin);}
+    $sql.=" ORDER BY s.created_at DESC,s.id DESC LIMIT 200";
+    $stmt=$this->ejecutarSqlVenta($sql,$tipos,$params);
+    $iniciales=$stmt->get_result()->fetch_all(MYSQLI_ASSOC);$stmt->close();
+    $movimientos=array_merge($movimientos,$iniciales);
+    usort($movimientos,function($a,$b){
+        $orden=strcmp($b["created_at"],$a["created_at"]);
+        return $orden!==0 ? $orden : ((int)$b["id"] <=> (int)$a["id"]);
+    });
+    $movimientos=array_slice($movimientos,0,200);
+}
+
             $json=["status"=>"ok","answer"=>"Abonos y pagos consultados.","results"=>["movimientos"=>$movimientos],"code"=>200];
         } catch (InvalidArgumentException $e) {
             $json=["status"=>"warning","answer"=>$e->getMessage(),"code"=>400];
