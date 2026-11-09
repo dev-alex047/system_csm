@@ -501,7 +501,9 @@ public function generarPdfNotaVenta($idVenta)
         );
         $json["code"] = 200;
     } catch (Throwable $e) {
-        error_log("generarNotaVenta: " . $e->getMessage());
+        
+error_log("PDF NOTA VENTA | ID: " . $idVenta . " | ERROR: " . $e->getMessage() . " | ARCHIVO: " . $e->getFile() . " | LINEA: " . $e->getLine());
+
         $json["status"] = "error";
         $json["answer"] = "No fue posible generar la nota de venta.";
         $json["code"] = 500;
