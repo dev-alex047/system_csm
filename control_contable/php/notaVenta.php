@@ -40,6 +40,7 @@ public function generarArchivo($venta) {
     $this->AddPage();
 
     $y = $this->encabezadoNotaFisica($venta);
+    $this->marcaAguaNota();
     $items = isset($venta['items']) && is_array($venta['items']) ? $venta['items'] : [];
 
     foreach ($items as $item) {
@@ -53,6 +54,7 @@ public function generarArchivo($venta) {
         if ($y + $alto > 155) {
             $this->AddPage();
             $y = $this->encabezadoNotaFisica($venta);
+            $this->marcaAguaNota();
         }
 
         $this->SetDrawColor(126, 169, 140);
@@ -111,8 +113,10 @@ public function generarArchivo($venta) {
 }
 
 
+
 private function textoNota($texto) {
     $texto = (string)($texto === null ? '' : $texto);
+    if (!preg_match('//u', $texto)) return $texto;
     $convertido = @iconv('UTF-8', 'Windows-1252//TRANSLIT', $texto);
     return $convertido === false ? utf8_decode($texto) : $convertido;
 }
@@ -120,18 +124,24 @@ private function textoNota($texto) {
 private function escribirNota($x, $y, $ancho, $texto, $tamano = 8, $estilo = '', $alineacion = 'L') {
     $texto = $this->textoNota($texto);
     $this->SetFont('Arial', $estilo, $tamano);
+
     while ($tamano > 5 && $this->GetStringWidth($texto) > $ancho - 1.5) {
         $tamano -= 0.25;
         $this->SetFont('Arial', $estilo, $tamano);
     }
-    while ($this->GetStringWidth($texto) > $ancho - 1.5 && strlen($texto) > 3) {
-    $texto = substr($texto, 0, -2);
-    $texto = rtrim($texto, '.') . '...';
+
+    if ($this->GetStringWidth($texto) > $ancho - 1.5) {
+        $sufijo = '...';
+        while ($texto !== '' && $this->GetStringWidth($texto . $sufijo) > $ancho - 1.5) {
+            $texto = substr($texto, 0, -1);
+        }
+        $texto = rtrim($texto) . $sufijo;
+    }
+
+    $this->SetXY($x, $y);
+    $this->Cell($ancho, 4, $texto, 0, 0, $alineacion);
 }
 
-$this->SetXY($x, $y);
-$this->Cell($ancho, 4, $texto, 0, 0, $alineacion);
-}
 
 private function lineasArticuloNota($texto, $ancho) {
     $texto = str_replace("\r", '', $this->textoNota($texto));
@@ -154,6 +164,29 @@ private function lineasArticuloNota($texto, $ancho) {
     }
     return $lineas;
 }
+
+
+private function iconoContactoNota($tipo, $x, $y) {
+    $this->SetDrawColor(255, 255, 255);
+    $this->SetLineWidth(0.3);
+
+    if ($tipo === 'telefono') {
+        $this->Rect($x + 0.5, $y, 2.8, 4.7);
+        $this->Line($x + 1.4, $y + 4, $x + 2.4, $y + 4);
+    } elseif ($tipo === 'whatsapp') {
+        $this->Rect($x, $y, 4, 3.4);
+        $this->Line($x + 1, $y + 3.4, $x + 0.3, $y + 4.5);
+        $this->Line($x + 0.3, $y + 4.5, $x + 2, $y + 3.4);
+        $this->Line($x + 1.1, $y + 1, $x + 2.9, $y + 2.5);
+    } elseif ($tipo === 'ubicacion') {
+        $this->Line($x + 0.4, $y + 0.5, $x + 2, $y + 4.2);
+        $this->Line($x + 2, $y + 4.2, $x + 3.6, $y + 0.5);
+        $this->Line($x + 0.4, $y + 0.5, $x + 3.6, $y + 0.5);
+    }
+
+    $this->SetDrawColor(72, 150, 116);
+}
+
 
 
 private function encabezadoNotaFisica($venta) {
@@ -183,17 +216,44 @@ private function encabezadoNotaFisica($venta) {
     $this->escribirNota(108, 9, 23, 'NOTA N.º', 6.2, 'B', 'C');
     $this->escribirNota(107, 16, 25, $venta['note_folio'] ?? '', 8.5, 'B', 'C');
 
-    $this->SetFillColor(26, 134, 94);
-    $this->Rect($x, 30, $w, 9, 'F');
-    $this->SetTextColor(255, 255, 255);
-    $this->escribirNota(9, 32.2, 55, 'Tel. 953 55 212 53', 9, 'B');
-    $this->escribirNota(67, 32.2, 64, 'WhatsApp 951 287 04 99', 8.5, 'B');
 
-    $this->SetFillColor(235, 247, 239);
-    $this->Rect($x, 39, $w, 9, 'F');
-    $this->SetTextColor(33, 93, 68);
-    $this->escribirNota(9, 39.4, 122, 'CARRETERA YUCUDAA KM. 34 // SAN MARTÍN HUAMELULPAM, TLAX. OAX.', 6.4, 'B');
-    $this->escribirNota(9, 43.7, 122, 'ATENCIÓN: HERMINIO PÉREZ BERNABÉ', 6.3);
+// FRANJA VERDE COMPLETA
+$this->SetFillColor(25, 132, 91);
+$this->Rect(7, 30, 126, 21, 'F');
+$this->SetTextColor(255, 255, 255);
+
+// CONTACTOS
+$this->iconoContactoNota('telefono', 9, 32.5);
+$this->escribirNota(15, 32.5, 33, '953 55 212 53', 8.7, 'B');
+
+$this->iconoContactoNota('whatsapp', 51, 32.5);
+$this->escribirNota(57, 32.5, 41, '951 287 04 99', 8.7, 'B');
+
+// DIRECCIÓN Y RESPONSABLE
+$this->iconoContactoNota('ubicacion', 9, 40);
+$this->escribirNota(15, 40, 82, 'CARRETERA YUCUDAA KM. 34 // SAN MARTÍN HUAMELULPAM, TLAX. OAX.', 5.5, 'B');
+$this->escribirNota(15, 45.2, 82, 'HERMINIO PÉREZ BERNABÉ', 6, 'B');
+
+// FECHA DENTRO DE LA FRANJA VERDE
+$fecha = strtotime($venta['created_at'] ?? '') ?: time();
+$valoresFecha = [date('d', $fecha), date('m', $fecha), date('Y', $fecha)];
+$etiquetasFecha = ['DÍA', 'MES', 'AÑO'];
+
+foreach ($valoresFecha as $i => $valor) {
+    $fx = 100 + ($i * 10.6);
+    $this->SetFillColor(239, 248, 242);
+    $this->SetDrawColor(255, 255, 255);
+    $this->Rect($fx, 32, 10.2, 16, 'DF');
+
+    $this->SetTextColor(34, 112, 77);
+    $this->escribirNota($fx + 0.2, 33.5, 9.8, $etiquetasFecha[$i], 5.3, 'B', 'C');
+
+    $this->SetTextColor(35, 52, 42);
+    $this->escribirNota($fx + 0.2, 40, 9.8, $valor, 8.3, 'B', 'C');
+}
+
+$this->SetDrawColor(72, 150, 116);
+
 
     $this->SetTextColor(37, 46, 41);
     $this->escribirNota(8, 52, 16, 'Nombre:', 8, 'B');
@@ -211,18 +271,6 @@ private function encabezadoNotaFisica($venta) {
     $this->escribirNota(93, 68, 39, $venta['client_phone'] ?? '', 8);
     $this->Line(93, 73, 132, 73);
 
-    $fecha = strtotime($venta['created_at'] ?? '') ?: time();
-    $partes = [date('d', $fecha), date('m', $fecha), date('Y', $fecha)];
-
-    foreach ($partes as $i => $valor) {
-        $px = 101 + $i * 10.7;
-        $this->SetFillColor(234, 245, 238);
-        $this->Rect($px, 49, 10.5, 10.5, 'DF');
-        $this->SetTextColor(46, 119, 85);
-        $this->escribirNota($px, 49.5, 10.5, ['DÍA','MES','AÑO'][$i], 5.4, 'B', 'C');
-        $this->SetTextColor(34, 45, 38);
-        $this->escribirNota($px, 54, 10.5, $valor, 8, 'B', 'C');
-    }
 
     $this->SetFillColor(225, 243, 231);
     $this->SetFont('Arial', 'B', 7.2);
@@ -242,6 +290,62 @@ private function encabezadoNotaFisica($venta) {
     $this->SetTextColor(35, 45, 39);
     return 85;
 }
+
+
+private function marcaAguaNota() {
+    // TEXTO TENUE DETRÁS DE LOS RENGLONES
+    $this->SetTextColor(231, 241, 234);
+    $this->SetFont('Arial', 'B', 29);
+    $this->SetXY(27, 116);
+    $this->Cell(103, 16, $this->textoNota('San Martín'), 0, 0, 'C');
+
+    // LOGO DESVANECIDO EN LA PARTE INFERIOR IZQUIERDA
+    $ruta = __DIR__ . '/../recursos/logo.png';
+    if (!is_file($ruta) || !function_exists('imagecreatefrompng')) return;
+
+    $original = @imagecreatefrompng($ruta);
+    if (!$original) return;
+
+    $n = 160;
+    $mini = imagecreatetruecolor($n, $n);
+    imagealphablending($mini, false);
+    imagesavealpha($mini, true);
+    $transparente = imagecolorallocatealpha($mini, 255, 255, 255, 127);
+    imagefill($mini, 0, 0, $transparente);
+
+    imagecopyresampled($mini, $original, 0, 0, 0, 0, $n, $n, imagesx($original), imagesy($original));
+    imagedestroy($original);
+
+    $fondo = imagecreatetruecolor($n, $n);
+    $intensidad = 0.10;
+
+    for ($y = 0; $y < $n; $y++) {
+        for ($x = 0; $x < $n; $x++) {
+            $p = imagecolorat($mini, $x, $y);
+            $alfa = ($p >> 24) & 127;
+            $opacidad = $intensidad * (1 - $alfa / 127);
+
+            $r = (int)(255 - (255 - (($p >> 16) & 255)) * $opacidad);
+            $g = (int)(255 - (255 - (($p >> 8) & 255)) * $opacidad);
+            $b = (int)(255 - (255 - ($p & 255)) * $opacidad);
+
+            imagesetpixel($fondo, $x, $y, ($r << 16) | ($g << 8) | $b);
+        }
+    }
+
+    imagedestroy($mini);
+
+    $temporal = tempnam(sys_get_temp_dir(), 'wm_nota_');
+    if ($temporal) {
+        if (@imagejpeg($fondo, $temporal, 85)) {
+            $this->Image($temporal, 12, 156, 32, 32, 'JPG');
+        }
+        @unlink($temporal);
+    }
+
+    imagedestroy($fondo);
+}
+
 
 private function pieNotaFisica($venta) {
     $this->SetTextColor(35, 45, 39);
@@ -277,7 +381,7 @@ private function pieNotaFisica($venta) {
     $this->SetTextColor(37, 95, 67);
     $this->escribirNota(7, 199, 126, 'CONSERVE SU NOTA PARA PODER RECOGER SU PEDIDO.', 7, 'B', 'C');
     $this->escribirNota(7, 204, 126, 'No se entregará el pedido sin presentar esta nota en mostrador.', 6.5, '', 'C');
-    $this->escribirNota(7, 209, 126, 'Documento de venta. I.V.A. no desglosado.', 6, '', 'C');
+    $this->escribirNota(7, 207, 126, 'Documento de venta. I.V.A. no desglosado.', 6, '', 'C');
 }
 
 }
