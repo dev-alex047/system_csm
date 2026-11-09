@@ -1473,7 +1473,7 @@ public function getCuentas($data = []) {
             $tabla = $meta["tabla"]; $nombre = $meta["nombre"];
             $buscar = $this->textoVenta($data,"buscar",100);
             $estado = isset($data["estado"]) ? trim((string)$data["estado"]) : "TODAS";
-            if (!in_array($estado,["TODAS","PENDIENTE","VENCIDO","PAGADO","CANCELADO"],true)) throw new InvalidArgumentException("Filtro de estado inválido.");
+            if (!in_array($estado,["TODAS","PENDIENTE","VENCIDO","PAGADO","CANCELADO","HOY"],true)) throw new InvalidArgumentException("Filtro de estado inválido.");
 
             $stmt = $this->ejecutarSqlVenta("SELECT COUNT(*) AS total, COALESCE(SUM(CASE WHEN status='PENDIENTE' THEN pending_amount ELSE 0 END),0) AS pendiente, COALESCE(SUM(CASE WHEN status='PENDIENTE' AND due_date<CURDATE() THEN pending_amount ELSE 0 END),0) AS vencido, SUM(CASE WHEN status='PENDIENTE' AND due_date IS NULL THEN 1 ELSE 0 END) AS sin_vencimiento FROM `$tabla` WHERE status<>'CANCELADO'");
             $resumen = $stmt->get_result()->fetch_assoc(); $stmt->close();
@@ -1765,6 +1765,81 @@ public function registrarAbonoCuenta($data) {
     }
     return $json;
 }
+
+
+public function getPersonasCuentas($data = []) {
+    $json = [];
+    if (!$this->conn) {
+        $json = ["status"=>"error","answer"=>"No hay conexión con MySQL.","code"=>500];
+    } else {
+        try {
+            $meta = $this->metaCuenta($data["tipo"] ?? "");
+            $tabla = $meta["tabla"]; $col = $meta["nombre"];
+            $buscar = $this->textoVenta($data,"buscar",100);
+            $sql = "SELECT `$col` AS nombre,COUNT(*) AS creditos,COALESCE(SUM(total_amount),0) AS total,COALESCE(SUM(paid_amount),0) AS abonado,COALESCE(SUM(pending_amount),0) AS pendiente,SUM(CASE WHEN status='PENDIENTE' AND pending_amount>0 AND due_date<CURDATE() THEN 1 ELSE 0 END) AS vencidos,MIN(CASE WHEN status='PENDIENTE' AND pending_amount>0 AND due_date>=CURDATE() THEN due_date END) AS proximo_pago FROM `$tabla` WHERE status<>'CANCELADO'";
+            $tipos=""; $params=[];
+            if ($buscar!=="") {$sql.=" AND `$col` LIKE ?";$tipos="s";$params=["%".$buscar."%"];}
+            $sql.=" GROUP BY `$col` ORDER BY pendiente DESC,nombre ASC LIMIT 200";
+            $stmt=$this->ejecutarSqlVenta($sql,$tipos,$params);
+            $personas=$stmt->get_result()->fetch_all(MYSQLI_ASSOC); $stmt->close();
+            $json=["status"=>"ok","answer"=>"Personas consultadas.","results"=>["personas"=>$personas],"code"=>200];
+        } catch (InvalidArgumentException $e) {
+            $json=["status"=>"warning","answer"=>$e->getMessage(),"code"=>400];
+        } catch (Throwable $e) {
+            error_log("getPersonasCuentas: ".$e->getMessage());
+            $json=["status"=>"error","answer"=>"No fue posible consultar los deudores o proveedores.","code"=>500];
+        }
+    }
+    return $json;
+}
+
+
+
+public function getAbonosCuentas($data = []) {
+    $json=[];
+    if (!$this->conn) {
+        $json=["status"=>"error","answer"=>"No hay conexión con MySQL.","code"=>500];
+    } else {
+        try {
+            $tipo=$data["tipo"] ?? "";
+            $meta=$this->metaCuenta($tipo);
+            $tabla=$meta["tabla"]; $col=$meta["nombre"];
+            $buscar=$this->textoVenta($data,"buscar",100);
+            $inicio=$this->textoVenta($data,"fecha_inicio",10);
+            $fin=$this->textoVenta($data,"fecha_fin",10);
+            if ($inicio!=="" || $fin!=="") {
+                $a=DateTime::createFromFormat("!Y-m-d",$inicio);
+                $b=DateTime::createFromFormat("!Y-m-d",$fin);
+                if (!$a || !$b || $a->format("Y-m-d")!==$inicio || $b->format("Y-m-d")!==$fin || $inicio>$fin) throw new InvalidArgumentException("El rango de fechas no es válido.");
+            }
+            $consulta="SELECT a.id,a.account_id,r.`$col` AS nombre,a.amount,a.method,a.reference,a.created_at,'REGISTRADO' AS origen FROM account_settlements a JOIN `$tabla` r ON r.id=a.account_id WHERE a.account_type=?";
+            $tipos="s"; $params=[$tipo];
+            if ($tipo==="COBRAR") {
+                $consulta.=" UNION ALL SELECT -s.id,r.id,r.client_name,s.initial_paid,CASE WHEN s.cash_register_id IS NOT NULL THEN 'EFECTIVO' ELSE 'TRANSFERENCIA' END,COALESCE(NULLIF(s.bank_reference,''),s.note_folio),s.created_at,'INICIAL' FROM receivables r JOIN sales s ON s.id=r.sale_id WHERE s.initial_paid>0";
+            }
+            $sql="SELECT h.* FROM ($consulta) h WHERE 1=1";
+            if ($buscar!=="") {
+                $sql.=" AND (h.nombre LIKE ? OR COALESCE(h.reference,'') LIKE ? OR CAST(h.account_id AS CHAR) LIKE ?)";
+                $patron="%".$buscar."%";$tipos.="sss";array_push($params,$patron,$patron,$patron);
+            }
+            if ($inicio!=="") {
+                $sql.=" AND h.created_at>=? AND h.created_at<DATE_ADD(?,INTERVAL 1 DAY)";
+                $tipos.="ss";array_push($params,$inicio,$fin);
+            }
+            $sql.=" ORDER BY h.created_at DESC,h.id DESC LIMIT 200";
+            $stmt=$this->ejecutarSqlVenta($sql,$tipos,$params);
+            $movimientos=$stmt->get_result()->fetch_all(MYSQLI_ASSOC);$stmt->close();
+            $json=["status"=>"ok","answer"=>"Abonos y pagos consultados.","results"=>["movimientos"=>$movimientos],"code"=>200];
+        } catch (InvalidArgumentException $e) {
+            $json=["status"=>"warning","answer"=>$e->getMessage(),"code"=>400];
+        } catch (Throwable $e) {
+            error_log("getAbonosCuentas: ".$e->getMessage());
+            $json=["status"=>"error","answer"=>"No fue posible consultar los abonos o pagos.","code"=>500];
+        }
+    }
+    return $json;
+}
+
 
     
 }

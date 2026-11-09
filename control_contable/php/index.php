@@ -71,6 +71,15 @@ case "registrarAbonoCuenta":
     break;
 
 
+case "getPersonasCuentas":
+    $response = $consultas->getPersonasCuentas($_POST);
+    break;
+case "getAbonosCuentas":
+    $response = $consultas->getAbonosCuentas($_POST);
+    break;
+
+
+
     default:
         $response["status"] = "warning";
         $response["answer"] = "La acción solicitada no es válida.";

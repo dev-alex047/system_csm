@@ -1337,7 +1337,7 @@ function mostrarVistaCuentas(vista,buscar) {
         $(this).toggleClass("active",activo).attr("aria-selected",activo ? "true":"false");
     });
     $("#tituloListadoCuentas").text(vista==="PERSONAS" ? (cobrar?"Resumen de deudores":"Resumen de proveedores") : vista==="CREDITOS" ? (cobrar?"Créditos registrados":"Deudas registradas") : (cobrar?"Historial de abonos":"Historial de pagos"));
-    //$("#pillsEstadoCuenta").toggleClass("d-none",vista!=="CREDITOS");
+    $("#pillsEstadoCuenta").toggleClass("d-none",vista!=="CREDITOS");
     $("#cuentasKpis").toggleClass("d-none",vista!=="CREDITOS");
     $("#cuentasRangoFechas").toggleClass("d-none",vista!=="MOVIMIENTOS");
     $("#cuentasFiltroHoy").text(cobrar ? "Cobrar hoy":"Pagar hoy");
