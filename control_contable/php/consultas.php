@@ -500,14 +500,22 @@ public function generarPdfNotaVenta($idVenta)
             "nombre" => $archivo["nombre"]
         );
         $json["code"] = 200;
-    } catch (Throwable $e) {
-        
-error_log("PDF NOTA VENTA | ID: " . $idVenta . " | ERROR: " . $e->getMessage() . " | ARCHIVO: " . $e->getFile() . " | LINEA: " . $e->getLine());
+    
+} catch (Throwable $e) {
+    error_log("generarPdfNotaVenta: " . $e->getMessage());
 
-        $json["status"] = "error";
-        $json["answer"] = "No fue posible generar la nota de venta.";
-        $json["code"] = 500;
+    $json["status"] = "error";
+    $json["answer"] = "No fue posible generar la nota de venta.";
+    $json["code"] = 500;
+
+    if (defined("DEBUG_NOTA_PDF") && DEBUG_NOTA_PDF) {
+        $json["debug"] = [
+            "mensaje" => $e->getMessage(),
+            "archivo" => basename($e->getFile()),
+            "linea" => $e->getLine()
+        ];
     }
+}
 
     return $json;
 }

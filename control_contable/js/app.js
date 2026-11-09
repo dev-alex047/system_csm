@@ -911,8 +911,25 @@ function generarPdfNotaVenta(idVenta) {
         confirmButtonColor: "#086b47"
     });
 
-    }).fail(function(xhr) {
-        const data = xhr.responseJSON || {};
-        Swal.fire("Error", data.answer || "No fue posible generar el PDF.", "error");
+    
+}).fail(function(xhr) {
+    const data = xhr.responseJSON || {};
+    const debug = data.debug || {};
+
+    console.error("ERROR PDF:", xhr.status, data, xhr.responseText);
+
+    const detalle = debug.mensaje
+        ? "\n\nDetalle: " + debug.mensaje +
+          "\nArchivo: " + debug.archivo +
+          "\nLínea: " + debug.linea
+        : "";
+
+    Swal.fire({
+        icon: "error",
+        title: "Error al generar PDF",
+        text: (data.answer || "No fue posible generar la nota.") + detalle,
+        confirmButtonColor: "#086b47"
     });
+});
+
 }
