@@ -46,6 +46,7 @@ window.addEventListener("DOMContentLoaded", function() {
     bindVentaNota();
     bindVentaRapida();
     bindCajaEgresos();
+    bindCuentas();
     mostrarInicio();
 });
 
@@ -165,8 +166,18 @@ if (modulo === "caja" && submodulo === "egresos") { renderEgresos(); return; }
         return;
     }
 
+
+if (modulo === "cuentas" && submodulo === "cobrar") { renderCuentas("COBRAR"); return; }
+if (modulo === "cuentas" && submodulo === "pagar") { renderCuentas("PAGAR"); return; }
+
+
     mostrarContenidoPendiente(item.nombre);
 }
+
+
+//if (modulo === "cuentas" && submodulo === "cobrar") { renderCuentas("COBRAR"); return; }
+//if (modulo === "cuentas" && submodulo === "pagar") { renderCuentas("PAGAR"); return; }
+
 
 
 /* VENTAS CON NOTA */
@@ -684,14 +695,13 @@ function validarVentaRapida() {
 
     const total = obtenerTotalVentaRapida();
     if (total <= 0 || total > 9999999999) return errorVentaRapida("El total debe ser mayor que cero y no exceder $99,999,999.99.");
-    if (!["EFECTIVO","TRANSFERENCIA"].includes(venta.forma_pago)) return errorVentaRapida("Selecciona efectivo o transferencia.");
-    return true;
-
-
-if (venta.forma_pago === "EFECTIVO" &&
-    (!Number.isInteger(Number(venta.caja_id)) || Number(venta.caja_id) <= 0)) {
+    
+if (!["EFECTIVO","TRANSFERENCIA"].includes(venta.forma_pago)) return errorVentaRapida("Selecciona efectivo o transferencia.");
+if (venta.forma_pago==="EFECTIVO" && (!Number.isInteger(Number(venta.caja_id)) || Number(venta.caja_id)<=0)) {
     return errorVentaRapida("Selecciona una caja para recibir el efectivo.","#rapidaCaja");
 }
+return true;
+
 
 }
 
@@ -1259,5 +1269,288 @@ function getCajasVentaRapida() {
         Swal.fire("Error",data.answer || "No fue posible consultar las cajas.","error");
     }).always(function(){
         $("#rapidaCaja").prop("disabled",false);
+    });
+}
+
+
+state.tipoCuentaActual = null;
+state.peticionCuentas = 0;
+state.guardandoCuenta = false;
+state.guardandoAbono = false;
+state.tokenNuevaCuenta = null;
+state.tokenAbonoCuenta = null;
+state.abonoCuentaIdentidad = "";
+state.vistaCuentas = "CREDITOS";
+
+function bindCuentas() {
+    $(document).on("click","#btnNuevaCuenta",function(){$("#panelNuevaCuenta").removeClass("d-none");$("#cuentaNombre").trigger("focus");});
+    $(document).on("click","#btnCancelarCuentaNueva",function(){$("#panelNuevaCuenta").addClass("d-none");});
+    //$(document).on("submit","#formFiltroCuentas",function(e){e.preventDefault();consultarCuentas();});
+    $(document).on("submit","#formFiltroCuentas",function(e){e.preventDefault();consultarVistaCuentas();});
+    $(document).on("submit","#formCuentaNueva",function(e){e.preventDefault();guardarCuentaNueva();});
+    $(document).on("click",".btnCuentaHistorial",function(){verDetalleCuenta(Number($(this).attr("data-id")));});
+    $(document).on("click",".btnCuentaAbonar",function(){abrirAbonoCuenta(Number($(this).attr("data-id")),Number($(this).attr("data-saldo")));});
+    $(document).on("change","#abonoMetodo",function(){
+        const efectivo = $(this).val()==="EFECTIVO";
+        $("#abonoCajaBox").toggleClass("d-none",!efectivo);
+        $("#abonoReferenciaBox").toggleClass("d-none",efectivo);
+    });
+
+
+$(document).on("click",".js-vista-cuentas",function(){mostrarVistaCuentas($(this).attr("data-vista"));});
+$(document).on("click",".js-filtro-cuentas",function(){
+    const filtro=$(this).attr("data-filtro");
+    $("#cuentasEstado").val(filtro);
+    $(".js-filtro-cuentas").removeClass("active").attr("aria-pressed","false");
+    $(this).addClass("active").attr("aria-pressed","true");
+    consultarCuentas();
+});
+$(document).on("click",".btnPersonaCreditos",function(){mostrarVistaCuentas("CREDITOS",$(this).attr("data-nombre"));});
+$(document).on("click",".btnMovimientoCuenta",function(){verDetalleCuenta(Number($(this).attr("data-id")));});
+
+}
+
+function renderCuentas(tipo) {
+    state.tipoCuentaActual = tipo;
+    const tpl = document.getElementById("tplCuentas");
+    if (!tpl) return console.error("No existe tplCuentas");
+    $("#contenidoModulo").empty().append(tpl.content.cloneNode(true));
+    $("#tituloNuevaCuenta").text(tipo==="COBRAR" ? "Registrar cuenta por cobrar" : "Registrar cuenta por pagar");
+    $("#cuentaNombreLabel").text(tipo==="COBRAR" ? "Cliente *" : "Proveedor *");
+    $("#cuentasBuscar").attr("placeholder",tipo==="COBRAR" ? "Nombre del cliente, folio o ID" : "Proveedor, factura o ID");
+    if (!state.tokenNuevaCuenta) state.tokenNuevaCuenta = generarIdSolicitudVenta();
+    //consultarCuentas();
+    mostrarVistaCuentas("CREDITOS");
+}
+
+
+function mostrarVistaCuentas(vista,buscar) {
+    if (!["PERSONAS","CREDITOS","MOVIMIENTOS"].includes(vista)) return;
+    state.vistaCuentas = vista;
+    state.peticionCuentas++;
+    const cobrar = state.tipoCuentaActual==="COBRAR";
+    $("#cuentasVistaPersonas").text(cobrar ? "Deudores" : "Proveedores");
+    $("#cuentasVistaCreditos").text(cobrar ? "Créditos" : "Deudas");
+    $("#cuentasVistaMovimientos").text(cobrar ? "Abonos" : "Pagos");
+    $(".js-vista-cuentas").each(function(){
+        const activo = $(this).attr("data-vista")===vista;
+        $(this).toggleClass("active",activo).attr("aria-selected",activo ? "true":"false");
+    });
+    $("#tituloListadoCuentas").text(vista==="PERSONAS" ? (cobrar?"Resumen de deudores":"Resumen de proveedores") : vista==="CREDITOS" ? (cobrar?"Créditos registrados":"Deudas registradas") : (cobrar?"Historial de abonos":"Historial de pagos"));
+    //$("#pillsEstadoCuenta").toggleClass("d-none",vista!=="CREDITOS");
+    $("#cuentasKpis").toggleClass("d-none",vista!=="CREDITOS");
+    $("#cuentasRangoFechas").toggleClass("d-none",vista!=="MOVIMIENTOS");
+    $("#cuentasFiltroHoy").text(cobrar ? "Cobrar hoy":"Pagar hoy");
+    $("#cuentasBuscar").val(buscar||"");
+    //$("#cuentasEstado").val("PENDIENTE");
+    const filtroInicial = buscar ? "TODAS" : "PENDIENTE";
+$("#cuentasEstado").val(filtroInicial);
+    $(".js-filtro-cuentas").removeClass("active").attr("aria-pressed","false");
+    //$(".js-filtro-cuentas[data-filtro='PENDIENTE']").addClass("active").attr("aria-pressed","true");
+    $(".js-filtro-cuentas").filter(function(){return $(this).attr("data-filtro")===filtroInicial;}).addClass("active").attr("aria-pressed","true");
+    const columnas = vista==="PERSONAS" ? [cobrar?"Deudor":"Proveedor","Cuentas","Total","Abonado","Deuda actual","Vencidas","Próximo pago","Acciones"] : vista==="CREDITOS" ? ["No.",cobrar?"Cliente":"Proveedor","Documento","Vencimiento","Total","Abonado","Saldo","Estado","Acciones"] : ["No.",cobrar?"Cliente":"Proveedor","Cuenta","Fecha","Origen","Método","Referencia","Importe","Acciones"];
+    const $fila = $("<tr>");
+    columnas.forEach(function(c){$fila.append($("<th>").text(c));});
+    $("#cabeceraCuentas").empty().append($fila);
+    consultarVistaCuentas();
+}
+
+function consultarVistaCuentas() {
+    if (state.vistaCuentas==="CREDITOS") return consultarCuentas();
+    const vista=state.vistaCuentas, tipo=state.tipoCuentaActual;
+    const version=state.versionVista, solicitud=++state.peticionCuentas;
+    const datos={action:vista==="PERSONAS" ? "getPersonasCuentas" : "getAbonosCuentas",tipo:tipo,buscar:$("#cuentasBuscar").val()||""};
+    //if(vista==="MOVIMIENTOS") {datos.fecha_inicio=$("#cuentasFechaInicio").val();datos.fecha_fin=$("#cuentasFechaFin").val();}
+    
+if (vista==="MOVIMIENTOS") {
+    const inicio=$("#cuentasFechaInicio").val(), fin=$("#cuentasFechaFin").val();
+    if ((inicio&&!fin)||(!inicio&&fin)||(inicio&&fin&&inicio>fin)) {
+        return Swal.fire("Revisa las fechas","Indica ambas fechas en un rango válido, o deja ambas vacías.","warning");
+    }
+    datos.fecha_inicio=inicio;
+    datos.fecha_fin=fin;
+}
+
+    $("#tablaCuentas").html('<tr><td colspan="9" class="text-center text-secondary py-4">Consultando...</td></tr>');
+    $.ajax({url:"php/index.php",type:"POST",dataType:"json",data:datos}).done(function(r){
+        if(version!==state.versionVista || solicitud!==state.peticionCuentas || tipo!==state.tipoCuentaActual || vista!==state.vistaCuentas) return;
+        if(!r || r.status!=="ok") {$("#tablaCuentas").empty();return Swal.fire("Aviso",r && r.answer || "No fue posible consultar la información.","warning");}
+        const registros=vista==="PERSONAS" ? (r.results.personas||[]) : (r.results.movimientos||[]);
+        const $tabla=$("#tablaCuentas").empty();
+        if(!registros.length) return $tabla.append('<tr><td colspan="9" class="text-center text-secondary py-4">No hay registros con estos filtros.</td></tr>');
+        registros.forEach(function(x){
+            const $tr=$("<tr>");
+            const datosFila=vista==="PERSONAS" ? [x.nombre,x.creditos,monedaMXN(x.total),monedaMXN(x.abonado),monedaMXN(x.pendiente),x.vencidos,x.proximo_pago||"Sin fecha"] : [x.origen==="INICIAL" ? "Inicial" : x.id,x.nombre,"#"+x.account_id,x.created_at,x.origen==="INICIAL"?"Anticipo inicial":(tipo==="COBRAR"?"Abono":"Pago"),x.method,x.reference||"—",monedaMXN(x.amount)];
+            datosFila.forEach(function(valor){$tr.append($("<td>").text(valor));});
+            const $boton=vista==="PERSONAS" ? $('<button type="button" class="btn btn-outline-success btn-sm btnPersonaCreditos">Ver cuentas</button>').attr("data-nombre",x.nombre) : $('<button type="button" class="btn btn-outline-success btn-sm btnMovimientoCuenta">Ver cuenta</button>').attr("data-id",x.account_id);
+            $tabla.append($tr.append($("<td>").append($boton)));
+        });
+    }).fail(function(xhr){
+        if(version===state.versionVista && solicitud===state.peticionCuentas && tipo===state.tipoCuentaActual && vista===state.vistaCuentas) Swal.fire("Error",xhr.responseJSON && xhr.responseJSON.answer || "No fue posible conectar con PHP.","error");
+    });
+}
+
+
+function consultarCuentas() {
+    const version = state.versionVista, solicitud = ++state.peticionCuentas, tipo = state.tipoCuentaActual;
+    const buscar = $("#cuentasBuscar").val() || "", estado = $("#cuentasEstado").val() || "TODAS";
+    $("#tablaCuentas").html('<tr><td colspan="9" class="text-center py-4 text-secondary">Consultando cuentas...</td></tr>');
+    $.ajax({url:"php/index.php",type:"POST",dataType:"json",data:{action:"getCuentas",tipo:tipo,buscar:buscar,estado:estado}}).done(function(r){
+        if (version!==state.versionVista || solicitud!==state.peticionCuentas || tipo!==state.tipoCuentaActual) return;
+        if (!r || r.status!=="ok") return Swal.fire("Aviso",r && r.answer || "No se pudieron consultar las cuentas.","warning");
+        const resumen = r.results.resumen || {}, registros = r.results.cuentas || [];
+        const tarjetas = [
+            {titulo:"Cuentas registradas",valor:Number(resumen.total)||0,icono:"bi-journal-text",moneda:false},
+            {titulo:"Saldo pendiente",valor:resumen.pendiente,icono:"bi-wallet2",moneda:true},
+            {titulo:"Importe vencido",valor:resumen.vencido,icono:"bi-exclamation-circle",moneda:true}
+        ];
+        const $kpis = $("#cuentasKpis").empty();
+        tarjetas.forEach(function(t){
+            const $contenido = $('<div class="border bg-white rounded-4 p-3 h-100"></div>');
+            $contenido.append($('<div class="d-flex justify-content-between align-items-center gap-2"></div>')
+                .append($("<small>").addClass("text-secondary").text(t.titulo))
+                .append($("<i>").addClass("bi "+t.icono+" text-success")));
+            $contenido.append($('<h3 class="h4 fw-bold mt-2 mb-0"></h3>').text(t.moneda ? monedaMXN(t.valor) : t.valor));
+            $kpis.append($('<div class="col-md-4"></div>').append($contenido));
+        });
+        const $tabla = $("#tablaCuentas").empty();
+        if (!registros.length) $tabla.append('<tr><td colspan="9" class="text-center text-secondary py-4">No hay cuentas con estos filtros.</td></tr>');
+        const hoy = new Date(), hoyTexto = hoy.getFullYear()+"-"+String(hoy.getMonth()+1).padStart(2,"0")+"-"+String(hoy.getDate()).padStart(2,"0");
+        registros.forEach(function(c){
+            const vencida = c.status==="PENDIENTE" && c.due_date && c.due_date<hoyTexto && Number(c.pending_amount)>0;
+            const estadoTexto = vencida ? "Vencida" : c.status==="PENDIENTE" ? "Pendiente" : c.status==="PAGADO" ? "Pagada" : "Cancelada";
+            const clase = vencida ? "text-bg-danger" : c.status==="PAGADO" ? "text-bg-success" : c.status==="CANCELADO" ? "text-bg-secondary" : "text-bg-warning";
+            const $tr = $("<tr>");
+            [c.id,c.nombre,c.document_reference||"—",c.due_date||"Sin fecha",monedaMXN(c.total_amount),monedaMXN(c.paid_amount),monedaMXN(c.pending_amount)].forEach(function(v){$tr.append($("<td>").text(v));});
+            $tr.append($("<td>").append($('<span class="badge"></span>').addClass(clase).text(estadoTexto)));
+            const $acciones = $('<td class="text-nowrap"></td>');
+            $acciones.append($('<button type="button" class="btn btn-outline-secondary btn-sm btnCuentaHistorial me-1"><i class="bi bi-clock-history"></i> Historial</button>').attr("data-id",c.id));
+            if (c.status==="PENDIENTE" && Number(c.pending_amount)>0) $acciones.append($('<button type="button" class="btn btn-success btn-sm btnCuentaAbonar"><i class="bi bi-cash-coin"></i> '+(tipo==="COBRAR"?"Cobrar":"Pagar")+'</button>').attr("data-id",c.id).attr("data-saldo",c.pending_amount));
+            $tabla.append($tr.append($acciones));
+        });
+    }).fail(function(xhr){
+        if (version===state.versionVista && solicitud===state.peticionCuentas) Swal.fire("Error",xhr.responseJSON && xhr.responseJSON.answer || "Error de conexión.","error");
+    });
+}
+
+
+
+function guardarCuentaNueva() {
+    if (state.guardandoCuenta) return;
+    const d = {
+        action:"crearCuenta",tipo:state.tipoCuentaActual,solicitud_id:state.tokenNuevaCuenta,
+        nombre:$("#cuentaNombre").val().trim(),
+        referencia:$("#cuentaReferencia").val().trim(),
+        concepto:$("#cuentaConcepto").val().trim(),
+        monto:$("#cuentaMonto").val(),
+        vencimiento:$("#cuentaVencimiento").val()
+    };
+    if (!d.nombre || !d.concepto || numeroNotaValido(d.monto,0.01,99999999.99)===null) return Swal.fire("Aviso","Completa el nombre, concepto e importe.","warning");
+    Swal.fire({title:"¿Registrar esta cuenta?",text:d.nombre+" · "+monedaMXN(d.monto),icon:"question",showCancelButton:true,confirmButtonText:"Registrar",cancelButtonText:"Cancelar",confirmButtonColor:"#086b47"}).then(function(c){
+        if (!c.isConfirmed || state.guardandoCuenta) return;
+        state.guardandoCuenta = true;
+        $("#btnGuardarCuenta").prop("disabled",true);
+        $.ajax({url:"php/index.php",type:"POST",dataType:"json",data:d}).done(function(r){
+            if (!r || r.status!=="ok") return Swal.fire("Aviso",r && r.answer || "No se registró la cuenta.","warning");
+            state.tokenNuevaCuenta = generarIdSolicitudVenta();
+            if ($("#formCuentaNueva").length){$("#formCuentaNueva")[0].reset();$("#panelNuevaCuenta").addClass("d-none");}
+            //if (state.moduloActual==="cuentas" && state.tipoCuentaActual===d.tipo) consultarCuentas();
+            if (state.moduloActual==="cuentas" && state.tipoCuentaActual===d.tipo) consultarVistaCuentas();
+            Swal.fire("Cuenta registrada",r.answer,"success");
+        }).fail(function(xhr){Swal.fire("Error",xhr.responseJSON && xhr.responseJSON.answer || "No se pudo confirmar la operación. Reintenta sin modificar los datos.","error");})
+        .always(function(){state.guardandoCuenta=false;$("#btnGuardarCuenta").prop("disabled",false);});
+    });
+}
+
+
+function verDetalleCuenta(id) {
+    const tipo = state.tipoCuentaActual;
+    $.ajax({url:"php/index.php",type:"POST",dataType:"json",data:{action:"getDetalleCuenta",tipo:tipo,id:id}}).done(function(r){
+        if (!r || r.status!=="ok") return Swal.fire("Aviso",r && r.answer || "No se encontró la cuenta.","warning");
+        const c = r.results.cuenta, movimientos = r.results.historial || [];
+        const $contenido = $('<div class="text-start"></div>');
+        $contenido.append($('<h5 class="fw-bold mb-2"></h5>').text(c.nombre));
+        $contenido.append($('<p class="text-secondary small"></p>').text("Documento: "+(c.document_reference||"Sin referencia")+" · Vencimiento: "+(c.due_date||"No establecido")));
+        $contenido.append($('<p class="small mb-3"></p>').text(c.description||""));
+        const $saldos = $('<div class="row g-2 mb-3"></div>');
+        [["Total",c.total_amount],["Pagado",c.paid_amount],["Pendiente",c.pending_amount]].forEach(function(a){
+
+$saldos.append(
+    $('<div class="col-sm-4"></div>').append(
+        $('<div class="border rounded-3 p-2"></div>').append(
+            $('<small class="d-block text-secondary"></small>').text(a[0]),
+            $('<strong></strong>').text(monedaMXN(a[1]))
+        )
+    )
+);
+
+        });
+        $contenido.append($saldos,$('<h6 class="fw-bold"></h6>').text(tipo==="COBRAR"?"Historial de abonos":"Historial de pagos"));
+        const $tabla = $('<table class="table table-sm table-hover small"></table>');
+        $tabla.append('<thead><tr><th>Fecha</th><th>Método</th><th>Referencia</th><th class="text-end">Importe</th></tr></thead>');
+        const $tbody = $("<tbody></tbody>");
+        if (!movimientos.length) $tbody.append('<tr><td colspan="4" class="text-center text-secondary">Todavía no hay pagos registrados.</td></tr>');
+        movimientos.forEach(function(m){
+            const $fila = $("<tr>");
+            [m.created_at,m.method,m.reference||"—",monedaMXN(m.amount)].forEach(function(v){$fila.append($("<td>").text(v));});
+            $tbody.append($fila);
+        });
+        $tabla.append($tbody);
+        $contenido.append($('<div class="table-responsive"></div>').append($tabla));
+        Swal.fire({title:"Detalle de cuenta #"+id,html:$contenido[0],width:"780px",confirmButtonText:"Cerrar",confirmButtonColor:"#086b47"});
+    }).fail(function(xhr){Swal.fire("Error",xhr.responseJSON && xhr.responseJSON.answer || "No se pudo consultar el historial.","error");});
+}
+
+
+function abrirAbonoCuenta(id,saldo) {
+    if (!id || saldo<=0 || state.guardandoAbono) return;
+    const tipo = state.tipoCuentaActual, identidad = tipo+"-"+id;
+    if (state.abonoCuentaIdentidad!==identidad) {
+        state.abonoCuentaIdentidad = identidad;
+        state.tokenAbonoCuenta = generarIdSolicitudVenta();
+    }
+    if (!state.tokenAbonoCuenta) state.tokenAbonoCuenta = generarIdSolicitudVenta();
+
+    const tpl = document.getElementById("tplAbonoCuenta");
+    if (!tpl) return console.error("Falta tplAbonoCuenta");
+    const contenido = tpl.content.firstElementChild.cloneNode(true);
+    $(contenido).find("#abonoSaldoDisponible").text(monedaMXN(saldo));
+
+    Swal.fire({
+        title:tipo==="COBRAR" ? "Registrar cobro" : "Registrar pago",
+        html:contenido,width:"600px",showCancelButton:true,
+        confirmButtonText:tipo==="COBRAR" ? "Confirmar cobro" : "Confirmar pago",
+        cancelButtonText:"Cancelar",confirmButtonColor:"#086b47",
+        didOpen:function(){
+            $.ajax({url:"php/index.php",type:"POST",dataType:"json",data:{action:"getCajasVenta"}}).done(function(r){
+                const $select = $("#abonoCaja");
+                if (!$select.length) return;
+                $select.empty().append($("<option>",{value:"",text:"Selecciona una caja abierta"}));
+                if (!r || r.status!=="ok") return;
+                (r.results||[]).forEach(function(c){$select.append($("<option>").val(c.id).text(c.name+" · #"+c.id));});
+            }).fail(function(){if ($("#abonoCaja").length) $("#abonoCaja").html('<option value="">No se pudieron consultar las cajas</option>');});
+        },
+        preConfirm:function(){
+            const monto = $("#abonoMonto").val(), metodo = $("#abonoMetodo").val();
+            const cajaId = $("#abonoCaja").val(), referencia = $("#abonoReferencia").val().trim();
+            const cantidad = numeroNotaValido(monto,0.01,99999999.99);
+            if (cantidad===null || Math.round(cantidad*100)>Math.round(saldo*100)) {Swal.showValidationMessage("El importe debe ser mayor que cero y no superar el saldo.");return false;}
+            if (metodo==="EFECTIVO" && !cajaId) {Swal.showValidationMessage("Selecciona una caja con turno abierto.");return false;}
+            if (metodo==="TRANSFERENCIA" && !referencia) {Swal.showValidationMessage("Captura la referencia bancaria.");return false;}
+            return {action:"registrarAbonoCuenta",tipo:tipo,id:id,solicitud_id:state.tokenAbonoCuenta,monto:monto,metodo:metodo,caja_id:metodo==="EFECTIVO"?cajaId:"",referencia:metodo==="TRANSFERENCIA"?referencia:"",notas:$("#abonoNotas").val().trim()};
+        }
+    }).then(function(c){
+        if (!c.isConfirmed || !c.value || state.guardandoAbono) return;
+        state.guardandoAbono = true;
+        $.ajax({url:"php/index.php",type:"POST",dataType:"json",data:c.value}).done(function(r){
+            if (!r || r.status!=="ok") return Swal.fire("Aviso",r && r.answer || "No se registró el movimiento.","warning");
+            state.tokenAbonoCuenta = null;
+            state.abonoCuentaIdentidad = "";
+            //if (state.moduloActual==="cuentas" && state.tipoCuentaActual===tipo) consultarCuentas();
+            if (state.moduloActual==="cuentas" && state.tipoCuentaActual===tipo) consultarVistaCuentas();
+            Swal.fire({icon:"success",title:tipo==="COBRAR"?"Cobro registrado":"Pago registrado",text:r.results && r.results.duplicado ? "Esta operación ya estaba registrada; no se duplicó." : "Saldo pendiente: "+monedaMXN(r.results.saldo),confirmButtonColor:"#086b47"});
+        }).fail(function(xhr){
+            Swal.fire("Error",xhr.responseJSON && xhr.responseJSON.answer || "No fue posible confirmar el movimiento. Puedes reintentar sin duplicarlo.","error");
+        }).always(function(){state.guardandoAbono=false;});
     });
 }

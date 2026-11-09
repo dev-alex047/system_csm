@@ -56,6 +56,21 @@ case "guardarEgreso":
     $response = $consultas->guardarEgreso($_POST);
     break;
 
+
+case "getCuentas":
+    $response = $consultas->getCuentas($_POST);
+    break;
+case "crearCuenta":
+    $response = $consultas->crearCuenta($_POST);
+    break;
+case "getDetalleCuenta":
+    $response = $consultas->getDetalleCuenta($_POST);
+    break;
+case "registrarAbonoCuenta":
+    $response = $consultas->registrarAbonoCuenta($_POST);
+    break;
+
+
     default:
         $response["status"] = "warning";
         $response["answer"] = "La acción solicitada no es válida.";

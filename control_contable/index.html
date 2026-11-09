@@ -534,6 +534,95 @@
 </template>
 
 
+<template id="tplCuentas">
+<div id="panelGestionCuentas">
+
+<nav id="navVistasCuentas" class="nav nav-pills nav-fill bg-white border rounded-4 p-2 mb-3 gap-2" role="tablist" aria-label="Vistas de cuentas">
+    <button type="button" class="nav-link js-vista-cuentas" data-vista="PERSONAS" role="tab" aria-selected="false" id="cuentasVistaPersonas">Deudores</button>
+    <button type="button" class="nav-link js-vista-cuentas active" data-vista="CREDITOS" role="tab" aria-selected="true" id="cuentasVistaCreditos">Créditos</button>
+    <button type="button" class="nav-link js-vista-cuentas" data-vista="MOVIMIENTOS" role="tab" aria-selected="false" id="cuentasVistaMovimientos">Abonos</button>
+</nav>
+
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+        <div><h2 class="h5 fw-bold mb-1">Administración de cuentas</h2><p class="text-secondary small mb-0">Consulta obligaciones, vencimientos y movimientos.</p></div>
+        <button type="button" id="btnNuevaCuenta" class="btn btn-success"><i class="bi bi-plus-circle me-2"></i>Nueva cuenta</button>
+    </div>
+    <div class="row g-3 mb-3" id="cuentasKpis"></div>
+    <section class="nota-bloque mb-3 d-none" id="panelNuevaCuenta">
+        <div class="nota-seccion-titulo"><i class="bi bi-journal-plus"></i><div><h2 id="tituloNuevaCuenta">Registrar cuenta</h2><small>Registra una obligación que todavía no exista en el sistema.</small></div></div>
+        <form id="formCuentaNueva" novalidate>
+            <div class="row g-3">
+                <div class="col-md-6"><label for="cuentaNombre" id="cuentaNombreLabel" class="form-label">Cliente / proveedor *</label><input id="cuentaNombre" class="form-control" maxlength="100" required></div>
+                <div class="col-md-6"><label for="cuentaReferencia" class="form-label">Factura, folio o documento</label><input id="cuentaReferencia" class="form-control" maxlength="80" placeholder="Referencia administrativa"></div>
+                <div class="col-md-6"><label for="cuentaMonto" class="form-label">Importe de la deuda *</label><input id="cuentaMonto" type="number" min="0.01" step="0.01" class="form-control" required></div>
+                <div class="col-md-6"><label for="cuentaVencimiento" class="form-label">Fecha de vencimiento</label><input id="cuentaVencimiento" type="date" class="form-control"></div>
+                <div class="col-12"><label for="cuentaConcepto" class="form-label">Concepto / descripción *</label><textarea id="cuentaConcepto" class="form-control" rows="2" maxlength="255" required></textarea></div>
+                <div class="col-12 d-flex flex-wrap gap-2">
+                    <button type="submit" class="btn btn-success" id="btnGuardarCuenta"><i class="bi bi-check-circle me-2"></i>Guardar cuenta</button>
+                    <button type="button" id="btnCancelarCuentaNueva" class="btn btn-outline-secondary">Cancelar</button>
+                </div>
+            </div>
+        </form>
+    </section>
+    
+<section class="nota-bloque">
+    <div class="nota-seccion-titulo">
+        <i class="bi bi-list-check"></i>
+        <div><h2 id="tituloListadoCuentas">Créditos registrados</h2><small>Consulta las obligaciones y su historial financiero.</small></div>
+    </div>
+    <form id="formFiltroCuentas" class="row g-3 align-items-end mb-3">
+        <div class="col-lg-5">
+            <label class="form-label" for="cuentasBuscar">Buscar</label>
+            <input id="cuentasBuscar" class="form-control" maxlength="100" placeholder="Nombre, cuenta o referencia">
+        </div>
+        <div id="cuentasRangoFechas" class="col-lg-5 d-none">
+            <div class="row g-2">
+                <div class="col-sm-6"><label class="form-label" for="cuentasFechaInicio">Desde</label><input type="date" id="cuentasFechaInicio" class="form-control"></div>
+                <div class="col-sm-6"><label class="form-label" for="cuentasFechaFin">Hasta</label><input type="date" id="cuentasFechaFin" class="form-control"></div>
+            </div>
+        </div>
+        <input type="hidden" id="cuentasEstado" value="PENDIENTE">
+        <div class="col-lg-2"><button type="submit" class="btn btn-success w-100"><i class="bi bi-search me-1"></i>Buscar</button></div>
+    </form>
+    <div id="pillsEstadoCuenta" class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <button type="button" class="btn btn-outline-success btn-sm rounded-pill js-filtro-cuentas active" data-filtro="PENDIENTE">Activos</button>
+        <button type="button" class="btn btn-outline-success btn-sm rounded-pill js-filtro-cuentas" data-filtro="VENCIDO">En mora</button>
+        <button type="button" class="btn btn-outline-success btn-sm rounded-pill js-filtro-cuentas" data-filtro="PAGADO">Pagados</button>
+        <button type="button" class="btn btn-outline-success btn-sm rounded-pill js-filtro-cuentas" data-filtro="HOY" id="cuentasFiltroHoy">Cobrar hoy</button>
+        <button type="button" class="btn btn-outline-success btn-sm rounded-pill js-filtro-cuentas" data-filtro="TODAS">Todos</button>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle small mb-0">
+            <thead id="cabeceraCuentas"></thead>
+            <tbody id="tablaCuentas"></tbody>
+        </table>
+    </div>
+    <p class="small text-secondary mt-3 mb-0">Mostrando hasta 200 registros por consulta. Los saldos corresponden a la información registrada en MySQL.</p>
+</section>
+
+</div>
+</template>
+
+
+
+<template id="tplAbonoCuenta">
+<div class="text-start">
+    <div class="alert alert-light border rounded-3 mb-3">
+        <small class="text-secondary d-block">Saldo disponible para liquidar</small>
+        <strong id="abonoSaldoDisponible" class="fs-4 text-success">$0.00</strong>
+    </div>
+    <div class="row g-3">
+        <div class="col-md-6"><label for="abonoMonto" class="form-label">Importe *</label><input id="abonoMonto" class="form-control" type="number" min="0.01" step="0.01" placeholder="0.00"></div>
+        <div class="col-md-6"><label for="abonoMetodo" class="form-label">Método *</label><select id="abonoMetodo" class="form-select"><option value="EFECTIVO">Efectivo</option><option value="TRANSFERENCIA">Transferencia</option></select></div>
+        <div class="col-12" id="abonoCajaBox"><label for="abonoCaja" class="form-label">Caja con turno abierto *</label><select id="abonoCaja" class="form-select"><option value="">Consultando cajas...</option></select></div>
+        <div class="col-12 d-none" id="abonoReferenciaBox"><label for="abonoReferencia" class="form-label">Referencia bancaria *</label><input id="abonoReferencia" class="form-control" maxlength="100" placeholder="Número de transferencia o comprobante"></div>
+        <div class="col-12"><label for="abonoNotas" class="form-label">Observaciones</label><textarea id="abonoNotas" class="form-control" rows="2" maxlength="500"></textarea></div>
+    </div>
+    <p class="small text-secondary mt-3 mb-0">Confirma únicamente pagos o cobros realmente realizados. No se permite superar el saldo pendiente.</p>
+</div>
+</template>
+
+
 
 <!-- ========== LIBRERÍAS JAVASCRIPT ========== -->
 

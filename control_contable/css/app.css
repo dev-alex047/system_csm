@@ -96,3 +96,18 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
 .rapida-total-box{background:#eaf5ee;border-radius:14px;padding:22px;text-align:center;color:#086b47}
 .rapida-total-box small{display:block;font-size:12px;margin-bottom:6px;color:#587465}
 .rapida-total-box strong{display:block;font-size:clamp(25px,3vw,32px);font-weight:800;overflow-wrap:anywhere}
+
+
+
+#navVistasCuentas .nav-link {color:#40594d;font-weight:600;border-radius:14px;padding:.8rem 1rem;transition:.2s ease;}
+#navVistasCuentas .nav-link:hover {background:#eaf4ed;color:#086b47;}
+#navVistasCuentas .nav-link.active {background:#086b47;color:#fff;box-shadow:0 4px 12px rgba(8,107,71,.12);}
+#pillsEstadoCuenta .btn.active {background:#086b47;border-color:#086b47;color:#fff;}
+#tablaCuentas td {vertical-align:middle;padding-top:.85rem;padding-bottom:.85rem;}
+#tablaCuentas td:nth-child(2) {font-weight:500;}
+@media(max-width:575px) {
+    #navVistasCuentas {gap:4px!important;}
+    #navVistasCuentas .nav-link {padding:.7rem .3rem;font-size:.82rem;}
+    #pillsEstadoCuenta {gap:6px!important;}
+    #pillsEstadoCuenta .btn {font-size:.76rem;}
+}

@@ -342,6 +342,14 @@ if (!$turnoAbierto) throw new InvalidArgumentException("Debes abrir un turno de 
                     $stmt->close();
                 }
 
+
+$stmt = $this->ejecutarSqlVenta(
+    "UPDATE receivables SET document_reference=? WHERE sale_id=?",
+    "si",[$folio,$idVenta]
+);
+$stmt->close();
+
+
                 if ($pagadoCentavos > 0) {
                     $origen = $metodoCobro === 'EFECTIVO' ? 'CAJA' : 'BANCO';
                     $referenciaMovimiento = $referenciaCobro !== '' ? $referenciaCobro : $folio;
@@ -1199,6 +1207,7 @@ public function getEgresos() {
                  expense_category, reference, amount, ticket_number, note, notes
                  FROM account_moves
                  WHERE `type` = 'SALIDA' AND status = 'PAGADO'
+AND (link_type IS NULL OR link_type <> 'CXP')
                  ORDER BY `date` DESC, id DESC LIMIT 20"
             );
 
@@ -1446,6 +1455,316 @@ public function guardarEgreso($data) {
     return $json;
 }
 
+
+private function metaCuenta($tipo) {
+    if ($tipo === "COBRAR") return ["tabla"=>"receivables","nombre"=>"client_name","relacion"=>"sale_id"];
+    if ($tipo === "PAGAR") return ["tabla"=>"payables","nombre"=>"supplier_name","relacion"=>"purchase_id"];
+    throw new InvalidArgumentException("Selecciona un tipo de cuenta válido.");
+}
+
+
+public function getCuentas($data = []) {
+    $json = [];
+    if (!$this->conn) {
+        $json["status"]="error"; $json["answer"]="No hay conexión con MySQL."; $json["code"]=500;
+    } else {
+        try {
+            $meta = $this->metaCuenta(isset($data["tipo"]) ? $data["tipo"] : "");
+            $tabla = $meta["tabla"]; $nombre = $meta["nombre"];
+            $buscar = $this->textoVenta($data,"buscar",100);
+            $estado = isset($data["estado"]) ? trim((string)$data["estado"]) : "TODAS";
+            if (!in_array($estado,["TODAS","PENDIENTE","VENCIDO","PAGADO","CANCELADO"],true)) throw new InvalidArgumentException("Filtro de estado inválido.");
+
+            $stmt = $this->ejecutarSqlVenta("SELECT COUNT(*) AS total, COALESCE(SUM(CASE WHEN status='PENDIENTE' THEN pending_amount ELSE 0 END),0) AS pendiente, COALESCE(SUM(CASE WHEN status='PENDIENTE' AND due_date<CURDATE() THEN pending_amount ELSE 0 END),0) AS vencido, SUM(CASE WHEN status='PENDIENTE' AND due_date IS NULL THEN 1 ELSE 0 END) AS sin_vencimiento FROM `$tabla` WHERE status<>'CANCELADO'");
+            $resumen = $stmt->get_result()->fetch_assoc(); $stmt->close();
+
+            $where = " WHERE 1=1"; $tipos = ""; $params = [];
+            if ($buscar !== "") {
+                $where .= " AND (`$nombre` LIKE ? OR document_reference LIKE ? OR CAST(id AS CHAR) LIKE ?)";
+                $patron = "%".$buscar."%"; $tipos .= "sss"; $params = [$patron,$patron,$patron];
+            }
+            if ($estado === "PENDIENTE") $where .= " AND status='PENDIENTE' AND pending_amount>0";
+            if ($estado === "VENCIDO") $where .= " AND status='PENDIENTE' AND pending_amount>0 AND due_date<CURDATE()";
+            if ($estado === "PAGADO") $where .= " AND status='PAGADO'";
+            if ($estado === "CANCELADO") $where .= " AND status='CANCELADO'";
+
+            $sql = "SELECT id, `$nombre` AS nombre, total_amount, paid_amount, pending_amount, status, due_date, document_reference, description, created_at FROM `$tabla`".$where." ORDER BY CASE WHEN status='PENDIENTE' THEN 0 ELSE 1 END, due_date IS NULL, due_date ASC, id DESC LIMIT 200";
+            $stmt = $this->ejecutarSqlVenta($sql,$tipos,$params);
+            $cuentas = $stmt->get_result()->fetch_all(MYSQLI_ASSOC); $stmt->close();
+
+            $json["status"]="ok"; $json["answer"]="Cuentas consultadas correctamente.";
+            $json["results"]=["resumen"=>$resumen,"cuentas"=>$cuentas];
+            $json["code"]=200;
+        } catch (InvalidArgumentException $e) {
+            $json["status"]="warning"; $json["answer"]=$e->getMessage(); $json["code"]=400;
+        } catch (Throwable $e) {
+            error_log("getCuentas: ".$e->getMessage());
+            $json["status"]="error"; $json["answer"]="No fue posible consultar las cuentas."; $json["code"]=500;
+        }
+    }
+    return $json;
+}
+
+
+public function crearCuenta($data) {
+    $json = []; $token = "";
+    if (!$this->conn) {
+        $json["status"]="error"; $json["answer"]="No hay conexión con MySQL."; $json["code"]=500;
+    } else {
+        try {
+            $tipo = isset($data["tipo"]) ? $data["tipo"] : "";
+            $meta = $this->metaCuenta($tipo);
+            $tabla = $meta["tabla"]; $nombreCol = $meta["nombre"];
+            $token = $this->textoVenta($data,"solicitud_id",32);
+            $nombre = $this->textoVenta($data,"nombre",100);
+            $referencia = $this->textoVenta($data,"referencia",80);
+            $concepto = $this->textoVenta($data,"concepto",255);
+            $fechaVence = $this->textoVenta($data,"vencimiento",10);
+            $montoCentavos = $this->centavosVenta(isset($data["monto"]) ? $data["monto"] : "");
+
+            if (!preg_match('/^[a-f0-9]{32}$/D',$token)) throw new InvalidArgumentException("Solicitud inválida.");
+            if ($nombre==="") throw new InvalidArgumentException("Indica el cliente o proveedor.");
+            if ($concepto==="") throw new InvalidArgumentException("Describe el origen de la deuda.");
+            if ($montoCentavos===null || $montoCentavos<=0) throw new InvalidArgumentException("El importe debe ser mayor que cero.");
+
+            if ($fechaVence!=="") {
+                $fecha = DateTime::createFromFormat("!Y-m-d",$fechaVence);
+                if (!$fecha || $fecha->format("Y-m-d")!==$fechaVence) throw new InvalidArgumentException("Fecha de vencimiento inválida.");
+            } else $fechaVence = null;
+
+            $stmt = $this->ejecutarSqlVenta("SELECT id FROM `$tabla` WHERE request_token=? LIMIT 1","s",[$token]);
+            $anterior = $stmt->get_result()->fetch_assoc(); $stmt->close();
+
+            if ($anterior) {
+                $json["status"]="ok"; $json["answer"]="Esta cuenta ya estaba registrada; no se duplicó.";
+                $json["results"]=["id"=>(int)$anterior["id"],"duplicado"=>true]; $json["code"]=200;
+            } else {
+                $ahora = date("Y-m-d H:i:s");
+                $monto = number_format($montoCentavos/100,2,".","");
+                $relacion = $tipo==="COBRAR" ? "sale_id,client_id" : "purchase_id,supplier_id";
+                $sql = "INSERT INTO `$tabla` ($relacion,`$nombreCol`,user_id,total_amount,paid_amount,pending_amount,status,due_date,created_at,updated_at,description,document_reference,request_token) VALUES (NULL,NULL,?,?,?,0,?,'PENDIENTE',?,?,?,?,?,?)";
+                $stmt = $this->ejecutarSqlVenta($sql,"sissssssss",[$nombre,$this->usuarioOperador,$monto,$monto,$fechaVence,$ahora,$ahora,$concepto,$referencia,$token]);
+                $stmt->close();
+                $id = (int)$this->conn->insert_id;
+                $json["status"]="ok"; $json["answer"]="Cuenta registrada correctamente.";
+                $json["results"]=["id"=>$id,"duplicado"=>false]; $json["code"]=200;
+            }
+        } catch (InvalidArgumentException $e) {
+            $json["status"]="warning"; $json["answer"]=$e->getMessage(); $json["code"]=400;
+        } catch (Throwable $e) {
+            error_log("crearCuenta: ".$e->getMessage());
+            $json["status"]="error"; $json["answer"]="No fue posible registrar la cuenta. Si la solicitud se procesó, puedes reintentar con el mismo identificador."; $json["code"]=500;
+        }
+    }
+    return $json;
+}
+
+
+public function getDetalleCuenta($data) {
+    $json = [];
+    if (!$this->conn) {
+        $json["status"]="error"; $json["answer"]="No hay conexión con MySQL."; $json["code"]=500;
+    } else {
+        try {
+            $tipo = isset($data["tipo"]) ? $data["tipo"] : "";
+            $meta = $this->metaCuenta($tipo);
+            $id = isset($data["id"]) ? (int)$data["id"] : 0;
+            if ($id<=0) throw new InvalidArgumentException("Cuenta inválida.");
+            $tabla = $meta["tabla"]; $nombre = $meta["nombre"];
+
+            $stmt = $this->ejecutarSqlVenta("SELECT *, `$nombre` AS nombre FROM `$tabla` WHERE id=? LIMIT 1","i",[$id]);
+            $cuenta = $stmt->get_result()->fetch_assoc(); $stmt->close();
+            if (!$cuenta) throw new InvalidArgumentException("No se encontró la cuenta.");
+
+            $stmt = $this->ejecutarSqlVenta("SELECT id,amount,method,cash_register_id,reference,notes,created_at FROM account_settlements WHERE account_type=? AND account_id=? ORDER BY id DESC","si",[$tipo,$id]);
+            $historial = $stmt->get_result()->fetch_all(MYSQLI_ASSOC); $stmt->close();
+
+
+if ($tipo==="COBRAR" && (int)$cuenta["sale_id"]>0) {
+    $stmt = $this->ejecutarSqlVenta("SELECT initial_paid,cash_register_id,bank_reference,note_folio,created_at FROM sales WHERE id=? LIMIT 1","i",[(int)$cuenta["sale_id"]]);
+    $venta = $stmt->get_result()->fetch_assoc(); $stmt->close();
+    if ($venta && (float)$venta["initial_paid"]>0) {
+        $referencia = trim((string)$venta["bank_reference"]);
+        if ($referencia==="") $referencia = (string)$venta["note_folio"];
+        $historial[] = [
+            "id"=>-(int)$cuenta["sale_id"],
+            "amount"=>$venta["initial_paid"],
+            "method"=>$venta["cash_register_id"] ? "EFECTIVO" : "TRANSFERENCIA",
+            "cash_register_id"=>$venta["cash_register_id"],
+            "reference"=>"Anticipo inicial · ".$referencia,
+            "notes"=>"Registrado al crear la venta",
+            "created_at"=>$venta["created_at"]
+        ];
+        usort($historial,function($a,$b){return strcmp($b["created_at"],$a["created_at"]);});
+    }
+}
+
+
+            $json["status"]="ok"; $json["answer"]="Detalle consultado correctamente.";
+            $json["results"]=["cuenta"=>$cuenta,"historial"=>$historial]; $json["code"]=200;
+        } catch (InvalidArgumentException $e) {
+            $json["status"]="warning"; $json["answer"]=$e->getMessage(); $json["code"]=400;
+        } catch (Throwable $e) {
+            error_log("getDetalleCuenta: ".$e->getMessage());
+            $json["status"]="error"; $json["answer"]="No fue posible obtener el historial."; $json["code"]=500;
+        }
+    }
+    return $json;
+}
+
+
+public function registrarAbonoCuenta($data) {
+    $json = []; $transaccion = false; $token = "";
+    if (!$this->conn) {
+        $json["status"]="error"; $json["answer"]="No hay conexión con MySQL."; $json["code"]=500;
+    } else {
+        try {
+            $tipo = isset($data["tipo"]) ? $data["tipo"] : "";
+            $meta = $this->metaCuenta($tipo);
+            $tabla = $meta["tabla"]; $nombreCol = $meta["nombre"];
+            $id = isset($data["id"]) ? (int)$data["id"] : 0;
+            $cajaId = isset($data["caja_id"]) ? (int)$data["caja_id"] : 0;
+            $token = $this->textoVenta($data,"solicitud_id",32);
+            $metodo = $this->textoVenta($data,"metodo",20);
+            $referencia = $this->textoVenta($data,"referencia",100);
+            $notas = $this->textoVenta($data,"notas",500);
+            $centavos = $this->centavosVenta(isset($data["monto"]) ? $data["monto"] : "");
+
+            if ($id<=0 || !preg_match('/^[a-f0-9]{32}$/D',$token)) throw new InvalidArgumentException("Identificador de operación inválido.");
+            if (!in_array($metodo,["EFECTIVO","TRANSFERENCIA"],true)) throw new InvalidArgumentException("Método de pago inválido.");
+            if ($centavos===null || $centavos<=0) throw new InvalidArgumentException("Captura un importe válido.");
+            if ($metodo==="EFECTIVO" && $cajaId<=0) throw new InvalidArgumentException("Selecciona una caja abierta.");
+            if ($metodo==="TRANSFERENCIA" && $referencia==="") throw new InvalidArgumentException("Captura la referencia de la transferencia.");
+
+            $stmt = $this->ejecutarSqlVenta("SELECT id,account_type,account_id FROM account_settlements WHERE request_token=? LIMIT 1","s",[$token]);
+            $anterior = $stmt->get_result()->fetch_assoc(); $stmt->close();
+
+            if ($anterior) {
+                if ($anterior["account_type"]!==$tipo || (int)$anterior["account_id"]!==$id) throw new InvalidArgumentException("La solicitud ya pertenece a otra cuenta.");
+                $json["status"]="ok"; $json["answer"]="Este pago ya estaba registrado; no se duplicó.";
+                $json["results"]=["id"=>(int)$anterior["id"],"duplicado"=>true]; $json["code"]=200;
+            } else {
+                if (!$this->conn->begin_transaction()) throw new RuntimeException("No fue posible iniciar la transacción.");
+                $transaccion = true;
+
+                $relacion = $meta["relacion"];
+                $stmt = $this->ejecutarSqlVenta("SELECT id,`$nombreCol` AS nombre,total_amount,paid_amount,pending_amount,status,`$relacion` AS documento_id FROM `$tabla` WHERE id=? FOR UPDATE","i",[$id]);
+                $cuenta = $stmt->get_result()->fetch_assoc(); $stmt->close();
+                if (!$cuenta) throw new InvalidArgumentException("La cuenta no existe.");
+                if ($cuenta["status"]!=="PENDIENTE") throw new InvalidArgumentException("Esta cuenta ya está liquidada o cancelada.");
+
+                $saldoAnterior = $this->centavosVenta($cuenta["pending_amount"]);
+                $pagadoAnterior = $this->centavosVenta($cuenta["paid_amount"]);
+                $totalCuenta = $this->centavosVenta($cuenta["total_amount"]);
+                if ($saldoAnterior===null || $pagadoAnterior===null || $totalCuenta===null || $saldoAnterior+$pagadoAnterior!==$totalCuenta) throw new RuntimeException("Los importes de la cuenta son inconsistentes.");
+                if ($centavos>$saldoAnterior) throw new InvalidArgumentException("El abono no puede superar el saldo pendiente.");
+
+                if ($tipo==="COBRAR" && (int)$cuenta["documento_id"]>0) {
+                    $stmt = $this->ejecutarSqlVenta("SELECT pending_amount FROM sales WHERE id=? FOR UPDATE","i",[(int)$cuenta["documento_id"]]);
+                    $venta = $stmt->get_result()->fetch_assoc(); $stmt->close();
+                    if (!$venta || $this->centavosVenta($venta["pending_amount"])!==$saldoAnterior) throw new RuntimeException("El saldo de la venta no coincide con su cuenta por cobrar.");
+                }
+
+                $idCajaMovimiento = $metodo==="EFECTIVO" ? $cajaId : null;
+                $saldoCaja = null;
+                if ($idCajaMovimiento!==null) {
+                    $stmt = $this->ejecutarSqlVenta("SELECT current_balance FROM cash_registers WHERE id=? AND kind='CASH' AND is_active=1 FOR UPDATE","i",[$cajaId]);
+                    $caja = $stmt->get_result()->fetch_assoc(); $stmt->close();
+                    if (!$caja) throw new InvalidArgumentException("La caja no está activa.");
+
+                    $stmt = $this->ejecutarSqlVenta("SELECT id FROM cash_shifts WHERE cash_register_id=? AND status='ABIERTO' LIMIT 1 FOR UPDATE","i",[$cajaId]);
+                    $turno = $stmt->get_result()->fetch_assoc(); $stmt->close();
+                    if (!$turno) throw new InvalidArgumentException("Debes tener un turno abierto.");
+
+                    $saldoCaja = $this->centavosVenta($caja["current_balance"]);
+                    if ($saldoCaja===null) throw new RuntimeException("El saldo de caja es inválido.");
+                    if ($tipo==="PAGAR" && $saldoCaja<$centavos) throw new InvalidArgumentException("No hay efectivo suficiente en la caja.");
+                }
+
+                $ahora = date("Y-m-d H:i:s");
+                $monto = number_format($centavos/100,2,".","");
+                $saldoNuevo = number_format(($saldoAnterior-$centavos)/100,2,".","");
+                $pagadoNuevo = number_format(($pagadoAnterior+$centavos)/100,2,".","");
+                $estadoNuevo = $saldoAnterior===$centavos ? "PAGADO" : "PENDIENTE";
+                $origen = $metodo==="EFECTIVO" ? "CAJA" : "BANCO";
+                $movTipo = $tipo==="COBRAR" ? "ENTRADA" : "SALIDA";
+                $notaMovimiento = $tipo==="COBRAR" ? "Abono a cuenta por cobrar" : "Pago de cuenta por pagar";
+                $categoria = $tipo==="PAGAR" ? "PROVEEDORES" : null;
+
+                $stmt = $this->ejecutarSqlVenta(
+                    "INSERT INTO account_settlements (account_type,account_id,amount,method,cash_register_id,reference,notes,user_id,request_token,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                    "sissississ",[$tipo,$id,$monto,$metodo,$idCajaMovimiento,$referencia,$notas,$this->usuarioOperador,$token,$ahora]
+                );
+                $stmt->close();
+                $idAbono = (int)$this->conn->insert_id;
+                $folio = ($tipo==="COBRAR" ? "CXC-" : "CXP-").str_pad((string)$idAbono,8,"0",STR_PAD_LEFT);
+                $refMovimiento = $referencia!=="" ? $referencia : $folio;
+
+                $stmt = $this->ejecutarSqlVenta(
+                    "INSERT INTO account_moves (`date`,`type`,`origin`,cash_register_id,user_reference_name,reference,amount,user_id,link_type,link_id,ticket_number,status,note,notes,created_at,updated_at,expense_category,request_token) VALUES (?,?,?,?,?,?,?,?,?,?,?,'PAGADO',?,?,?,?,?,?)",
+                    "sssisssisisssssss",
+                    [$ahora,$movTipo,$origen,$idCajaMovimiento,$cuenta["nombre"],$refMovimiento,$monto,$this->usuarioOperador,$tipo==="COBRAR" ? "CXC" : "CXP",$id,$folio,$notaMovimiento,$notas,$ahora,$ahora,$categoria,$token]
+                );
+                $stmt->close();
+                $idMovimiento = (int)$this->conn->insert_id;
+
+                $stmt = $this->ejecutarSqlVenta("UPDATE account_settlements SET account_move_id=? WHERE id=?","ii",[$idMovimiento,$idAbono]); $stmt->close();
+                $stmt = $this->ejecutarSqlVenta("UPDATE `$tabla` SET paid_amount=?,pending_amount=?,status=?,updated_at=? WHERE id=?","ssssi",[$pagadoNuevo,$saldoNuevo,$estadoNuevo,$ahora,$id]);
+                if ($stmt->affected_rows!==1) throw new RuntimeException("No fue posible actualizar la cuenta.");
+                $stmt->close();
+
+                if ($tipo==="COBRAR" && (int)$cuenta["documento_id"]>0) {
+                    $stmt = $this->ejecutarSqlVenta("UPDATE sales SET pending_amount=?,updated_at=? WHERE id=?","ssi",[$saldoNuevo,$ahora,(int)$cuenta["documento_id"]]);
+                    if ($stmt->affected_rows!==1) throw new RuntimeException("No se actualizó el saldo de la venta.");
+                    $stmt->close();
+                }
+
+                if ($idCajaMovimiento!==null) {
+                    $flujo = $tipo==="COBRAR" ? "IN" : "OUT";
+                    $descripcion = $notaMovimiento." ".$folio;
+                    $stmt = $this->ejecutarSqlVenta("INSERT INTO cash_flows (cash_register_id,user_id,amount,`type`,description,reference,created_at) VALUES (?,?,?,?,?,?,?)","iisssss",[$cajaId,$this->usuarioOperador,$monto,$flujo,$descripcion,$folio,$ahora]);
+                    $stmt->close();
+
+                    if ($tipo==="COBRAR") {
+                        $sqlCaja = "UPDATE cash_registers SET current_balance=current_balance+?,updated_at=? WHERE id=? AND kind='CASH' AND is_active=1";
+                        $paramsCaja = [$monto,$ahora,$cajaId]; $tiposCaja = "ssi";
+                    } else {
+                        $sqlCaja = "UPDATE cash_registers SET current_balance=current_balance-?,updated_at=? WHERE id=? AND kind='CASH' AND is_active=1 AND current_balance>=?";
+                        $paramsCaja = [$monto,$ahora,$cajaId,$monto]; $tiposCaja = "ssis";
+                    }
+                    $stmt = $this->ejecutarSqlVenta($sqlCaja,$tiposCaja,$paramsCaja);
+                    if ($stmt->affected_rows!==1) throw new RuntimeException("No fue posible actualizar la caja.");
+                    $stmt->close();
+                }
+
+                if (!$this->conn->commit()) throw new RuntimeException("No fue posible confirmar la transacción.");
+                $transaccion = false;
+                $json["status"]="ok"; $json["answer"]=$tipo==="COBRAR" ? "Abono registrado correctamente." : "Pago registrado correctamente.";
+                $json["results"]=["id"=>$idAbono,"folio"=>$folio,"saldo"=>$saldoNuevo,"estado"=>$estadoNuevo,"duplicado"=>false]; $json["code"]=200;
+            }
+        } catch (InvalidArgumentException $e) {
+            if ($transaccion) $this->conn->rollback();
+            $json["status"]="warning"; $json["answer"]=$e->getMessage(); $json["code"]=400;
+        } catch (Throwable $e) {
+            if ($transaccion) $this->conn->rollback();
+            error_log("registrarAbonoCuenta: ".$e->getMessage());
+            $json["status"]="error"; $json["answer"]="No fue posible confirmar el pago. Reintenta con el mismo identificador para evitar duplicados."; $json["code"]=500;
+            if ((int)$e->getCode()===1062 && $token!=="") {
+                try {
+                    $stmt = $this->ejecutarSqlVenta("SELECT id,account_type,account_id FROM account_settlements WHERE request_token=? LIMIT 1","s",[$token]);
+                    $repetido = $stmt->get_result()->fetch_assoc(); $stmt->close();
+                    if ($repetido && $repetido["account_type"]===$tipo && (int)$repetido["account_id"]===$id) {
+                        $json["status"]="ok"; $json["answer"]="El pago ya estaba registrado; no se duplicó.";
+                        $json["results"]=["id"=>(int)$repetido["id"],"duplicado"=>true]; $json["code"]=200;
+                    }
+                } catch (Throwable $otroError) {
+                    error_log("Verificar abono duplicado: ".$otroError->getMessage());
+                }
+            }
+        }
+    }
+    return $json;
+}
 
     
 }
