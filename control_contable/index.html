@@ -472,15 +472,52 @@
             <section class="nota-bloque h-100 d-none" id="panelCerrarCaja">
                 <div class="nota-seccion-titulo"><i class="bi bi-lock"></i><div><h2>Arqueo y cierre</h2><small>Verifica el dinero físico al terminar.</small></div></div>
                 <p>Efectivo esperado: <strong id="cajaEsperado" data-valor="0">$0.00</strong></p>
-                <form id="formCierreCaja">
+                <!--<form id="formCierreCaja">
                     <label for="contadoCaja" class="form-label">Efectivo contado ($)</label>
                     <input id="contadoCaja" class="form-control" type="number" min="0" step="0.01" required>
                     <button type="submit" class="btn btn-success mt-3"><i class="bi bi-check-circle me-2"></i>Cerrar caja</button>
-                </form>
+                </form>-->
+
+
+<form id="formCierreCaja">
+    <div class="mb-3">
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <i class="bi bi-cash-stack text-success"></i>
+            <h3 class="h6 fw-bold mb-0">Desglose de efectivo</h3>
+        </div>
+        <p class="small text-secondary mb-3">
+            Captura cuántas piezas tienes de cada denominación.
+            El total se calculará automáticamente.
+        </p>
+        <div id="denominacionesCaja" class="row g-2"></div>
+    </div>
+
+    <div class="border rounded-4 p-3 mt-3 bg-light">
+        <label for="contadoCaja" class="form-label fw-semibold">
+            Efectivo contado
+        </label>
+        <input id="contadoCaja" type="number" class="form-control fw-bold"
+               value="0.00" min="0" step="0.01" readonly required>
+
+        <div class="d-flex justify-content-between gap-2 mt-3">
+            <span class="text-secondary small">Diferencia del arqueo</span>
+            <strong id="diferenciaArqueoCaja">$0.00</strong>
+        </div>
+        <div class="form-text">
+            El conteo no modifica los ingresos o egresos; registra el resultado físico del turno.
+        </div>
+    </div>
+
+    <button class="btn btn-success w-100 mt-3" type="submit">
+        <i class="bi bi-check2-circle me-2"></i>Confirmar cierre de caja
+    </button>
+</form>
+
             </section>
         </div>
     </div>
     <p class="small text-secondary" id="cajaUltimoCierre"></p>
+    <div id="cajaUltimoDesglose" class="row g-2 mb-3"></div>
     <section class="nota-bloque">
         <div class="nota-seccion-titulo"><i class="bi bi-list-ul"></i><div><h2>Movimientos del turno</h2><small>Entradas y salidas de efectivo registradas.</small></div></div>
         <div class="table-responsive">

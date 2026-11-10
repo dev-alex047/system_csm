@@ -111,3 +111,38 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
     #pillsEstadoCuenta {gap:6px!important;}
     #pillsEstadoCuenta .btn {font-size:.76rem;}
 }
+
+
+/* DESGLOSE DE EFECTIVO */
+.denom-caja-card {
+    height: 100%;
+    padding: 12px;
+    background: #fff;
+    border: 1px solid #dce8e1;
+    border-radius: 13px;
+    transition: border-color .2s, box-shadow .2s;
+}
+
+.denom-caja-card:focus-within {
+    border-color: #16865b;
+    box-shadow: 0 0 0 3px rgba(22,134,91,.08);
+}
+
+.denom-caja-card .form-control {
+    border-radius: 9px;
+    font-weight: 600;
+}
+
+.denom-caja-card .denom-subtotal {
+    display: block;
+    font-size: 12px;
+    margin-top: 7px;
+    color: #66776c;
+}
+
+#contadoCaja {
+    font-size: 23px;
+    font-weight: 800;
+    color: #087849;
+    background: #fff;
+}

@@ -1114,8 +1114,65 @@ public function cerrarCaja($data) {
         $json["code"] = 500;
     } else {
         try {
-            $idCaja = isset($data["caja_id"]) ? (int)$data["caja_id"] : 0;
-            $contadoCentavos = $this->centavosVenta(isset($data["contado"]) ? $data["contado"] : "");
+            /*$idCaja = isset($data["caja_id"]) ? (int)$data["caja_id"] : 0;
+
+$rawDenominaciones = isset($data["denominaciones"]) && is_string($data["denominaciones"])
+    ? $data["denominaciones"] : "";*/
+
+
+$idCaja = isset($data["caja_id"]) ? (int)$data["caja_id"] : 0;
+$contadoCentavos = $this->centavosVenta(isset($data["contado"]) ? $data["contado"] : "");
+
+$rawDenominaciones = isset($data["denominaciones"]) && is_string($data["denominaciones"])
+    ? $data["denominaciones"] : "";
+
+
+if (strlen($rawDenominaciones) > 600) {
+    throw new InvalidArgumentException("El desglose de efectivo es demasiado grande.");
+}
+
+$denominaciones = json_decode($rawDenominaciones, true);
+$permitidas = [100000, 50000, 20000, 10000, 5000, 2000, 1000, 500, 200, 100, 50];
+$desgloseSeguro = [];
+$totalDesglose = 0;
+
+if (!is_array($denominaciones) || count($denominaciones) !== count($permitidas)) {
+    throw new InvalidArgumentException("El desglose de billetes y monedas está incompleto.");
+}
+
+foreach ($permitidas as $centavos) {
+    $clave = (string)$centavos;
+
+    if (!array_key_exists($clave, $denominaciones)) {
+        throw new InvalidArgumentException("Falta una denominación en el arqueo.");
+    }
+
+    $cantidad = $denominaciones[$clave];
+
+    if (!is_int($cantidad) || $cantidad < 0 || $cantidad > 100000) {
+        throw new InvalidArgumentException("Cantidad inválida para la denominación de $" . number_format($centavos / 100, 2));
+    }
+
+    $totalDesglose += $centavos * $cantidad;
+
+    if ($totalDesglose > 9999999999) {
+        throw new InvalidArgumentException("El efectivo contado supera el máximo permitido.");
+    }
+
+    $desgloseSeguro[$clave] = $cantidad;
+}
+
+if ($contadoCentavos === null || $contadoCentavos !== $totalDesglose) {
+    throw new InvalidArgumentException("El total contado no coincide con el desglose de efectivo.");
+}
+
+$desgloseJson = json_encode($desgloseSeguro);
+
+if ($desgloseJson === false) {
+    throw new RuntimeException("No fue posible preparar el desglose del arqueo.");
+}
+
+            //$contadoCentavos = $this->centavosVenta(isset($data["contado"]) ? $data["contado"] : "");
 
             if ($idCaja <= 0 || $contadoCentavos === null) {
                 throw new InvalidArgumentException("Selecciona una caja e ingresa el efectivo contado.");
@@ -1174,11 +1231,35 @@ public function cerrarCaja($data) {
             $contadoFormato = number_format($contadoCentavos / 100, 2, ".", "");
             $diferenciaFormato = number_format($diferenciaCentavos / 100, 2, ".", "");
 
-            $stmt = $this->ejecutarSqlVenta(
-                "UPDATE cash_shifts SET status = 'CERRADO', closed_at = ?, closing_flow_id = ?, income_cash = ?, expense_cash = ?, expected_balance = ?, counted_balance = ?, difference_amount = ?, updated_at = ? WHERE id = ? AND status = 'ABIERTO'",
-                "sissssssi",
-                [$fecha, $ultimoMovimiento, $ingresosFormato, $salidasFormato, $esperadoFormato, $contadoFormato, $diferenciaFormato, $fecha, (int)$turno["id"]]
-            );
+            
+$stmt = $this->ejecutarSqlVenta(
+    "UPDATE cash_shifts
+     SET status = 'CERRADO',
+         closed_at = ?,
+         closing_flow_id = ?,
+         income_cash = ?,
+         expense_cash = ?,
+         expected_balance = ?,
+         counted_balance = ?,
+         difference_amount = ?,
+         denomination_breakdown = ?,
+         updated_at = ?
+     WHERE id = ? AND status = 'ABIERTO'",
+    "sisssssssi",
+    [
+        $fecha,
+        $ultimoMovimiento,
+        $ingresosFormato,
+        $salidasFormato,
+        $esperadoFormato,
+        $contadoFormato,
+        $diferenciaFormato,
+        $desgloseJson,
+        $fecha,
+        (int)$turno["id"]
+    ]
+);
+
 
             if ($stmt->affected_rows !== 1) {
                 throw new RuntimeException("No fue posible cerrar el turno.");

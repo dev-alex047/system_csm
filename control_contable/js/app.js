@@ -1078,34 +1078,39 @@ function generarPdfNotaVenta(idVenta) {
 
 }
 
-/* CONTROL DE CAJA Y EGRESOS */
 state.cajaId = 0;
 state.peticionCaja = 0;
 state.guardandoEgreso = false;
 state.tokenEgreso = generarIdSolicitudVenta();
 
 function bindCajaEgresos() {
-    $(document).on("change","#cajaSeleccionada",function(){state.cajaId = Number(this.value)||0; consultarControlCaja();});
+    //$(document).on("change","#cajaSeleccionada",function(){state.cajaId = Number(this.value)||0; consultarControlCaja();});
+
+$(document).on("change", "#cajaSeleccionada", function() {
+    state.cajaId = Number(this.value) || 0;
+    $(".js-denominacion-caja").val("");
+    actualizarDenominacionesCaja();
+    consultarControlCaja();
+});
+
     $(document).on("submit","#formAperturaCaja",function(e){
         e.preventDefault();
         operarCaja("abrirCaja",{caja_id:state.cajaId,fondo:$("#fondoCaja").val()},"¿Confirmar apertura de caja?");
     });
-    $(document).on("submit","#formCierreCaja",function(e){
-        e.preventDefault();
-        const contado = $("#contadoCaja").val();
-        if (numeroNotaValido(contado,0,99999999.99) === null) return Swal.fire("Aviso","Captura el efectivo contado.","warning");
-        const diferencia = Math.round(Number(contado)*100)-Math.round(Number($("#cajaEsperado").attr("data-valor"))*100);
-        operarCaja("cerrarCaja",{caja_id:state.cajaId,contado:contado},"¿Cerrar turno? Diferencia: "+monedaMXN(diferencia/100));
-    });
+    
     $(document).on("change","#egresoMetodo",alternarMetodoEgreso);
     $(document).on("submit","#formEgreso",function(e){e.preventDefault(); confirmarEgreso();});
+    $(document).on("input", ".js-denominacion-caja", actualizarDenominacionesCaja);
 }
 
 function renderControlCaja() {
     const tpl = document.getElementById("tplControlCaja");
     if (!tpl) return console.error("Falta tplControlCaja");
+    //$("#contenidoModulo").empty().append(tpl.content.cloneNode(true));
+    //consultarControlCaja();
     $("#contenidoModulo").empty().append(tpl.content.cloneNode(true));
-    consultarControlCaja();
+renderDenominacionesCaja();
+consultarControlCaja();
 }
 
 function consultarControlCaja() {
@@ -1138,8 +1143,34 @@ function consultarControlCaja() {
             $res.append($card);
         });
         $("#cajaEsperado").text(monedaMXN(turno ? turno.esperado : 0)).attr("data-valor",turno ? turno.esperado : 0);
+        actualizarDenominacionesCaja();
         $("#cajaEstado").text(!turno ? "Sin turnos registrados" : turno.status==="ABIERTO" ? "Turno #"+turno.id+" abierto desde "+turno.opened_at : "Último turno cerrado · "+turno.closed_at);
         $("#cajaUltimoCierre").text(turno && turno.status==="CERRADO" ? "Último arqueo: "+monedaMXN(turno.counted_balance)+" · Diferencia: "+monedaMXN(turno.difference_amount) : "");
+        
+        
+const $ultimoDesglose = $("#cajaUltimoDesglose").empty();
+
+if (turno && turno.status === "CERRADO" && turno.denomination_breakdown) {
+    try {
+        const cantidades = JSON.parse(turno.denomination_breakdown);
+
+        DENOMINACIONES_CAJA.forEach(function(d) {
+            const cantidad = Number(cantidades[String(d.centavos)] || 0);
+            if (cantidad <= 0) return;
+
+            const $col = $('<div class="col-6 col-md-4 col-xl-3"></div>');
+            const $card = $('<div class="border rounded-3 bg-white p-2 small"></div>');
+
+            $card.text(d.nombre + " × " + cantidad + " = " + monedaMXN(d.centavos * cantidad / 100));
+            $col.append($card);
+            $ultimoDesglose.append($col);
+        });
+    } catch (error) {
+        console.error("No se pudo mostrar el desglose del arqueo:", error);
+    }
+}
+
+        
         const $tbody = $("#tablaFlujosCaja").empty();
         if (!d.movimientos.length) $tbody.append('<tr><td colspan="4" class="text-center text-secondary py-3">Sin movimientos en este turno</td></tr>');
         d.movimientos.forEach(function(m){
@@ -1554,3 +1585,112 @@ function abrirAbonoCuenta(id,saldo) {
         }).always(function(){state.guardandoAbono=false;});
     });
 }
+
+
+
+const DENOMINACIONES_CAJA = [
+    {centavos:100000, nombre:"$1,000", tipo:"Billete"},
+    {centavos:50000, nombre:"$500", tipo:"Billete"},
+    {centavos:20000, nombre:"$200", tipo:"Billete"},
+    {centavos:10000, nombre:"$100", tipo:"Billete"},
+    {centavos:5000, nombre:"$50", tipo:"Billete"},
+    {centavos:2000, nombre:"$20", tipo:"Billete"},
+    {centavos:1000, nombre:"$10", tipo:"Moneda"},
+    {centavos:500, nombre:"$5", tipo:"Moneda"},
+    {centavos:200, nombre:"$2", tipo:"Moneda"},
+    {centavos:100, nombre:"$1", tipo:"Moneda"},
+    {centavos:50, nombre:"$0.50", tipo:"Moneda"}
+];
+
+function renderDenominacionesCaja() {
+    const $contenedor = $("#denominacionesCaja").empty();
+
+    DENOMINACIONES_CAJA.forEach(function(d) {
+        const $col = $('<div class="col-6 col-md-4 col-xl-3"></div>');
+        const $card = $('<div class="denom-caja-card"></div>');
+        const $label = $('<label class="form-label small fw-semibold mb-2"></label>')
+            .text(d.tipo + " " + d.nombre);
+
+        const $input = $('<input type="number" class="form-control js-denominacion-caja" min="0" max="100000" step="1" inputmode="numeric" placeholder="0">')
+            .attr("data-centavos", d.centavos)
+            .attr("aria-label", d.tipo + " de " + d.nombre);
+
+        const $subtotal = $('<small class="denom-subtotal"></small>').text("$0.00");
+
+        $card.append($label, $input, $subtotal);
+        $col.append($card);
+        $contenedor.append($col);
+    });
+
+    actualizarDenominacionesCaja();
+}
+
+function actualizarDenominacionesCaja() {
+    let total = 0;
+    let valido = true;
+    const desglose = {};
+
+    $("#denominacionesCaja .js-denominacion-caja").each(function() {
+        const centavos = Number($(this).attr("data-centavos"));
+        const valor = this.value.trim();
+        const correcto = valor === "" || (/^(0|[1-9][0-9]{0,5})$/.test(valor) && Number(valor) <= 100000);
+
+        $(this).toggleClass("is-invalid", !correcto);
+
+        if (!correcto) {
+            valido = false;
+            $(this).siblings(".denom-subtotal").text("Cantidad inválida");
+            return;
+        }
+
+        const cantidad = valor === "" ? 0 : Number(valor);
+        const subtotal = centavos * cantidad;
+
+        desglose[String(centavos)] = cantidad;
+        total += subtotal;
+
+        $(this).siblings(".denom-subtotal").text(monedaMXN(subtotal / 100));
+    });
+
+    if (total > 9999999999) valido = false;
+
+    $("#contadoCaja").val(valido ? (total / 100).toFixed(2) : "");
+
+    const esperado = Math.round(Number($("#cajaEsperado").attr("data-valor") || 0) * 100);
+    const diferencia = total - esperado;
+
+    $("#diferenciaArqueoCaja")
+        .text(valido ? monedaMXN(diferencia / 100) : "Revisa las cantidades")
+        .toggleClass("text-danger", !valido || diferencia < 0)
+        .toggleClass("text-success", valido && diferencia >= 0);
+
+    return {valido:valido, total:total, desglose:desglose};
+}
+
+
+
+$(document).on("submit", "#formCierreCaja", function(e) {
+    e.preventDefault();
+
+    const arqueo = actualizarDenominacionesCaja();
+
+    if (!arqueo.valido) {
+        Swal.fire("Aviso", "Revisa las cantidades de billetes y monedas.", "warning");
+        return;
+    }
+
+    if (!state.cajaId) {
+        Swal.fire("Aviso", "Selecciona una caja válida.", "warning");
+        return;
+    }
+
+    const contado = (arqueo.total / 100).toFixed(2);
+    const esperado = Math.round(Number($("#cajaEsperado").attr("data-valor") || 0) * 100);
+    const diferencia = (arqueo.total - esperado) / 100;
+
+    operarCaja("cerrarCaja", {
+        caja_id:state.cajaId,
+        contado:contado,
+        denominaciones:JSON.stringify(arqueo.desglose)
+    }, "¿Cerrar turno? Diferencia: " + monedaMXN(diferencia));
+});
