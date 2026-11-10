@@ -1,7 +1,8 @@
 
 <?php
 date_default_timezone_set('America/Mexico_City');
-define("DEBUG_NOTA_PDF", true);
+//define("DEBUG_NOTA_PDF", true);
+define("DEBUG_NOTA_PDF", false);
 header("Content-Type: application/json; charset=utf-8");
 
 ini_set('display_errors', 0);

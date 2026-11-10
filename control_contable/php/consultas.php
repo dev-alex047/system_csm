@@ -177,6 +177,7 @@ public function guardarVentaNota($data) {
     $json = [];
     $transaccion = false;
     $token = '';
+    $etapa = "validaciones";
 
     if (!$this->conn) {
         $json = ['status'=>'error','answer'=>'No existe conexión con MySQL.','code'=>500];
@@ -299,6 +300,7 @@ $stmt->close();
 if (!$turnoAbierto) throw new InvalidArgumentException("Debes abrir un turno de caja antes de recibir efectivo.");
                 }
 
+                $etapa = "insertar_venta";
                 $stmt = $this->ejecutarSqlVenta(
                     'INSERT INTO sales (user_id,client_name,client_address,client_phone,payment_method,bank_reference,cash_register_id,pending_amount,total_amount,ticket_barcode,notes,created_at,updated_at,sale_kind,note_folio,seller_name,initial_paid,request_token) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
                     'isssssisssssssssss',
@@ -312,6 +314,7 @@ if (!$turnoAbierto) throw new InvalidArgumentException("Debes abrir un turno de 
                 $stmt = $this->ejecutarSqlVenta('UPDATE sales SET note_folio = ?, ticket_barcode = ? WHERE id = ?', 'ssi', [$folio,$folio,$idVenta]);
                 $stmt->close();
 
+                $etapa = "insertar_articulos";
                 $stmtItem = $this->conn->prepare("INSERT INTO sale_items (sale_id,product_id,quantity,price,total,item_origin,manual_name,manual_code) VALUES (?,NULL,?,?,?,'MANUAL',?,?)");
                 if (!$stmtItem) throw new RuntimeException($this->conn->error, (int)$this->conn->errno);
 
@@ -334,7 +337,7 @@ if (!$turnoAbierto) throw new InvalidArgumentException("Debes abrir un turno de 
                 }
                 $stmtItem->close();
 
-                if ($saldoCentavos > 0) {
+                /*if ($saldoCentavos > 0) {
                     $stmt = $this->ejecutarSqlVenta(
                         "INSERT INTO receivables (sale_id,client_id,client_name,user_id,total_amount,paid_amount,pending_amount,status,due_date,created_at,updated_at) VALUES (?,NULL,?,?,?,?,?,'PENDIENTE',NULL,?,?)",
                         'isisssss', [$idVenta,$cliente,$this->usuarioOperador,$total,$pagado,$saldo,$fecha,$fecha]
@@ -347,9 +350,41 @@ $stmt = $this->ejecutarSqlVenta(
     "UPDATE receivables SET document_reference=? WHERE sale_id=?",
     "si",[$folio,$idVenta]
 );
-$stmt->close();
+$stmt->close();*/
 
 
+$etapa = "registrar_cuenta_cobrar";
+
+if ($saldoCentavos > 0) {
+    $descripcionCuenta = "Venta con nota " . $folio;
+
+    $stmt = $this->ejecutarSqlVenta(
+        "INSERT INTO receivables
+        (sale_id, client_id, client_name, user_id, total_amount,
+        paid_amount, status, due_date, created_at, updated_at,
+        description, document_reference, request_token)
+        VALUES (?, NULL, ?, ?, ?, ?, 'PENDIENTE', NULL, ?, ?, ?, ?, ?)",
+        "isisssssss",
+        [
+            $idVenta,
+            $cliente,
+            $this->usuarioOperador,
+            $total,
+            $pagado,
+            $fecha,
+            $fecha,
+            $descripcionCuenta,
+            $folio,
+            $token
+        ]
+    );
+
+    $stmt->close();
+}
+
+
+
+$etapa = "registrar_cobro";
                 if ($pagadoCentavos > 0) {
                     $origen = $metodoCobro === 'EFECTIVO' ? 'CAJA' : 'BANCO';
                     $referenciaMovimiento = $referenciaCobro !== '' ? $referenciaCobro : $folio;
@@ -379,6 +414,7 @@ $stmt->close();
                     }
                 }
 
+                $etapa = "confirmar_transaccion";
                 if (!$this->conn->commit()) throw new RuntimeException('No fue posible confirmar la transacción.');
                 $transaccion = false;
 
@@ -398,8 +434,20 @@ $stmt->close();
             $json = ['status'=>'warning','answer'=>$e->getMessage(),'code'=>400];
         } catch (Throwable $e) {
             if ($transaccion) $this->conn->rollback();
-            error_log('guardarVentaNota: ' . $e->getMessage());
-            $json = ['status'=>'error','answer'=>'No fue posible confirmar el registro de la venta.','code'=>500];
+            //error_log('guardarVentaNota: ' . $e->getMessage());
+            //$json = ['status'=>'error','answer'=>'No fue posible confirmar el registro de la venta.','code'=>500];
+
+
+error_log("guardarVentaNota [" . $etapa . "] Código " . $e->getCode() . ": " . $e->getMessage());
+
+$json["status"] = "error";
+$json["answer"] = "No fue posible confirmar el registro de la venta.";
+$json["code"] = 500;
+$json["diagnostico"] = [
+    "etapa" => $etapa,
+    "codigo" => (int)$e->getCode()
+];
+
 
             if ((int)$e->getCode() === 1062) {
                 try {
