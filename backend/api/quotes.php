@@ -9,17 +9,52 @@ require_once __DIR__ . '/../lib/fpdf.php';
 requireLogin();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-  http_response_code(405);
-  echo json_encode(['error' => 'Method not allowed']);
-  exit;
+    http_response_code(405);
+
+    echo json_encode([
+        'status' => 'error',
+        'code' => 405,
+        'answer' => 'Método no permitido'
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
 }
 
-$data = json_decode(file_get_contents('php://input'), true);
-if (!$data || !isset($data['items']) || !is_array($data['items'])) {
-  http_response_code(400);
-  echo json_encode(['error' => 'Invalid request body']);
-  exit;
+$action = trim((string)($_POST['action'] ?? ''));
+
+if ($action !== 'generarCotizacion') {
+    http_response_code(400);
+
+    echo json_encode([
+        'status' => 'error',
+        'code' => 400,
+        'answer' => 'Acción no válida'
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
 }
+
+$items = json_decode(
+    (string)($_POST['items'] ?? ''),
+    true
+);
+
+if (!is_array($items) || empty($items)) {
+    http_response_code(400);
+
+    echo json_encode([
+        'status' => 'error',
+        'code' => 400,
+        'answer' => 'Agrega al menos un producto válido'
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+$data = [
+    'items' => $items,
+    'date' => trim((string)($_POST['date'] ?? '')),
+    'place' => trim((string)($_POST['place'] ?? '')),
+    'recipient' => trim((string)($_POST['recipient'] ?? '')),
+    'iva' => (($_POST['iva'] ?? '0') === '1')
+];
 
 $pdo  = getPDO();
 $user = currentUser();
@@ -101,7 +136,14 @@ foreach ($data['items'] as $item) {
   $quantity  = (float)($item['quantity'] ?? 0);
   if (!$productId || $quantity <= 0) continue;
 
-  $stmt = $pdo->prepare('SELECT * FROM products WHERE id = ?');
+  //$stmt = $pdo->prepare('SELECT * FROM products WHERE id = ?');
+  $stmt = $pdo->prepare("
+    SELECT *
+    FROM products
+    WHERE id = ?
+      AND eliminado = 0
+    LIMIT 1
+");
   $stmt->execute([$productId]);
   $product = $stmt->fetch(PDO::FETCH_ASSOC);
   if (!$product) continue;
@@ -130,9 +172,14 @@ foreach ($data['items'] as $item) {
 }
 
 if (!$rows) {
-  http_response_code(400);
-  echo json_encode(['error' => 'No valid items']);
-  exit;
+    http_response_code(400);
+
+    echo json_encode([
+        'status' => 'error',
+        'code' => 400,
+        'answer' => 'No se encontraron productos válidos para generar la cotización'
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
 }
 
 $iva   = $includeIva ? ($subtotal * 0.16) : 0.0;
@@ -392,10 +439,44 @@ $pdf->SetTextColor(0,0,0);
 
 // ===== Guardar PDF =====
 $quotesDir = __DIR__ . '/../uploads/quotes';
-if (!is_dir($quotesDir)) mkdir($quotesDir, 0777, true);
 
-$fileName = 'quote_' . time() . '.pdf';
-$filePath = $quotesDir . '/' . $fileName;
-$pdf->Output('F', $filePath);
+try {
+    if (!is_dir($quotesDir)) {
+        if (!mkdir($quotesDir, 0755, true) && !is_dir($quotesDir)) {
+            throw new Exception("No se pudo crear la carpeta de cotizaciones");
+        }
+    }
 
-echo json_encode(['success' => true, 'file' => 'uploads/quotes/' . $fileName]);
+    $fileName = 'quote_' . bin2hex(random_bytes(8)) . '.pdf';
+    $filePath = $quotesDir . '/' . $fileName;
+
+    $pdf->Output('F', $filePath);
+
+    if (!is_file($filePath)) {
+        throw new Exception("No se generó el archivo PDF");
+    }
+
+    $response = [
+        'status' => 'ok',
+        'code' => 200,
+        'answer' => 'Cotización generada correctamente',
+        'results' => [
+            'file' => 'uploads/quotes/' . $fileName
+        ]
+    ];
+
+    http_response_code(200);
+
+} catch (Throwable $e) {
+    error_log('generarCotizacion: ' . $e->getMessage());
+
+    $response = [
+        'status' => 'error',
+        'code' => 500,
+        'answer' => 'No fue posible generar el PDF de cotización'
+    ];
+
+    http_response_code(500);
+}
+
+echo json_encode($response, JSON_UNESCAPED_UNICODE);

@@ -535,6 +535,18 @@
             <section class="nota-bloque">
                 <div class="nota-seccion-titulo"><i class="bi bi-arrow-up-right-circle"></i><div><h2>Registrar gasto o salida</h2><small>Control manual de los egresos del negocio.</small></div></div>
                 <form id="formEgreso" novalidate>
+
+<div class="col-md-6">
+    <label for="egresoFechaMovimiento" class="form-label">Fecha y hora del movimiento *</label>
+    <input id="egresoFechaMovimiento" type="datetime-local" class="form-control" required>
+    <div class="form-text">Puedes cambiarla si el gasto ocurrió anteriormente.</div>
+</div>
+<div class="col-md-6">
+    <label for="egresoResponsable" class="form-label">Registrado por *</label>
+    <input id="egresoResponsable" type="text" class="form-control" maxlength="100" placeholder="Nombre del responsable" required>
+    <div class="form-text">Indica quién está capturando este movimiento.</div>
+</div>
+
                     <div class="row g-3">
                         <div class="col-md-6"><label for="egresoBeneficiario" class="form-label">Beneficiario / proveedor *</label><input id="egresoBeneficiario" class="form-control" maxlength="100" required></div>
                         <div class="col-md-6"><label for="egresoCategoria" class="form-label">Categoría *</label>

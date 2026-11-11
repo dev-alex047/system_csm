@@ -29,12 +29,10 @@ switch ($action) {
     case "guardarVentaNota":
         $response = $consultas->guardarVentaNota($_POST);
         break;
-
-    
-case "guardarVentaRapida":
-    $response = $consultas->guardarVentaRapida($_POST);
-break;
-
+        
+    case "guardarVentaRapida":
+        $response = $consultas->guardarVentaRapida($_POST);
+        break;
 
     case "generarPdfNotaVenta":
         $idVenta = isset($_POST["id"]) ? (int)$_POST["id"] : 0;
@@ -42,26 +40,30 @@ break;
         break;
 
     case "getControlCaja":
-    $response = $consultas->getControlCaja($_POST);
-    break;
-case "abrirCaja":
-    $response = $consultas->abrirCaja($_POST);
-    break;
-case "cerrarCaja":
-    $response = $consultas->cerrarCaja($_POST);
-    break;
-case "getEgresos":
-    $response = $consultas->getEgresos();
-    break;
-case "guardarEgreso":
-    $response = $consultas->guardarEgreso($_POST);
-    break;
-
-
-case "getCuentas":
-    $response = $consultas->getCuentas($_POST);
-    break;
-case "crearCuenta":
+        $response = $consultas->getControlCaja($_POST);
+        break;
+        
+    case "abrirCaja":
+        $response = $consultas->abrirCaja($_POST);
+        break;
+    
+    case "cerrarCaja":
+        $response = $consultas->cerrarCaja($_POST);
+        break;
+    
+    case "getEgresos":
+        $response = $consultas->getEgresos();
+        break;
+    
+    case "guardarEgreso":
+        $response = $consultas->guardarEgreso($_POST);
+        break;
+        
+    case "getCuentas":
+        $response = $consultas->getCuentas($_POST);
+        break;
+    
+    case "crearCuenta":
     $response = $consultas->crearCuenta($_POST);
     break;
 case "getDetalleCuenta":

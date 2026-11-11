@@ -1672,8 +1672,32 @@ public function crearCuenta($data) {
                 $ahora = date("Y-m-d H:i:s");
                 $monto = number_format($montoCentavos/100,2,".","");
                 $relacion = $tipo==="COBRAR" ? "sale_id,client_id" : "purchase_id,supplier_id";
-                $sql = "INSERT INTO `$tabla` ($relacion,`$nombreCol`,user_id,total_amount,paid_amount,pending_amount,status,due_date,created_at,updated_at,description,document_reference,request_token) VALUES (NULL,NULL,?,?,?,0,?,'PENDIENTE',?,?,?,?,?,?)";
-                $stmt = $this->ejecutarSqlVenta($sql,"sissssssss",[$nombre,$this->usuarioOperador,$monto,$monto,$fechaVence,$ahora,$ahora,$concepto,$referencia,$token]);
+                //$sql = "INSERT INTO `$tabla` ($relacion,`$nombreCol`,user_id,total_amount,paid_amount,pending_amount,status,due_date,created_at,updated_at,description,document_reference,request_token) VALUES (NULL,NULL,?,?,?,0,?,'PENDIENTE',?,?,?,?,?,?)";
+                //$stmt = $this->ejecutarSqlVenta($sql,"sissssssss",[$nombre,$this->usuarioOperador,$monto,$monto,$fechaVence,$ahora,$ahora,$concepto,$referencia,$token]);
+                
+$sql = "INSERT INTO `$tabla`
+    ($relacion, `$nombreCol`, user_id, total_amount, paid_amount,
+    status, due_date, created_at, updated_at, description,
+    document_reference, request_token)
+    VALUES (NULL, NULL, ?, ?, ?, 0, 'PENDIENTE', ?, ?, ?, ?, ?, ?)";
+
+$stmt = $this->ejecutarSqlVenta(
+    $sql,
+    "sisssssss",
+    [
+        $nombre,
+        $this->usuarioOperador,
+        $monto,
+        $fechaVence,
+        $ahora,
+        $ahora,
+        $concepto,
+        $referencia,
+        $token
+    ]
+);
+
+                
                 $stmt->close();
                 $id = (int)$this->conn->insert_id;
                 $json["status"]="ok"; $json["answer"]="Cuenta registrada correctamente.";
@@ -1839,7 +1863,15 @@ public function registrarAbonoCuenta($data) {
                 $idMovimiento = (int)$this->conn->insert_id;
 
                 $stmt = $this->ejecutarSqlVenta("UPDATE account_settlements SET account_move_id=? WHERE id=?","ii",[$idMovimiento,$idAbono]); $stmt->close();
-                $stmt = $this->ejecutarSqlVenta("UPDATE `$tabla` SET paid_amount=?,pending_amount=?,status=?,updated_at=? WHERE id=?","ssssi",[$pagadoNuevo,$saldoNuevo,$estadoNuevo,$ahora,$id]);
+                //$stmt = $this->ejecutarSqlVenta("UPDATE `$tabla` SET paid_amount=?,pending_amount=?,status=?,updated_at=? WHERE id=?","ssssi",[$pagadoNuevo,$saldoNuevo,$estadoNuevo,$ahora,$id]);
+                
+$stmt = $this->ejecutarSqlVenta(
+    "UPDATE `$tabla` SET paid_amount=?,status=?,updated_at=? WHERE id=?",
+    "sssi",
+    [$pagadoNuevo,$estadoNuevo,$ahora,$id]
+);
+
+                
                 if ($stmt->affected_rows!==1) throw new RuntimeException("No fue posible actualizar la cuenta.");
                 $stmt->close();
 
