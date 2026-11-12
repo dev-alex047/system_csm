@@ -958,8 +958,8 @@ Swal.fire({
     html:"<strong>Folio:</strong> " + $("<div>").text(folio).html() +
          "<p class='mb-0 mt-2'>La operación quedó registrada en MySQL.</p>",
     showCancelButton:true,
-    //confirmButtonText:'<i class="bi bi-file-earmark-pdf me-2"></i>Generar nota PDF',
-    confirmButtonText:'<i class="bi bi-files me-2"></i>Elegir notas PDF',
+    confirmButtonText:'<i class="bi bi-file-earmark-pdf me-2"></i>Generar nota PDF',
+    //confirmButtonText:'<i class="bi bi-files me-2"></i>Elegir notas PDF',
     cancelButtonText:"Cerrar",
     confirmButtonColor:"#086b47",
     reverseButtons:true
@@ -1522,6 +1522,14 @@ function bindCuentas() {
     });
 
 
+$(document).on("click",".btnCuentaReporte",function(){
+    if (state.tipoCuentaActual!=="COBRAR") return;
+    const id=Number($(this).attr("data-id"));
+    mostrarConcentradoCxc(id);
+});
+
+
+
 $(document).on("click",".js-vista-cuentas",function(){mostrarVistaCuentas($(this).attr("data-vista"));});
 $(document).on("click",".js-filtro-cuentas",function(){
     const filtro=$(this).attr("data-filtro");
@@ -1648,9 +1656,51 @@ function consultarCuentas() {
             const $tr = $("<tr>");
             [c.id,c.nombre,c.document_reference||"—",c.due_date||"Sin fecha",monedaMXN(c.total_amount),monedaMXN(c.paid_amount),monedaMXN(c.pending_amount)].forEach(function(v){$tr.append($("<td>").text(v));});
             $tr.append($("<td>").append($('<span class="badge"></span>').addClass(clase).text(estadoTexto)));
-            const $acciones = $('<td class="text-nowrap"></td>');
-            $acciones.append($('<button type="button" class="btn btn-outline-secondary btn-sm btnCuentaHistorial me-1"><i class="bi bi-clock-history"></i> Historial</button>').attr("data-id",c.id));
-            if (c.status==="PENDIENTE" && Number(c.pending_amount)>0) $acciones.append($('<button type="button" class="btn btn-success btn-sm btnCuentaAbonar"><i class="bi bi-cash-coin"></i> '+(tipo==="COBRAR"?"Cobrar":"Pagar")+'</button>').attr("data-id",c.id).attr("data-saldo",c.pending_amount));
+            //const $acciones = $('<td class="text-nowrap"></td>');
+            //$acciones.append($('<button type="button" class="btn btn-outline-secondary btn-sm btnCuentaHistorial me-1"><i class="bi bi-clock-history"></i> Historial</button>').attr("data-id",c.id));
+            //if (c.status==="PENDIENTE" && Number(c.pending_amount)>0) $acciones.append($('<button type="button" class="btn btn-success btn-sm btnCuentaAbonar"><i class="bi bi-cash-coin"></i> '+(tipo==="COBRAR"?"Cobrar":"Pagar")+'</button>').attr("data-id",c.id).attr("data-saldo",c.pending_amount));
+            
+const $acciones = $('<td class="text-nowrap"></td>');
+const $dropdown = $('<div class="dropdown"></div>');
+const $toggle = $('<button type="button" class="btn btn-outline-success btn-sm dropdown-toggle px-3" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false"><i class="bi bi-three-dots-vertical me-1"></i>Acciones</button>');
+const $menu = $('<ul class="dropdown-menu dropdown-menu-end shadow-sm border rounded-3 p-2"></ul>');
+
+const agregarAccion = function(texto, icono, clase, datos) {
+    const $btn = $('<button type="button" class="dropdown-item rounded-2 py-2"></button>');
+    $btn.addClass(clase);
+    $btn.append($('<i class="bi me-2"></i>').addClass("bi-"+icono));
+    $btn.append(document.createTextNode(texto));
+    Object.keys(datos).forEach(function(k){
+        $btn.attr("data-"+k,datos[k]);
+    });
+    $menu.append($('<li></li>').append($btn));
+};
+
+agregarAccion("Ver historial","clock-history","btnCuentaHistorial",{id:c.id});
+
+if (c.status==="PENDIENTE" && Number(c.pending_amount)>0) {
+    agregarAccion(
+        tipo==="COBRAR" ? "Registrar cobro" : "Registrar pago",
+        "cash-coin",
+        "btnCuentaAbonar",
+        {id:c.id,saldo:c.pending_amount}
+    );
+
+    if (tipo==="COBRAR") {
+        $menu.append('<li><hr class="dropdown-divider"></li>');
+        agregarAccion(
+            "Generar concentrado PDF",
+            "file-earmark-pdf",
+            "btnCuentaReporte",
+            {id:c.id}
+        );
+    }
+}
+
+$dropdown.append($toggle,$menu);
+$acciones.append($dropdown);
+
+            
             $tabla.append($tr.append($acciones));
         });
     }).fail(function(xhr){
@@ -1777,6 +1827,112 @@ function abrirAbonoCuenta(id,saldo) {
         }).fail(function(xhr){
             Swal.fire("Error",xhr.responseJSON && xhr.responseJSON.answer || "No fue posible confirmar el movimiento. Puedes reintentar sin duplicarlo.","error");
         }).always(function(){state.guardandoAbono=false;});
+    });
+}
+
+
+
+function mostrarConcentradoCxc(id) {
+    if (!Number.isInteger(id) || id<=0) return;
+
+    Swal.fire({
+        title:'Concentrado de cuentas por cobrar',
+        html:`
+            <div class="text-start">
+                <p class="small text-secondary mb-3">Selecciona las cuentas que deseas incluir en el documento.</p>
+                <label class="border rounded-3 p-3 d-block mb-2">
+                    <input type="radio" name="scopeCxc" value="0" class="form-check-input me-2" checked>
+                    <strong>Solo este crédito</strong>
+                    <small class="d-block ms-4 text-secondary">Reporte individual del saldo pendiente.</small>
+                </label>
+                <label class="border rounded-3 p-3 d-block">
+                    <input type="radio" name="scopeCxc" value="1" class="form-check-input me-2">
+                    <strong>Concentrado completo del cliente</strong>
+                    <small class="d-block ms-4 text-secondary">Incluye todas sus cuentas pendientes registradas.</small>
+                </label>
+                <div class="alert alert-warning small mt-3 mb-0">
+                    Si el cliente no tiene ID registrado, las cuentas se agrupan por nombre exacto. Verifica que correspondan a la misma persona.
+                </div>
+            </div>`,
+        width:'570px',
+        showCancelButton:true,
+        confirmButtonText:'Generar PDF',
+        cancelButtonText:'Cancelar',
+        confirmButtonColor:'#086b47',
+        preConfirm:function(){
+            return document.querySelector('input[name="scopeCxc"]:checked').value;
+        }
+    }).then(function(resultado){
+        if (!resultado.isConfirmed) return;
+
+        Swal.fire({
+            title:'Generando concentrado',
+            text:'Preparando las notas pendientes...',
+            allowOutsideClick:false,
+            allowEscapeKey:false,
+            showConfirmButton:false,
+            didOpen:function(){Swal.showLoading();}
+        });
+
+        $.ajax({
+            type:'POST',
+            url:'php/index.php',
+            dataType:'json',
+            data:{
+                action:'generarConcentradoCxc',
+                id:id,
+                agrupar:resultado.value
+            }
+        }).done(function(r){
+            if (!r || r.status!=='ok') {
+                return Swal.fire('Aviso',r && r.answer || 'No se pudo generar el reporte.','warning');
+            }
+
+            const a=r.results||{};
+            if (!a.archivo) {
+                return Swal.fire('Error','No se recibió el archivo PDF.','error');
+            }
+
+            const carpeta=new URL('pdf_generados/cuentas_cobrar/',window.location.href);
+            const url=new URL(a.archivo,window.location.href);
+
+            if (url.origin!==carpeta.origin || !url.pathname.startsWith(carpeta.pathname)) {
+                return Swal.fire('Error','La ruta del PDF no es válida.','error');
+            }
+
+            const $contenido=$('<div class="text-center"></div>');
+            $contenido.append(
+                $('<p class="mb-3"></p>').text(
+                    a.cuentas+' cuenta(s) pendientes · '+monedaMXN(a.pendiente)
+                )
+            );
+
+            $contenido.append(
+                $('<a class="btn btn-success d-block mb-2" target="_blank" rel="noopener noreferrer"></a>')
+                    .attr('href',url.href)
+                    .text('Ver e imprimir concentrado')
+            );
+
+            $contenido.append(
+                $('<a class="btn btn-outline-success d-block"></a>')
+                    .attr({href:url.href,download:a.nombre})
+                    .text('Descargar PDF')
+            );
+
+            Swal.fire({
+                icon:'success',
+                title:'Concentrado listo',
+                html:$contenido[0],
+                confirmButtonText:'Cerrar',
+                confirmButtonColor:'#086b47'
+            });
+        }).fail(function(xhr){
+            Swal.fire(
+                'Error',
+                xhr.responseJSON && xhr.responseJSON.answer || 'No se pudo generar el PDF.',
+                'error'
+            );
+        });
     });
 }
 

@@ -2159,6 +2159,159 @@ public function generarDocumentosNotaVenta($data) {
     return $json;
 }
 
+
+public function generarConcentradoCxc($data) {
+    $json = [];
+    if (!$this->conn) return ['status'=>'error','answer'=>'Sin conexión a MySQL.','code'=>500];
+
+    try {
+        $id = isset($data['id']) ? (int)$data['id'] : 0;
+        $agrupar = isset($data['agrupar']) && (string)$data['agrupar']==='1';
+        if ($id<=0) throw new InvalidArgumentException('Selecciona una cuenta válida.');
+
+        $stmt=$this->ejecutarSqlVenta(
+            'SELECT id,client_id,client_name FROM receivables WHERE id=? LIMIT 1',
+            'i',[$id]
+        );
+        $origen=$stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        if (!$origen) throw new InvalidArgumentException('No se encontró la cuenta.');
+
+        $where='r.id=?'; $tipos='i'; $params=[$id];
+
+        if ($agrupar) {
+            if ((int)$origen['client_id']>0) {
+                $where='r.client_id=?';
+                $params=[(int)$origen['client_id']];
+            } else {
+                $where='r.client_id IS NULL AND BINARY r.client_name=BINARY ?';
+                $tipos='s';
+                $params=[$origen['client_name']];
+            }
+        }
+
+        $sql="SELECT r.id,r.sale_id,r.description,r.document_reference,
+                     r.total_amount,r.paid_amount,r.pending_amount,
+                     r.created_at AS fecha_cuenta,
+                     s.note_folio,s.created_at AS fecha_venta,s.sale_kind
+              FROM receivables r
+              LEFT JOIN sales s ON s.id=r.sale_id
+              WHERE ($where) AND r.status='PENDIENTE'
+                AND r.pending_amount>0
+              ORDER BY COALESCE(s.created_at,r.created_at),r.id
+              LIMIT 151";
+
+        $stmt=$this->ejecutarSqlVenta($sql,$tipos,$params);
+        $cuentas=$stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+
+        if (!$cuentas) throw new InvalidArgumentException('No hay saldos pendientes para este reporte.');
+        if (count($cuentas)>150) throw new InvalidArgumentException('El concentrado supera 150 cuentas. Se necesita dividirlo por periodos.');
+
+        $ids=[]; $indices=[]; $total=0; $abonado=0; $pendiente=0; $fechas=[];
+
+        foreach ($cuentas as $k=>&$c) {
+            if ((int)$c['sale_id']>0 && $c['sale_kind']!=='NOTA') {
+                throw new RuntimeException('Existe una cuenta vinculada a una venta sin nota.');
+            }
+
+            $c['items']=[];
+            $c['folio']=$c['note_folio'] ?: ($c['document_reference'] ?: 'CXC-'.$c['id']);
+            $c['fecha']=$c['fecha_venta'] ?: $c['fecha_cuenta'];
+            $fechas[]=substr($c['fecha'],0,10);
+
+            $original=$this->centavosVenta($c['total_amount']);
+            $pagado=$this->centavosVenta($c['paid_amount']);
+            $saldo=$this->centavosVenta($c['pending_amount']);
+            if ($original===null || $pagado===null || $saldo===null ||
+                $original-$pagado!==$saldo) {
+                throw new RuntimeException('La cuenta '.$c['id'].' tiene importes inconsistentes.');
+            }
+            $total+=$original;
+            $abonado+=$pagado;
+            $pendiente+=$saldo;
+
+            if ((int)$c['sale_id']>0) {
+                $idVenta=(int)$c['sale_id'];
+                if (isset($indices[$idVenta])) {
+                    throw new RuntimeException('Hay cuentas duplicadas para la venta '.$idVenta);
+                }
+                $ids[]=$idVenta;
+                $indices[$idVenta]=$k;
+            }
+        }
+        unset($c);
+
+        if ($ids) {
+            $marcas=implode(',',array_fill(0,count($ids),'?'));
+            $stmt=$this->ejecutarSqlVenta(
+                "SELECT sale_id,product_id,manual_name,manual_code,quantity,price,total
+                 FROM sale_items WHERE sale_id IN ($marcas) ORDER BY sale_id,id",
+                str_repeat('i',count($ids)),$ids
+            );
+            $filas=$stmt->get_result();
+
+            while ($item=$filas->fetch_assoc()) {
+                if (!$item['manual_name']) {
+                    $item['manual_name']=(int)$item['product_id']>0
+                        ? 'Artículo #'.$item['product_id']
+                        : 'Artículo sin descripción';
+                }
+                $cuentas[$indices[(int)$item['sale_id']]]['items'][]=$item;
+            }
+            $stmt->close();
+        }
+
+        foreach ($cuentas as &$c) {
+            if (!$c['items']) {
+                $c['items'][]=[
+                    'manual_name'=>$c['description'] ?: 'Cuenta sin desglose de artículos',
+                    'manual_code'=>'',
+                    'quantity'=>null,
+                    'price'=>null,
+                    'total'=>$c['total_amount']
+                ];
+            }
+        }
+        unset($c);
+
+        sort($fechas);
+
+        $datos=[
+            'cliente'=>$origen['client_name'],
+            'cuentas'=>$cuentas,
+            'desde'=>$fechas[0],
+            'hasta'=>$fechas[count($fechas)-1],
+            'total'=>$total/100,
+            'abonado'=>$abonado/100,
+            'pendiente'=>$pendiente/100
+        ];
+
+        $pdf=new reporteCxcSanMartinPdf($datos);
+        $archivo=$pdf->generarArchivo();
+
+        $json=[
+            'status'=>'ok',
+            'answer'=>'Concentrado generado correctamente.',
+            'code'=>200,
+            'results'=>[
+                'archivo'=>$archivo['ruta_web'],
+                'nombre'=>$archivo['nombre'],
+                'cuentas'=>count($cuentas),
+                'pendiente'=>$datos['pendiente']
+            ]
+        ];
+
+    } catch (InvalidArgumentException $e) {
+        $json=['status'=>'warning','answer'=>$e->getMessage(),'code'=>400];
+    } catch (Throwable $e) {
+        error_log('generarConcentradoCxc: '.$e->getMessage());
+        $json=['status'=>'error','answer'=>'No fue posible generar el concentrado.','code'=>500];
+    }
+    return $json;
+}
+
+
     
 }
 ?>

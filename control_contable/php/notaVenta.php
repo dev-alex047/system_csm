@@ -359,14 +359,17 @@ private function pieNotaFisica($venta, $firmaRuta = '') {
         $this->escribirNota(8, 178, 79, $venta['notes'], 7);
     }
 
+    
     //$this->Line(19, 190, 78, 190);
+    $this->Line(19,190,78,190);
+    $this->escribirNota(19,191,59,'Recibí / Firma',7.2,'','C');
 
 
-if ($firmaRuta !== '' && is_file($firmaRuta)) {
+/*if ($firmaRuta !== '' && is_file($firmaRuta)) {
     $this->Image($firmaRuta, 30, 176, 35, 12, 'PNG');
 }
 
-    $this->escribirNota(19, 191, 59, ($firmaRuta !== '' ? 'Firma de autorización' : 'Recibí / Firma'), 7.2, '', 'C');
+    $this->escribirNota(19, 191, 59, ($firmaRuta !== '' ? 'Firma de autorización' : 'Recibí / Firma'), 7.2, '', 'C');*/
 
     $filas = [
         ['SUBTOTAL', $this->moneda($venta['total_amount'] ?? 0)],
@@ -644,3 +647,218 @@ class notaVentaCompleta extends FPDF {
         if ($this->marcaTemporal) @unlink($this->marcaTemporal);
     }
 }
+
+
+class reporteCxcSanMartinPdf extends FPDF {
+    private $datos;
+    private $anchos=[20,65,21,16,12,24,30];
+
+    public function __construct($datos) {
+        parent::__construct('P','mm','Letter');
+        $this->datos=$datos;
+        $this->SetMargins(14,52,14);
+        $this->SetAutoPageBreak(false);
+    }
+
+    private function t($s) {
+        $s=(string)($s===null?'':$s);
+        $v=@iconv('UTF-8','Windows-1252//TRANSLIT',$s);
+        return $v===false?utf8_decode($s):$v;
+    }
+
+    private function dinero($s) {
+        return '$'.number_format((float)$s,2,'.',',');
+    }
+
+    private function fecha($s) {
+        return $s?date('d/m/Y',strtotime($s)):'—';
+    }
+
+    public function Header() {
+        $ruta=__DIR__.'/../recursos/encabezado_cxc.png';
+        if (!is_file($ruta)) throw new RuntimeException('Falta el encabezado del concentrado.');
+        $this->Image($ruta,0,0,216,44,'PNG');
+        $this->SetY(52);
+    }
+
+    public function Footer() {
+        $ruta=__DIR__.'/../recursos/pie_cxc.png';
+        if (!is_file($ruta)) throw new RuntimeException('Falta el pie del concentrado.');
+        $this->Image($ruta,0,235.5,216,43.8,'PNG');
+    }
+
+    private function espacio($alto,$tabla=false) {
+        if ($this->GetY()+$alto>229) {
+            $this->AddPage();
+            if ($tabla) $this->cabeceraTabla();
+        }
+    }
+
+    private function cabeceraTabla() {
+        $this->SetFont('Arial','B',7.2);
+        $this->SetFillColor(225,242,230);
+        $this->SetTextColor(20,55,36);
+        $this->SetDrawColor(70,85,72);
+        foreach (['FECHA','DESCRIPCIÓN','N° NOTA','CANT.','UND.','PRECIO','IMPORTE'] as $k=>$titulo) {
+            $this->Cell($this->anchos[$k],7,$this->t($titulo),1,0,'C',true);
+        }
+        $this->Ln(7);
+    }
+
+    private function partir($s,$ancho) {
+        $salida=[]; $linea='';
+        foreach (preg_split('/\s+/',trim($s)) as $palabra) {
+            $probar=$linea===''?$palabra:$linea.' '.$palabra;
+            if ($this->GetStringWidth($probar)<=$ancho) {
+                $linea=$probar;
+                continue;
+            }
+            if ($linea!=='') {
+                $salida[]=$linea;
+                $linea='';
+            }
+            while ($this->GetStringWidth($palabra)>$ancho) {
+                $parte='';
+                while ($palabra!=='' && $this->GetStringWidth($parte.$palabra[0])<=$ancho) {
+                    $parte.=$palabra[0];
+                    $palabra=substr($palabra,1);
+                }
+                if ($parte==='') {
+                    $parte=$palabra[0];
+                    $palabra=substr($palabra,1);
+                }
+                $salida[]=$parte;
+            }
+            $linea=$palabra;
+        }
+        if ($linea!=='' || !$salida) $salida[]=$linea;
+        return $salida;
+    }
+
+    private function renglon($c,$item) {
+        $this->SetFont('Arial','',7.6);
+        $texto=$this->t($item['manual_name'] ?: 'Artículo sin descripción');
+        if (!empty($item['manual_code'])) {
+            $texto.=' ['.$this->t($item['manual_code']).']';
+        }
+
+        $lineas=$this->partir($texto,61);
+        $alto=max(7,count($lineas)*4+2);
+        $this->espacio($alto,true);
+
+        $x=$this->GetX(); $y=$this->GetY();
+        $this->SetDrawColor(75,83,78);
+
+        foreach ($this->anchos as $w) {
+            $this->Rect($this->GetX(),$y,$w,$alto);
+            $this->SetX($this->GetX()+$w);
+        }
+
+        $this->SetTextColor(25,36,29);
+        $this->SetXY($x+1,$y+2);
+        $this->Cell(18,4,$this->fecha($c['fecha']),0,0,'L');
+
+        foreach ($lineas as $k=>$linea) {
+            $this->SetXY($x+21,$y+1+$k*4);
+            $this->Cell(63,4,$linea);
+        }
+
+        $this->SetXY($x+85,$y+2);
+        $this->SetFont('Arial','',7);
+        $this->Cell(21,4,$this->t($c['folio']),0,0,'C');
+        //$this->Cell(16,4,$item['quantity']===null?'—':number_format((float)$item['quantity'],2),0,0,'R');
+        //$this->Cell(12,4,'—',0,0,'C');
+
+$this->Cell(16,4,$item['quantity']===null?$this->t('—'):number_format((float)$item['quantity'],2),0,0,'R');
+$this->Cell(12,4,$this->t('—'),0,0,'C');
+
+        $this->Cell(24,4,$item['price']===null?'—':$this->dinero($item['price']),0,0,'R');
+        $this->Cell(30,4,$this->dinero($item['total']),0,0,'R');
+        $this->SetXY($x,$y+$alto);
+    }
+
+    public function generarArchivo() {
+        $this->AddPage();
+        $this->SetTextColor(29,39,34);
+        $this->SetFont('Arial','',9);
+        $this->Cell(188,6,$this->t('San Martín Huamelúlpam; Tlaxiaco, Oaxaca.  '.date('d/m/Y')),0,1,'R');
+        $this->Ln(7);
+        $this->SetFont('Arial','B',10);
+        $this->Cell(188,6,$this->t('ASUNTO: Presentación de notas pendientes de pago.'),0,1);
+        $this->Ln(2);
+        $this->SetFont('Arial','',9);
+        $this->MultiCell(188,5,$this->t('Estimado(a): '.$this->datos['cliente'].'.'));
+        $this->Ln(2);
+        $this->MultiCell(
+            188,5,
+            $this->t(
+                'Por medio de la presente, CORPORATIVO SAN MARTÍN le entrega el concentrado de notas y cuentas pendientes de liquidación correspondientes al periodo del '.
+                $this->fecha($this->datos['desde']).' al '.$this->fecha($this->datos['hasta']).
+                '. Se detallan sus conceptos e importes para revisión.'
+            )
+        );
+        $this->Ln(6);
+        $this->espacio(14);
+        $this->cabeceraTabla();
+
+        foreach ($this->datos['cuentas'] as $c) {
+            foreach ($c['items'] as $item) {
+                $this->renglon($c,$item);
+            }
+        }
+
+        $this->Ln(5);
+        $this->espacio(32);
+        $this->SetFont('Arial','',9);
+        $this->Cell(153,6,'IMPORTE ORIGINAL',0,0,'R');
+        $this->Cell(35,6,$this->dinero($this->datos['total']),0,1,'R');
+        $this->Cell(153,6,'ABONOS REGISTRADOS',0,0,'R');
+        $this->Cell(35,6,$this->dinero($this->datos['abonado']),0,1,'R');
+
+        $this->SetFillColor(225,245,229);
+        $this->SetFont('Arial','B',10);
+        $this->Cell(153,9,'TOTAL PENDIENTE DE PAGO',1,0,'R',true);
+        $this->Cell(35,9,$this->dinero($this->datos['pendiente']),1,1,'R',true);
+        $this->Ln(5);
+
+        $this->SetFont('Arial','',8.6);
+        $this->MultiCell(
+            188,5,
+            $this->t('Agradecemos de antemano su atención y quedamos a sus órdenes para cualquier aclaración. Los saldos reflejan los pagos registrados a la fecha de emisión.')
+        );
+
+        $this->espacio(37);
+        $y=$this->GetY()+4;
+        $firma=__DIR__.'/../recursos/firma.png';
+
+        if (is_file($firma)) {
+            $this->Image($firma,88,$y,40,14,'PNG');
+        }
+
+        $this->SetDrawColor(60,65,59);
+        $this->Line(69,$y+15,147,$y+15);
+        $this->SetXY(14,$y+17);
+        $this->SetFont('Arial','B',9);
+        $this->Cell(188,5,$this->t('HERMINIO PÉREZ BERNABÉ'),0,1,'C');
+        $this->SetFont('Arial','',8);
+        $this->Cell(188,5,$this->t('CORPORATIVO SAN MARTÍN'),0,1,'C');
+
+        $carpeta=__DIR__.'/../pdf_generados/cuentas_cobrar/';
+
+        if (!is_dir($carpeta) && !mkdir($carpeta,0750,true) && !is_dir($carpeta)) {
+            throw new RuntimeException('No se pudo crear la carpeta PDF.');
+        }
+        if (!is_writable($carpeta)) {
+            throw new RuntimeException('La carpeta de reportes no permite escritura.');
+        }
+
+        $nombre='concentrado_cxc_'.date('Ymd_His').'_'.bin2hex(random_bytes(8)).'.pdf';
+        $this->Output('F',$carpeta.$nombre);
+
+        return [
+            'nombre'=>$nombre,
+            'ruta_web'=>'pdf_generados/cuentas_cobrar/'.$nombre
+        ];
+    }
+}
+

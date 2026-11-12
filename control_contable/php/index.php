@@ -88,6 +88,11 @@ case "getAbonosCuentas":
     break;
 
 
+case "generarConcentradoCxc":
+    $response = $consultas->generarConcentradoCxc($_POST);
+    break;
+
+
 
     default:
         $response["status"] = "warning";
