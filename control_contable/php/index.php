@@ -39,6 +39,12 @@ switch ($action) {
         $response = $consultas->generarPdfNotaVenta($idVenta);
         break;
 
+    
+case "generarDocumentosNotaVenta":
+    $response = $consultas->generarDocumentosNotaVenta($_POST);
+    break;
+
+
     case "getControlCaja":
         $response = $consultas->getControlCaja($_POST);
         break;

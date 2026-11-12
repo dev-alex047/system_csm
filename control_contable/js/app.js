@@ -958,7 +958,8 @@ Swal.fire({
     html:"<strong>Folio:</strong> " + $("<div>").text(folio).html() +
          "<p class='mb-0 mt-2'>La operación quedó registrada en MySQL.</p>",
     showCancelButton:true,
-    confirmButtonText:'<i class="bi bi-file-earmark-pdf me-2"></i>Generar nota PDF',
+    //confirmButtonText:'<i class="bi bi-file-earmark-pdf me-2"></i>Generar nota PDF',
+    confirmButtonText:'<i class="bi bi-files me-2"></i>Elegir notas PDF',
     cancelButtonText:"Cerrar",
     confirmButtonColor:"#086b47",
     reverseButtons:true
@@ -981,7 +982,200 @@ Swal.fire({
     });
 }
 
+
 function generarPdfNotaVenta(idVenta) {
+    if (!Number.isInteger(Number(idVenta)) || Number(idVenta)<=0) return;
+
+    const html = `
+        <div class="text-start">
+            <label class="form-label fw-semibold">¿Qué documentos deseas generar?</label>
+            <div class="d-grid gap-2 mb-3">
+                <label class="border rounded-3 p-3">
+                    <input class="form-check-input me-2" type="radio" name="formatoDocumento" value="COMPACTA" checked>
+                    <strong>Nota compacta</strong>
+                    <small class="d-block text-secondary ms-4">Formato original · 140 × 216 mm</small>
+                </label>
+                <label class="border rounded-3 p-3">
+                    <input class="form-check-input me-2" type="radio" name="formatoDocumento" value="CORPORATIVA">
+                    <strong>Nota corporativa</strong>
+                    <small class="d-block text-secondary ms-4">Hoja A4 · encabezado, tabla, marca de agua y firma</small>
+                </label>
+                <label class="border rounded-3 p-3">
+                    <input class="form-check-input me-2" type="radio" name="formatoDocumento" value="AMBAS">
+                    <strong>Ambas notas</strong>
+                    <small class="d-block text-secondary ms-4">Dos archivos PDF de la misma venta</small>
+                </label>
+            </div>
+            <label class="form-label fw-semibold" for="firmaTipoDocumento">Firma de autorización</label>
+            <select class="form-select mb-2" id="firmaTipoDocumento">
+                <option value="PREDEFINIDA">Utilizar firma existente</option>
+                <option value="DIBUJADA">Firmar ahora en pantalla</option>
+            </select>
+            <div id="firmaPredeterminadaDoc" class="rounded-3 border bg-light text-center p-2">
+                <img src="recursos/firma.png" alt="Firma existente del negocio" style="max-height:72px;max-width:100%;object-fit:contain">
+            </div>
+            <div id="firmaDibujadaDoc" class="d-none">
+                <label for="firmaNombreDocumento" class="form-label mt-2">Nombre de quien firma *</label>
+                <input class="form-control mb-2" id="firmaNombreDocumento" maxlength="100" placeholder="Nombre completo">
+                <canvas id="firmaCanvasDocumento" width="620" height="170" style="width:100%;height:auto;display:block;background:white;border:1px solid #ccd9d0;border-radius:12px;touch-action:none"></canvas>
+                <button id="btnLimpiarFirmaDocumento" type="button" class="btn btn-sm btn-outline-secondary mt-2">
+                    <i class="bi bi-eraser me-1"></i>Limpiar y volver a firmar
+                </button>
+            </div>
+            <p class="small text-secondary mt-3 mb-0">Se conservará la primera firma registrada en esta venta. Los documentos no generan nuevos cobros.</p>
+        </div>`;
+
+    let trazos=0;
+    Swal.fire({
+        title:'Documentos de la venta',
+        html:html,
+        width:'660px',
+        showCancelButton:true,
+        confirmButtonText:'Guardar firma y generar',
+        cancelButtonText:'Cancelar',
+        confirmButtonColor:'#086b47',
+        didOpen:function(){
+            const canvas=document.getElementById('firmaCanvasDocumento');
+            const ctx=canvas.getContext('2d');
+            const limpiar=function(){
+                ctx.fillStyle='#fff';
+                ctx.fillRect(0,0,canvas.width,canvas.height);
+                trazos=0;
+            };
+
+            limpiar();
+            ctx.strokeStyle='#173d2a';
+            ctx.lineWidth=2.7;
+            ctx.lineCap='round';
+            ctx.lineJoin='round';
+
+            let activo=false;
+            const coords=function(e){
+                const r=canvas.getBoundingClientRect();
+                return {
+                    x:(e.clientX-r.left)*canvas.width/r.width,
+                    y:(e.clientY-r.top)*canvas.height/r.height
+                };
+            };
+
+            canvas.addEventListener('pointerdown',function(e){
+                e.preventDefault();
+                activo=true;
+                canvas.setPointerCapture(e.pointerId);
+                const p=coords(e);
+                ctx.beginPath();
+                ctx.moveTo(p.x,p.y);
+                ctx.lineTo(p.x+.1,p.y+.1);
+                ctx.stroke();
+                trazos++;
+            });
+
+            canvas.addEventListener('pointermove',function(e){
+                if(!activo)return;
+                e.preventDefault();
+                const p=coords(e);
+                ctx.lineTo(p.x,p.y);
+                ctx.stroke();
+            });
+
+            ['pointerup','pointercancel','lostpointercapture'].forEach(function(ev){
+                canvas.addEventListener(ev,function(){activo=false;});
+            });
+
+            document.getElementById('btnLimpiarFirmaDocumento').addEventListener('click',limpiar);
+            document.getElementById('firmaTipoDocumento').addEventListener('change',function(){
+                const manual=this.value==='DIBUJADA';
+                document.getElementById('firmaDibujadaDoc').classList.toggle('d-none',!manual);
+                document.getElementById('firmaPredeterminadaDoc').classList.toggle('d-none',manual);
+            });
+        },
+        preConfirm:function(){
+            const formato=document.querySelector('input[name="formatoDocumento"]:checked').value;
+            const firma_tipo=document.getElementById('firmaTipoDocumento').value;
+            const firmante=document.getElementById('firmaNombreDocumento').value.trim();
+
+            if(firma_tipo==='DIBUJADA' && (!trazos || !firmante)) {
+                Swal.showValidationMessage('Escribe el nombre y dibuja la firma antes de guardar.');
+                return false;
+            }
+
+            return {
+                formato:formato,
+                firma_tipo:firma_tipo,
+                firmante:firmante,
+                firma_png:firma_tipo==='DIBUJADA'
+                    ? document.getElementById('firmaCanvasDocumento').toDataURL('image/png')
+                    : ''
+            };
+        }
+    }).then(function(r){
+        if(r.isConfirmed && r.value) enviarDocumentosNotaVenta(idVenta,r.value);
+    });
+}
+
+function enviarDocumentosNotaVenta(idVenta,opciones) {
+    Swal.fire({
+        title:'Generando documentos',
+        text:'Preparando los archivos PDF...',
+        allowOutsideClick:false,
+        allowEscapeKey:false,
+        showConfirmButton:false,
+        didOpen:()=>Swal.showLoading()
+    });
+
+    $.ajax({
+        url:'php/index.php',
+        type:'POST',
+        dataType:'json',
+        data:Object.assign({action:'generarDocumentosNotaVenta',id:idVenta},opciones)
+    }).done(function(r){
+        if(!r || r.status!=='ok') {
+            return Swal.fire('Aviso',r && r.answer||'No se generaron los documentos.','warning');
+        }
+
+        const $lista=$('<div class="d-grid gap-2 mt-3"></div>');
+        const carpeta=new URL('pdf_generados/notas_venta/',window.location.href);
+
+        (r.results.archivos||[]).forEach(function(a){
+            const url=new URL(a.archivo,window.location.href);
+            if(url.origin!==carpeta.origin || !url.pathname.startsWith(carpeta.pathname)) return;
+
+            const nombre=a.tipo==='COMPACTA'?'Nota compacta':'Nota corporativa';
+
+            $lista.append(
+                $('<a class="btn btn-success py-2" target="_blank" rel="noopener noreferrer"></a>')
+                    .attr('href',url.href)
+                    .text('Ver e imprimir '+nombre)
+            );
+            $lista.append(
+                $('<a class="btn btn-outline-success btn-sm"></a>')
+                    .attr({href:url.href,download:a.nombre})
+                    .text('Descargar '+nombre)
+            );
+        });
+
+        if(!$lista.children().length) {
+            return Swal.fire('Error','PHP no devolvió archivos válidos.','error');
+        }
+
+        Swal.fire({
+            icon:'success',
+            title:'Documentos listos',
+            html:$lista[0],
+            confirmButtonText:'Cerrar',
+            confirmButtonColor:'#086b47'
+        });
+    }).fail(function(xhr){
+        Swal.fire(
+            'No se generaron los documentos',
+            (xhr.responseJSON&&xhr.responseJSON.answer)||'Error de comunicación con PHP.',
+            'error'
+        );
+    });
+}
+
+
+function generarPdfNotaVenta_old(idVenta) {
     if (!idVenta || Number(idVenta) <= 0) {
         Swal.fire("Aviso", "No se recibió un ID de venta válido.", "warning");
         return;

@@ -34,7 +34,7 @@ class notaVenta extends FPDF
     }
 
     
-public function generarArchivo($venta) {
+public function generarArchivo($venta, $firmaRuta = '') {
     $this->SetAutoPageBreak(false);
     $this->SetMargins(7, 7, 7);
     $this->AddPage();
@@ -86,7 +86,8 @@ public function generarArchivo($venta) {
         $y += 8;
     }
 
-    $this->pieNotaFisica($venta);
+    //$this->pieNotaFisica($venta);
+    $this->pieNotaFisica($venta, $firmaRuta);
 
     $carpeta = __DIR__ . '/../pdf_generados/notas_venta/';
 
@@ -102,7 +103,8 @@ public function generarArchivo($venta) {
         !empty($venta['note_folio']) ? $venta['note_folio'] : 'venta_' . $venta['id']
     );
 
-    $nombre = 'nota_' . $folio . '_' . date('Ymd_His') . '.pdf';
+    //$nombre = 'nota_' . $folio . '_' . date('Ymd_His') . '.pdf';
+    $nombre = 'nota_' . $folio . '_' . date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.pdf';
     $this->Output('F', $carpeta . $nombre);
 
     return [
@@ -347,7 +349,7 @@ private function marcaAguaNota() {
 }
 
 
-private function pieNotaFisica($venta) {
+private function pieNotaFisica($venta, $firmaRuta = '') {
     $this->SetTextColor(35, 45, 39);
     $this->escribirNota(8, 157, 79, 'Forma de pago: ' . ($venta['payment_method'] ?? ''), 7.8, 'B');
     $this->escribirNota(8, 164, 79, 'Referencia: ' . (!empty($venta['bank_reference']) ? $venta['bank_reference'] : '—'), 7.5);
@@ -357,8 +359,14 @@ private function pieNotaFisica($venta) {
         $this->escribirNota(8, 178, 79, $venta['notes'], 7);
     }
 
-    $this->Line(19, 190, 78, 190);
-    $this->escribirNota(19, 191, 59, 'Recibí / Firma', 7.2, '', 'C');
+    //$this->Line(19, 190, 78, 190);
+
+
+if ($firmaRuta !== '' && is_file($firmaRuta)) {
+    $this->Image($firmaRuta, 30, 176, 35, 12, 'PNG');
+}
+
+    $this->escribirNota(19, 191, 59, ($firmaRuta !== '' ? 'Firma de autorización' : 'Recibí / Firma'), 7.2, '', 'C');
 
     $filas = [
         ['SUBTOTAL', $this->moneda($venta['total_amount'] ?? 0)],
@@ -386,3 +394,253 @@ private function pieNotaFisica($venta) {
 
 }
 
+
+class notaVentaCompleta extends FPDF {
+    private $venta = [];
+    private $firma = '';
+    private $firmante = '';
+    private $marcaTemporal = '';
+
+    private function texto($valor) {
+        $resultado = @iconv('UTF-8', 'Windows-1252//TRANSLIT', (string)$valor);
+        return $resultado === false ? utf8_decode((string)$valor) : $resultado;
+    }
+
+    private function dinero($valor) {
+        return '$'.number_format((float)$valor, 2, '.', ',');
+    }
+
+    public function __construct($venta, $firma, $firmante) {
+        parent::__construct('P','mm','A4');
+        $this->venta = $venta;
+        $this->firma = $firma;
+        $this->firmante = $firmante;
+        $this->SetMargins(15,61,15);
+        $this->SetAutoPageBreak(true,25);
+    }
+
+    private function imagenAjustada($ruta,$x,$y,$maxW,$maxH) {
+        if (!is_file($ruta)) return;
+        $dim = @getimagesize($ruta);
+        if (!$dim || !$dim[0] || !$dim[1]) return;
+        $factor = min($maxW/$dim[0], $maxH/$dim[1]);
+        $w=$dim[0]*$factor; $h=$dim[1]*$factor;
+        $this->Image($ruta,$x+($maxW-$w)/2,$y+($maxH-$h)/2,$w,$h,'PNG');
+    }
+
+    private function prepararMarca() {
+        $ruta = __DIR__.'/../recursos/logo.png';
+        if (!is_file($ruta) || !function_exists('imagecreatefrompng')) return;
+        $original = @imagecreatefrompng($ruta);
+        if (!$original) return;
+        $n=230; $base=imagecreatetruecolor($n,$n);
+        $palida=imagecreatetruecolor($n,$n);
+        $blanco=imagecolorallocate($base,255,255,255);
+        imagefill($base,0,0,$blanco);
+        imagefill($palida,0,0,imagecolorallocate($palida,255,255,255));
+        imagealphablending($base,true);
+        imagecopyresampled($base,$original,0,0,0,0,$n,$n,imagesx($original),imagesy($original));
+        imagecopymerge($palida,$base,0,0,0,0,$n,$n,9);
+        $tmp=tempnam(sys_get_temp_dir(),'marca_nv_');
+        if ($tmp && @imagejpeg($palida,$tmp,88)) $this->marcaTemporal=$tmp;
+        elseif ($tmp) @unlink($tmp);
+        imagedestroy($palida); imagedestroy($base); imagedestroy($original);
+    }
+
+    public function Header() {
+        $this->SetTextColor(34,54,43);
+        if ($this->marcaTemporal) {
+            $this->Image($this->marcaTemporal,66,114,78,78,'JPG');
+        } else {
+            $this->SetFont('Arial','B',28);
+            $this->SetTextColor(238,244,239);
+            $this->Text(49,152,$this->texto('SAN MARTÍN'));
+        }
+        $this->imagenAjustada(__DIR__.'/../recursos/logo.png',15,12,25,25);
+        $this->imagenAjustada(__DIR__.'/../recursos/maquinaria.png',164,12,31,25);
+        $this->SetXY(43,11);
+        $this->SetFont('Arial','B',15);
+        $this->SetTextColor(21,93,65);
+        $this->Cell(118,7,$this->texto('CORPORATIVO SAN MARTÍN'),0,1,'C');
+        $this->SetX(43);
+        $this->SetFont('Arial','B',8.5);
+        $this->SetTextColor(40,50,44);
+        $this->Cell(118,5,$this->texto('RENTA DE MAQUINARIA Y VENTA DE MATERIALES'),0,1,'C');
+        $this->SetX(43);
+        $this->Cell(118,4,$this->texto('PARA LA CONSTRUCCIÓN'),0,1,'C');
+        $this->SetX(43);
+        $this->SetFont('Arial','',8);
+        $this->Cell(118,5,$this->texto('RFC: QUSA8001193T1'),0,1,'C');
+        $this->SetX(41);
+        $this->SetFont('Arial','',7.2);
+        $this->Cell(122,5,'953 55 212 53  |  951 287 04 99',0,1,'C');
+        $this->SetDrawColor(18,123,79);
+        $this->SetLineWidth(.55);
+        $this->Line(15,45,195,45);
+        $this->SetY(61);
+    }
+
+    public function Footer() {
+        $this->SetY(-20);
+        $this->SetDrawColor(29,130,84);
+        $this->Line(15,$this->GetY(),195,$this->GetY());
+        $this->SetY(-17);
+        $this->SetFont('Arial','',7.3);
+        $this->SetTextColor(92,103,96);
+        $this->Cell(160,5,$this->texto('CARRETERA A YUCUDAA KM. 34+800 · SAN MARTÍN HUAMELULPAM · TLAXIACO, OAXACA'),0,0,'L');
+        $this->Cell(20,5,$this->texto('Pág. ').$this->PageNo(),0,0,'R');
+    }
+
+    private function encabezadoTabla() {
+        $this->SetFillColor(226,243,233);
+        $this->SetTextColor(24,96,67);
+        $this->SetFont('Arial','B',8);
+        $this->Cell(105,9,$this->texto('DESCRIPCIÓN / CONCEPTO'),1,0,'L',true);
+        $this->Cell(18,9,'CANT.',1,0,'C',true);
+        $this->Cell(27,9,'P. UNIT.',1,0,'R',true);
+        $this->Cell(30,9,'IMPORTE',1,1,'R',true);
+    }
+
+    private function lineas($texto,$ancho) {
+        $palabras=preg_split('/\s+/', trim($texto));
+        $filas=[]; $actual='';
+        foreach ($palabras as $palabra) {
+            $prueba=$actual===''?$palabra:$actual.' '.$palabra;
+            if ($this->GetStringWidth($prueba)<=$ancho-4) {
+                $actual=$prueba; continue;
+            }
+            if ($actual!=='') {$filas[]=$actual;$actual='';}
+            while ($this->GetStringWidth($palabra)>$ancho-4 && strlen($palabra)>1) {
+                $trozo='';
+                while (strlen($palabra) && $this->GetStringWidth($trozo.$palabra[0])<=$ancho-4) {
+                    $trozo.=$palabra[0];
+                    $palabra=substr($palabra,1);
+                }
+                if ($trozo==='') {$trozo=$palabra[0];$palabra=substr($palabra,1);}
+                $filas[]=$trozo;
+            }
+            $actual=$palabra;
+        }
+        if ($actual!=='' || !$filas) $filas[]=$actual;
+        return $filas;
+    }
+
+    private function filaArticulo($r) {
+        $this->SetFont('Arial','',8.5);
+        $this->SetTextColor(37,49,41);
+        $desc=$this->texto(trim((string)($r['manual_name']??'')));
+        if (!empty($r['manual_code'])) $desc.=' ['.$this->texto($r['manual_code']).']';
+        $filas=$this->lineas($desc,105);
+        $h=max(9,count($filas)*5+3);
+        if ($this->GetY()+$h>263) {
+            $this->AddPage();
+            $this->encabezadoTabla();
+            $this->SetFont('Arial','',8.5);
+            $this->SetTextColor(37,49,41);
+        }
+        $x=$this->GetX(); $y=$this->GetY();
+        foreach ([105,18,27,30] as $w) {
+            $this->Rect($this->GetX(),$y,$w,$h);
+            $this->SetX($this->GetX()+$w);
+        }
+        $this->SetXY($x+2,$y+1.5);
+        foreach ($filas as $linea) $this->Cell(101,5,$linea,0,2);
+        $this->SetXY($x+105,$y+2);
+        $this->Cell(18,5,number_format((float)$r['quantity'],2,'.',','),0,0,'C');
+        $this->Cell(27,5,$this->dinero($r['price']),0,0,'R');
+        $this->Cell(30,5,$this->dinero($r['total']),0,0,'R');
+        $this->SetXY($x,$y+$h);
+    }
+
+    private function espacio($alto) {
+        if ($this->GetY()+$alto>263) $this->AddPage();
+    }
+
+    public function generarArchivo() {
+        $this->prepararMarca();
+        $this->AddPage();
+        $this->SetFont('Arial','B',12);
+        $this->SetTextColor(28,99,69);
+        $this->Cell(130,9,$this->texto('NOTA DE VENTA · FORMATO CORPORATIVO'),0,0,'L');
+        $this->SetFont('Arial','B',9);
+        $this->SetTextColor(50,60,54);
+        $this->Cell(50,9,$this->texto('Folio: '.$this->venta['note_folio']),0,1,'R');
+        $this->SetFont('Arial','',8.5);
+        $this->Cell(180,6,$this->texto('Fecha: '.date('d/m/Y H:i',strtotime($this->venta['created_at']))),0,1);
+        $this->SetFillColor(247,250,248);
+        $this->SetFont('Arial','B',9);
+        $this->Cell(180,7,$this->texto('DATOS DEL CLIENTE'),0,1,'L',true);
+        $this->SetFont('Arial','',9);
+        $this->MultiCell(180,5,$this->texto('Cliente: '.($this->venta['client_name']??'')));
+        $this->MultiCell(180,5,$this->texto('Dirección: '.($this->venta['client_address']?:'No especificada')));
+        $this->Cell(95,6,$this->texto('Teléfono: '.($this->venta['client_phone']?:'—')),0,0);
+        $this->Cell(85,6,$this->texto('Vendedor: '.($this->venta['seller_name']??'')),0,1);
+        $this->Ln(6);
+        $this->espacio(14);
+        $this->encabezadoTabla();
+        foreach ($this->venta['items'] as $r) $this->filaArticulo($r);
+        $this->Ln(7);
+        $this->espacio(45);
+        $this->SetFont('Arial','',8.5);
+        $this->SetTextColor(45,55,48);
+        $this->Cell(110,7,$this->texto('Forma de pago: '.($this->venta['payment_method']??'')),0,0);
+        $this->SetFont('Arial','B',9);
+        $this->Cell(42,7,'TOTAL',0,0,'R');
+        $this->Cell(28,7,$this->dinero($this->venta['total_amount']),0,1,'R');
+        $this->SetFont('Arial','',8.5);
+        $this->Cell(110,7,$this->texto('Referencia: '.($this->venta['bank_reference']?:'—')),0,0);
+        $this->Cell(42,7,'Recibido',0,0,'R');
+        $this->Cell(28,7,$this->dinero($this->venta['initial_paid']),0,1,'R');
+        $this->Cell(110,7,'',0,0);
+        $this->SetFont('Arial','B',9);
+        $this->SetTextColor(17,105,68);
+        $this->Cell(42,7,'Saldo pendiente',0,0,'R');
+        $this->Cell(28,7,$this->dinero($this->venta['pending_amount']),0,1,'R');
+        if (!empty($this->venta['notes'])) {
+            $this->espacio(18);
+            $this->Ln(5);
+            $this->SetFont('Arial','',8.5);
+            $this->SetTextColor(44,54,47);
+            $this->MultiCell(180,5,$this->texto('Observaciones: '.$this->venta['notes']));
+        }
+        $this->Ln(7);
+        $this->espacio(45);
+        $this->SetFont('Arial','',8.5);
+        $this->SetTextColor(60,70,63);
+        $this->MultiCell(180,5,$this->texto('Documento comercial de venta. Conserve este comprobante para cualquier aclaración sobre su pedido.'));
+        $this->Ln(4);
+        $y=$this->GetY();
+        if ($this->firma && is_file($this->firma)) {
+            $this->imagenAjustada($this->firma,78,$y,54,17);
+        }
+        $this->SetDrawColor(40,50,42);
+        $this->Line(66,$y+19,144,$y+19);
+        $this->SetY($y+21);
+        $this->SetFont('Arial','B',9);
+        $this->SetTextColor(40,52,44);
+        $this->Cell(180,5,$this->texto($this->firmante),0,1,'C');
+        $this->SetFont('Arial','',8);
+        $this->Cell(180,5,$this->texto('Firma de autorización'),0,1,'C');
+
+        $carpeta=__DIR__.'/../pdf_generados/notas_venta/';
+        if (!is_dir($carpeta) && !mkdir($carpeta,0750,true) && !is_dir($carpeta)) {
+            throw new RuntimeException('No se pudo crear el directorio PDF.');
+        }
+        if (!is_writable($carpeta)) throw new RuntimeException('Directorio PDF sin permisos de escritura.');
+        $nombre='nota_corporativa_'.(int)$this->venta['id'].'_'.date('Ymd_His').'_'.bin2hex(random_bytes(4)).'.pdf';
+        $this->Output('F',$carpeta.$nombre);
+        if ($this->marcaTemporal) {
+            @unlink($this->marcaTemporal);
+            $this->marcaTemporal='';
+        }
+        return [
+            'nombre'=>$nombre,
+            'ruta_fisica'=>$carpeta.$nombre,
+            'ruta_web'=>'pdf_generados/notas_venta/'.$nombre
+        ];
+    }
+
+    public function __destruct() {
+        if ($this->marcaTemporal) @unlink($this->marcaTemporal);
+    }
+}

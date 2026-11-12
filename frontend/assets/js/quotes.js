@@ -512,11 +512,11 @@ consultarProductos("", 96)
 
         //alert('Precio inválido');
         Swal.fire({
-    icon: "warning",
-    title: "Precio inválido",
-    text: "Ingresa un precio de venta válido.",
-    confirmButtonColor: "#086b47"
-});
+          icon: "warning",
+          title: "Precio inválido",
+          text: "Ingresa un precio de venta válido.",
+          confirmButtonColor: "#086b47"
+        });
 
         return;
 
@@ -526,11 +526,11 @@ consultarProductos("", 96)
 
         //alert('El precio de venta no puede ser menor al precio de compra.');
         Swal.fire({
-    icon: "warning",
-    title: "Precio no permitido",
-    text: "El precio de venta no puede ser menor al precio de compra.",
-    confirmButtonColor: "#086b47"
-});
+          icon: "warning",
+          title: "Precio no permitido",
+          text: "El precio de venta no puede ser menor al precio de compra.",
+          confirmButtonColor: "#086b47"
+        });
 
         return;
 
@@ -585,8 +585,6 @@ consultarProductos("", 96)
     if (ivaRow) ivaRow.style.display = includeIva.checked ? '' : 'none';
 
   }
-
-
 
   // Lógica de búsqueda y escaneo
 

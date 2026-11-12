@@ -2011,6 +2011,154 @@ if ($tipo==="COBRAR") {
 }
 
 
+public function generarDocumentosNotaVenta($data) {
+    $json=[]; $transaccion=false; $firmaTmp=''; $creados=[];
+    if (!$this->conn) return ['status'=>'error','answer'=>'Sin conexión con MySQL.','code'=>500];
+
+    try {
+        $id=isset($data['id'])?(int)$data['id']:0;
+        $formato=$this->textoVenta($data,'formato',12);
+        $fuente=$this->textoVenta($data,'firma_tipo',15);
+
+        if ($id<=0 || !in_array($formato,['COMPACTA','CORPORATIVA','AMBAS'],true)) {
+            throw new InvalidArgumentException('Selecciona documentos válidos.');
+        }
+        if (!in_array($fuente,['PREDEFINIDA','DIBUJADA'],true)) {
+            throw new InvalidArgumentException('Selecciona una firma válida.');
+        }
+
+        $venta=$this->getDatosNotaVentaPdf($id);
+        if (!$venta || empty($venta['items'])) {
+            throw new InvalidArgumentException('No se encontró la venta o sus conceptos.');
+        }
+
+        $nombre=$fuente==='PREDEFINIDA'
+            ? 'C. HERMINIO PEREZ BERNABE'
+            : $this->textoVenta($data,'firmante',100);
+
+        if ($nombre==='') throw new InvalidArgumentException('Indica el nombre de quien firma.');
+
+        if (!$this->conn->begin_transaction()) {
+            throw new RuntimeException('No se pudo iniciar la operación.');
+        }
+        $transaccion=true;
+
+        $stmt=$this->ejecutarSqlVenta(
+            "SELECT document_signature_png,document_signer,document_signature_source
+             FROM sales WHERE id=? AND sale_kind='NOTA' FOR UPDATE",
+            "i",[$id]
+        );
+        $guardada=$stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$guardada) throw new InvalidArgumentException('La venta ya no existe.');
+
+        $firmaExistia=$guardada['document_signature_png']!==null
+            && $guardada['document_signature_png']!=='';
+
+        if ($firmaExistia) {
+            $png=$guardada['document_signature_png'];
+            $nombre=$guardada['document_signer'];
+        } else {
+            if ($fuente==='PREDEFINIDA') {
+                $rutaFirma=__DIR__.'/../recursos/firma.png';
+                if (!is_file($rutaFirma)) {
+                    throw new RuntimeException('Falta recursos/firma.png.');
+                }
+                $png=file_get_contents($rutaFirma);
+            } else {
+                $entrada=isset($data['firma_png'])?(string)$data['firma_png']:'';
+                if (strlen($entrada)>480000 ||
+                    !preg_match('~^data:image/png;base64,([A-Za-z0-9+/=]+)$~D',$entrada,$m)) {
+                    throw new InvalidArgumentException('La firma dibujada no tiene un formato válido.');
+                }
+                $png=base64_decode($m[1],true);
+            }
+
+            if (!is_string($png) || strlen($png)<70 ||
+                strlen($png)>($fuente==='PREDEFINIDA'?1500000:350000)) {
+                throw new InvalidArgumentException('La firma supera el tamaño permitido o es inválida.');
+            }
+
+            $info=@getimagesizefromstring($png);
+            if (!$info || $info['mime']!=='image/png' ||
+                $info[0]>4000 || $info[1]>1400 ||
+                $info[0]<1 || $info[1]<1) {
+                throw new InvalidArgumentException('La firma debe ser una imagen PNG válida.');
+            }
+
+            $stmt=$this->ejecutarSqlVenta(
+                "UPDATE sales SET document_signature_png=?,
+                 document_signer=?,document_signature_source=?,
+                 document_signed_at=NOW() WHERE id=?",
+                "sssi",[$png,$nombre,$fuente,$id]
+            );
+            $stmt->close();
+        }
+
+        if (!$this->conn->commit()) throw new RuntimeException('No se pudo confirmar la firma.');
+        $transaccion=false;
+
+        $firmaTmp=tempnam(sys_get_temp_dir(),'firma_nv_');
+        if (!$firmaTmp || file_put_contents($firmaTmp,$png)===false) {
+            throw new RuntimeException('No se pudo preparar la imagen de la firma.');
+        }
+
+        $archivos=[];
+
+        if ($formato==='COMPACTA' || $formato==='AMBAS') {
+            $pdf=new notaVenta();
+            $archivo=$pdf->generarArchivo($venta,$firmaTmp);
+            $creados[]=$archivo['ruta_fisica'];
+            $archivos[]=[
+                'tipo'=>'COMPACTA',
+                'archivo'=>$archivo['ruta_web'],
+                'nombre'=>$archivo['nombre']
+            ];
+        }
+
+        if ($formato==='CORPORATIVA' || $formato==='AMBAS') {
+            $pdf=new notaVentaCompleta($venta,$firmaTmp,$nombre);
+            $archivo=$pdf->generarArchivo();
+            $creados[]=$archivo['ruta_fisica'];
+            $archivos[]=[
+                'tipo'=>'CORPORATIVA',
+                'archivo'=>$archivo['ruta_web'],
+                'nombre'=>$archivo['nombre']
+            ];
+        }
+
+        $json=[
+            'status'=>'ok',
+            'answer'=>'Documentos generados correctamente.',
+            'results'=>[
+                'archivos'=>$archivos,
+                'folio'=>$venta['note_folio'],
+                'firma_reutilizada'=>$firmaExistia
+            ],
+            'code'=>200
+        ];
+
+    } catch (InvalidArgumentException $e) {
+        if ($transaccion) $this->conn->rollback();
+        $json=['status'=>'warning','answer'=>$e->getMessage(),'code'=>400];
+
+    } catch (Throwable $e) {
+        if ($transaccion) $this->conn->rollback();
+        foreach ($creados as $ruta) @unlink($ruta);
+        error_log('generarDocumentosNotaVenta: '.$e->getMessage());
+        $json=[
+            'status'=>'error',
+            'answer'=>'No se pudieron generar los PDF. Los importes de la venta permanecen intactos.',
+            'code'=>500
+        ];
+
+    } finally {
+        if ($firmaTmp && is_file($firmaTmp)) @unlink($firmaTmp);
+    }
+    return $json;
+}
+
     
 }
 ?>
