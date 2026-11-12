@@ -146,3 +146,24 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
     color: #087849;
     background: #fff;
 }
+
+
+#tablaListadoVentas td {
+    padding: 16px 12px;
+    vertical-align: top;
+}
+
+#tablaListadoVentas tbody tr {
+    border-color: #e6ece8;
+}
+
+#tablaListadoVentas details > summary {
+    cursor: pointer;
+    color: #087849;
+    font-weight: 600;
+    margin-top: 6px;
+}
+
+#tablaListadoVentas .dropdown-menu {
+    min-width: 210px;
+}

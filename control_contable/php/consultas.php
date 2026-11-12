@@ -172,6 +172,158 @@ public function getCajasVenta() {
 }
 
 
+public function getVentas($data = []) {
+    $json = [];
+
+    if (!$this->conn) {
+        $json["status"] = "error";
+        $json["answer"] = "No hay conexión con MySQL.";
+        $json["code"] = 500;
+    } else {
+        try {
+            $buscar = isset($data["buscar"]) ? trim((string)$data["buscar"]) : "";
+            $tipo = isset($data["tipo"]) ? (string)$data["tipo"] : "TODAS";
+            $inicio = isset($data["inicio"]) ? (string)$data["inicio"] : "";
+            $fin = isset($data["fin"]) ? (string)$data["fin"] : "";
+            $pagina = max(1, min(100000, isset($data["pagina"]) ? (int)$data["pagina"] : 1));
+            $limite = 12;
+
+            if (strlen($buscar) > 100 || !in_array($tipo, ["TODAS", "NOTA", "RAPIDA"], true)) {
+                throw new InvalidArgumentException("Revisa los filtros de búsqueda.");
+            }
+
+            foreach ([$inicio, $fin] as $fecha) {
+                if ($fecha === "") continue;
+                $valida = DateTime::createFromFormat("!Y-m-d", $fecha);
+                if (!$valida || $valida->format("Y-m-d") !== $fecha) {
+                    throw new InvalidArgumentException("Indica fechas válidas.");
+                }
+            }
+
+            if ($inicio !== "" && $fin !== "" && $inicio > $fin) {
+                throw new InvalidArgumentException("La fecha inicial no puede superar la final.");
+            }
+
+            $where = " WHERE s.sale_kind IN ('NOTA','RAPIDA')";
+            $tipos = "";
+            $params = [];
+
+            if ($tipo !== "TODAS") {
+                $where .= " AND s.sale_kind = ?";
+                $tipos .= "s";
+                $params[] = $tipo;
+            }
+
+            if ($inicio !== "") {
+                $where .= " AND s.created_at >= ?";
+                $tipos .= "s";
+                $params[] = $inicio . " 00:00:00";
+            }
+
+            if ($fin !== "") {
+                $where .= " AND s.created_at <= ?";
+                $tipos .= "s";
+                $params[] = $fin . " 23:59:59";
+            }
+
+            if ($buscar !== "") {
+                $patron = "%" . str_replace(["!", "%", "_"], ["!!", "!%", "!_"], $buscar) . "%";
+                $where .= " AND (
+                    s.note_folio LIKE ? ESCAPE '!'
+                    OR s.ticket_barcode LIKE ? ESCAPE '!'
+                    OR s.client_name LIKE ? ESCAPE '!'
+                    OR s.seller_name LIKE ? ESCAPE '!'
+                    OR EXISTS (
+                        SELECT 1 FROM sale_items si
+                        WHERE si.sale_id = s.id
+                        AND si.manual_name LIKE ? ESCAPE '!'
+                    )
+                )";
+                $tipos .= "sssss";
+                array_push($params, $patron, $patron, $patron, $patron, $patron);
+            }
+
+            $stmt = $this->ejecutarSqlVenta(
+                "SELECT COUNT(*) AS total FROM sales s" . $where,
+                $tipos, $params
+            );
+            $total = (int)$stmt->get_result()->fetch_assoc()["total"];
+            $stmt->close();
+
+            $paginas = max(1, (int)ceil($total / $limite));
+            $pagina = min($pagina, $paginas);
+            $offset = ($pagina - 1) * $limite;
+
+            $sql = "SELECT s.id, s.sale_kind, s.note_folio,
+                s.ticket_barcode, s.client_name, s.seller_name,
+                s.created_at, s.payment_method, s.total_amount,
+                s.initial_paid, s.pending_amount
+                FROM sales s" . $where . "
+                ORDER BY s.created_at DESC, s.id DESC
+                LIMIT ? OFFSET ?";
+
+            $stmt = $this->ejecutarSqlVenta(
+                $sql, $tipos . "ii", array_merge($params, [$limite, $offset])
+            );
+            $ventas = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            $stmt->close();
+
+            $posiciones = [];
+            $ids = [];
+
+            foreach ($ventas as $i => &$venta) {
+                $venta["id"] = (int)$venta["id"];
+                $venta["items"] = [];
+                $posiciones[$venta["id"]] = $i;
+                $ids[] = $venta["id"];
+            }
+            unset($venta);
+
+            if ($ids) {
+                $marcas = implode(",", array_fill(0, count($ids), "?"));
+
+                $stmt = $this->ejecutarSqlVenta(
+                    "SELECT sale_id, quantity, price, total, manual_name, manual_code
+                     FROM sale_items WHERE sale_id IN (" . $marcas . ")
+                     ORDER BY sale_id, id",
+                    str_repeat("i", count($ids)), $ids
+                );
+
+                $items = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+                $stmt->close();
+
+                foreach ($items as $item) {
+                    $ventas[$posiciones[(int)$item["sale_id"]]]["items"][] = $item;
+                }
+            }
+
+            $json["status"] = "ok";
+            $json["answer"] = "Ventas consultadas correctamente.";
+            $json["results"] = [
+                "ventas" => $ventas,
+                "total" => $total,
+                "pagina" => $pagina,
+                "paginas" => $paginas
+            ];
+            $json["code"] = 200;
+
+        } catch (InvalidArgumentException $e) {
+            $json["status"] = "warning";
+            $json["answer"] = $e->getMessage();
+            $json["code"] = 400;
+        } catch (Throwable $e) {
+            error_log("getVentas: " . $e->getMessage());
+            $json["status"] = "error";
+            $json["answer"] = "No fue posible consultar el historial de ventas.";
+            $json["code"] = 500;
+        }
+    }
+
+    return $json;
+}
+
+
+
 
 public function guardarVentaNota($data) {
     $json = [];
@@ -2244,11 +2396,37 @@ public function generarConcentradoCxc($data) {
 
         if ($ids) {
             $marcas=implode(',',array_fill(0,count($ids),'?'));
-            $stmt=$this->ejecutarSqlVenta(
+            /*$stmt=$this->ejecutarSqlVenta(
                 "SELECT sale_id,product_id,manual_name,manual_code,quantity,price,total
                  FROM sale_items WHERE sale_id IN ($marcas) ORDER BY sale_id,id",
                 str_repeat('i',count($ids)),$ids
-            );
+            );*/
+
+$stmt = $this->ejecutarSqlVenta(
+    "SELECT si.sale_id, si.product_id, si.manual_name,
+            si.manual_code, si.quantity, si.price, si.total,
+            COALESCE(
+                NULLIF(TRIM(p_id.unit), ''),
+                p_codigo.unit,
+                '-'
+            ) AS unidad
+     FROM sale_items si
+     LEFT JOIN products p_id
+         ON p_id.id = si.product_id
+     LEFT JOIN (
+         SELECT code, MAX(NULLIF(TRIM(unit), '')) AS unit
+         FROM products
+         WHERE code IS NOT NULL AND code <> ''
+         GROUP BY code
+         HAVING COUNT(*) = 1
+     ) p_codigo
+         ON p_codigo.code = si.manual_code
+     WHERE si.sale_id IN ($marcas)
+     ORDER BY si.sale_id, si.id",
+    str_repeat('i', count($ids)),
+    $ids
+);
+
             $filas=$stmt->get_result();
 
             while ($item=$filas->fetch_assoc()) {
@@ -2269,7 +2447,8 @@ public function generarConcentradoCxc($data) {
                     'manual_code'=>'',
                     'quantity'=>null,
                     'price'=>null,
-                    'total'=>$c['total_amount']
+                    'total'=>$c['total_amount'],
+                    'unidad'=>'-',
                 ];
             }
         }

@@ -2,13 +2,16 @@
 
 // CONFIGURACIÓN DE MÓDULOS
 const modulos = {
-    ventas: {
-        nombre: "Ventas",
-        items: [
-            {id:"nota",nombre:"Ventas con nota",icono:"receipt",descripcion:"Registra notas foleadas, clientes, artículos y formas de pago."},
-            {id:"rapida",nombre:"Venta rápida",icono:"cart3",descripcion:"Registra ventas de mostrador sin datos de cliente."}
-        ]
-    },
+   
+ventas: {
+    nombre: "Ventas",
+    items: [
+        {id:"listado",nombre:"Listado",icono:"list-ul",descripcion:"Consulta tus ventas registradas, notas y comprobantes."},
+        {id:"nota",nombre:"Ventas con nota",icono:"receipt",descripcion:"Registra notas foleadas, clientes, artículos y formas de pago."},
+        {id:"rapida",nombre:"Venta rápida",icono:"cart3",descripcion:"Registra ventas de mostrador sin datos de cliente."}
+    ]
+},
+
     caja: {
         nombre: "Caja y egresos",
         items: [
@@ -39,6 +42,8 @@ const state = {
 };
 state.ventaNota = crearBorradorVentaNota();
 state.ventaRapida = crearBorradorVentaRapida();
+state.filtrosVentas = {buscar:"",tipo:"TODAS",inicio:"",fin:""};
+state.peticionVentas = 0;
 
 // INICIALIZACIÓN
 window.addEventListener("DOMContentLoaded", function() {
@@ -71,6 +76,47 @@ $(document).on("submit", "#formFiltroResumen", function(e) {
     if (!inicio || !fin) return;
     getResumenInicial(inicio, fin);
 });
+
+
+$(document).on("submit", "#formBuscarVentas", function(e) {
+    e.preventDefault();
+    const buscar = $("#ventasBuscar").val().trim();
+    const tipo = $("#ventasTipo").val();
+    const inicio = $("#ventasDesde").val();
+    const fin = $("#ventasHasta").val();
+
+    if (inicio && fin && inicio > fin) {
+        return Swal.fire("Aviso", "La fecha inicial no puede ser mayor que la final.", "warning");
+    }
+
+    state.filtrosVentas = {buscar:buscar,tipo:tipo,inicio:inicio,fin:fin};
+    consultarListadoVentas(1);
+});
+
+$(document).on("click", "#btnLimpiarFiltrosVentas", function() {
+    state.filtrosVentas = {buscar:"",tipo:"TODAS",inicio:"",fin:""};
+    $("#formBuscarVentas")[0].reset();
+    consultarListadoVentas(1);
+});
+
+$(document).on("click", ".js-pagina-ventas", function() {
+    consultarListadoVentas(Number($(this).attr("data-pagina")));
+});
+
+$(document).on("click", ".js-nueva-venta", function() {
+    const tipo = $(this).attr("data-tipo");
+    if (tipo === "nota" || tipo === "rapida") mostrarSubmodulo(tipo);
+});
+
+$(document).on("click", "#btnVolverListadoVentas", function() {
+    mostrarSubmodulo("listado");
+});
+
+$(document).on("click", ".js-pdf-venta", function() {
+    const id = Number($(this).attr("data-id"));
+    if (Number.isInteger(id) && id > 0) generarPdfNotaVenta(id);
+});
+
 
 }
 
@@ -150,6 +196,10 @@ function mostrarConfiguracion() {
 
 // CONTENIDO DE MÓDULOS
 function cargarContenidoModulo(modulo, submodulo, item) {
+    if (modulo === "ventas" && submodulo === "listado") {
+    renderListadoVentas();
+    return;
+}
     if (modulo === "ventas" && submodulo === "nota") {
     renderVentaConNota();
     return;
@@ -235,6 +285,7 @@ function renderVentaConNota() {
     const template = document.getElementById("tplVentaNota");
     if (!template) {console.error("No existe tplVentaNota en index.html");return;}
     $("#contenidoModulo").empty().append(template.content.cloneNode(true));
+    $("#contenidoModulo").prepend('<div class="mb-3"><button id="btnVolverListadoVentas" type="button" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-2"></i>Volver al listado</button></div>');
 
     $("#formVentaNota [data-campo-nota]").each(function(){
         $(this).val(state.ventaNota[$(this).attr("data-campo-nota")]);
@@ -602,6 +653,7 @@ function renderVentaRapida() {
     if (!template) {console.error("No existe tplVentaRapida");return;}
 
     $("#contenidoModulo").empty().append(template.content.cloneNode(true));
+    $("#contenidoModulo").prepend('<div class="mb-3"><button id="btnVolverListadoVentas" type="button" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-2"></i>Volver al listado</button></div>');
     $("#formVentaRapida [data-campo-rapida]").each(function(){
         $(this).val(state.ventaRapida[$(this).attr("data-campo-rapida")]);
     });
@@ -799,7 +851,8 @@ function guardarVentaRapida() {
         state.ventaRapida = crearBorradorVentaRapida();
 
         if (state.moduloActual === "ventas" && state.submoduloActual === "rapida") {
-            renderVentaRapida();
+            state.filtrosVentas = {buscar:"",tipo:"TODAS",inicio:"",fin:""};
+    mostrarSubmodulo("listado");
         }
 
         Swal.fire({
@@ -807,7 +860,8 @@ function guardarVentaRapida() {
             title:resultado.duplicada ? "Venta ya registrada" : "Venta guardada",
             html:"<p class='mb-2'>Referencia interna: <strong id='referenciaVentaRapida'></strong></p>" +
                  "<p class='mb-0'>Total cobrado: <strong id='totalVentaRapida'></strong></p>",
-            confirmButtonText:"Nueva venta",
+            //confirmButtonText:"Nueva venta",
+            confirmButtonText:"Cerrar",
             confirmButtonColor:"#086b47",
             didOpen:function(){
                 $("#referenciaVentaRapida").text(referencia);
@@ -948,7 +1002,8 @@ function guardarVentaNota() {
         state.ventaNota = crearBorradorVentaNota();
 
         if (state.moduloActual === "ventas" && state.submoduloActual === "nota") {
-            renderVentaConNota();
+              state.filtrosVentas = {buscar:"",tipo:"TODAS",inicio:"",fin:""};
+    mostrarSubmodulo("listado");
         }
 
         
@@ -2043,3 +2098,123 @@ $(document).on("submit", "#formCierreCaja", function(e) {
         denominaciones:JSON.stringify(arqueo.desglose)
     }, "¿Cerrar turno? Diferencia: " + monedaMXN(diferencia));
 });
+
+
+
+function renderListadoVentas() {
+    const tpl = document.getElementById("tplListadoVentas");
+    $("#contenidoModulo").empty().append(tpl.content.cloneNode(true));
+    $("#ventasBuscar").val(state.filtrosVentas.buscar);
+    $("#ventasTipo").val(state.filtrosVentas.tipo);
+    $("#ventasDesde").val(state.filtrosVentas.inicio);
+    $("#ventasHasta").val(state.filtrosVentas.fin);
+    consultarListadoVentas(1);
+}
+
+function consultarListadoVentas(pagina) {
+    const version = state.versionVista, solicitud = ++state.peticionVentas;
+    const parametros = Object.assign({action:"getVentas",pagina:pagina},state.filtrosVentas);
+
+    $("#ventasResultado").text("Consultando ventas...");
+    $("#tablaListadoVentas").html('<tr><td colspan="6" class="text-center text-secondary py-5"><span class="spinner-border spinner-border-sm me-2"></span>Cargando historial...</td></tr>');
+    $("#ventasPaginacion").empty();
+
+    $.ajax({
+        url:"php/index.php",type:"POST",dataType:"json",data:parametros
+    }).done(function(r) {
+        if (version !== state.versionVista || solicitud !== state.peticionVentas) return;
+
+        if (!r || r.status !== "ok") {
+            $("#tablaListadoVentas").html('<tr><td colspan="6" class="text-center text-danger py-4">No se pudo cargar el historial.</td></tr>');
+            $("#ventasResultado").text("Consulta no disponible");
+            return Swal.fire("Aviso",r && r.answer || "No fue posible consultar las ventas.","warning");
+        }
+
+        const datos = r.results, $tabla = $("#tablaListadoVentas").empty();
+        $("#ventasResultado").text(datos.total + (Number(datos.total) === 1 ? " venta encontrada" : " ventas encontradas"));
+
+        if (!datos.ventas.length) {
+            $tabla.append('<tr><td colspan="6" class="text-center text-secondary py-5">No hay ventas que coincidan con la búsqueda.</td></tr>');
+        }
+
+        datos.ventas.forEach(function(v) {
+            const esNota = v.sale_kind === "NOTA", pendientes = Number(v.pending_amount) > 0;
+            const folio = (esNota ? v.note_folio : v.ticket_barcode) || ("#" + v.id);
+            const $tr = $("<tr>");
+            const $descripcion = $('<div class="d-grid gap-1" style="min-width:245px"></div>');
+
+            $descripcion.append($("<strong>").text((esNota ? "Nota " : "Venta ") + folio));
+            $descripcion.append($('<small class="text-secondary"></small>').text(v.created_at || ""));
+
+            const $items = $('<div class="small mt-1"></div>');
+            (v.items || []).slice(0,3).forEach(function(item) {
+                $items.append($("<div>").text(item.quantity + " × " + (item.manual_name || "Artículo") + " · " + monedaMXN(item.price)));
+            });
+
+            if ((v.items || []).length > 3) {
+                const $extra = $('<details class="text-secondary"></details>');
+                $extra.append($("<summary>").text("Ver " + (v.items.length - 3) + " artículos más"));
+                v.items.slice(3).forEach(function(item) {
+                    $extra.append($("<div>").text(item.quantity + " × " + (item.manual_name || "Artículo") + " · " + monedaMXN(item.price)));
+                });
+                $items.append($extra);
+            }
+
+            $descripcion.append($items);
+
+            const $pago = $('<div class="d-grid gap-2" style="min-width:130px"></div>');
+            $pago.append($('<span class="small fw-semibold"></span>').text(v.payment_method || "—"));
+            $pago.append($('<span class="badge rounded-pill align-self-start"></span>')
+                .addClass(pendientes ? "text-bg-warning" : "bg-success-subtle text-success")
+                .text(pendientes ? "Saldo pendiente" : "Liquidada"));
+
+            const $menu = $('<ul class="dropdown-menu dropdown-menu-end shadow-sm"></ul>');
+
+            if (esNota) {
+                $menu.append($("<li>").append(
+                    $('<button type="button" class="dropdown-item js-pdf-venta"><i class="bi bi-file-earmark-pdf me-2"></i>Obtener nota PDF</button>').attr("data-id",v.id)
+                ));
+            } else {
+                $menu.append($("<li>").append(
+                    '<span class="dropdown-item text-secondary disabled">Ticket 80 mm · Próximamente</span>'
+                ));
+            }
+
+            const $acciones = $('<div class="dropdown"></div>');
+            $acciones.append(
+                '<button type="button" class="btn btn-outline-success btn-sm dropdown-toggle" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false">Acciones</button>',
+                $menu
+            );
+
+            $tr.append($("<td>").append($descripcion));
+            $tr.append($("<td>").append($pago));
+            $tr.append($("<td>").text(esNota ? (v.seller_name || "—") : "Mostrador"));
+            $tr.append($("<td>").text(esNota ? (v.client_name || "—") : "Mostrador"));
+            $tr.append($('<td class="text-end fw-bold text-nowrap"></td>').text(monedaMXN(v.total_amount)));
+            $tr.append($("<td>").append($acciones));
+            $tabla.append($tr);
+        });
+
+        const $pag = $("#ventasPaginacion").empty();
+
+        if (Number(datos.paginas) > 1) {
+            $pag.append($('<button type="button" class="btn btn-outline-secondary btn-sm js-pagina-ventas">Anterior</button>')
+                .attr("data-pagina",Number(datos.pagina)-1)
+                .prop("disabled",Number(datos.pagina)<=1));
+
+            $pag.append($('<span class="small text-secondary px-2"></span>')
+                .text("Página " + datos.pagina + " de " + datos.paginas));
+
+            $pag.append($('<button type="button" class="btn btn-outline-secondary btn-sm js-pagina-ventas">Siguiente</button>')
+                .attr("data-pagina",Number(datos.pagina)+1)
+                .prop("disabled",Number(datos.pagina)>=Number(datos.paginas)));
+        }
+
+    }).fail(function(xhr) {
+        if (version !== state.versionVista || solicitud !== state.peticionVentas) return;
+
+        $("#ventasResultado").text("No se pudo consultar el historial");
+        $("#tablaListadoVentas").html('<tr><td colspan="6" class="text-center text-danger py-4">Error al consultar las ventas.</td></tr>');
+        Swal.fire("Error",xhr.responseJSON && xhr.responseJSON.answer || "Error de conexión.","error");
+    });
+}

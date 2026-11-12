@@ -133,6 +133,105 @@
 </div>
 
 
+<!-- LISTADO DE VENTAS -->
+<template id="tplListadoVentas">
+    <section class="nota-bloque mb-3">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+            <div class="nota-seccion-titulo mb-0">
+                <i class="bi bi-receipt-cutoff"></i>
+                <div>
+                    <h2>Historial de ventas</h2>
+                    <small>Consulta notas, ventas rápidas y sus comprobantes.</small>
+                </div>
+            </div>
+            <div class="dropdown">
+                <button class="btn btn-success dropdown-toggle px-4 py-2" type="button"
+                        data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-plus-lg me-2"></i>Nueva venta
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                    <li><button type="button" class="dropdown-item py-2 js-nueva-venta" data-tipo="nota">
+                        <i class="bi bi-receipt me-2 text-success"></i>Venta con nota
+                    </button></li>
+                    <li><button type="button" class="dropdown-item py-2 js-nueva-venta" data-tipo="rapida">
+                        <i class="bi bi-cart3 me-2 text-success"></i>Venta rápida
+                    </button></li>
+                </ul>
+            </div>
+        </div>
+
+        <form id="formBuscarVentas" class="row g-3 align-items-end">
+            <div class="col-lg-7">
+                <label for="ventasBuscar" class="form-label">Buscar ventas</label>
+                <input id="ventasBuscar" class="form-control" maxlength="100"
+                       placeholder="Folio, cliente, vendedor o artículo">
+            </div>
+            <div class="col-lg-3">
+                <label for="ventasTipo" class="form-label">Tipo de venta</label>
+                <select id="ventasTipo" class="form-select">
+                    <option value="TODAS">Todas las ventas</option>
+                    <option value="NOTA">Ventas con nota</option>
+                    <option value="RAPIDA">Ventas rápidas</option>
+                </select>
+            </div>
+            <div class="col-lg-2">
+                <button class="btn btn-success w-100" type="submit">
+                    <i class="bi bi-search me-1"></i>Buscar
+                </button>
+            </div>
+
+            <div class="col-12">
+                <button class="btn btn-link text-success text-decoration-none px-0"
+                        type="button" data-bs-toggle="collapse"
+                        data-bs-target="#ventasFiltrosAvanzados">
+                    <i class="bi bi-sliders2 me-2"></i>Más filtros
+                    <i class="bi bi-chevron-down ms-1"></i>
+                </button>
+                <div class="collapse" id="ventasFiltrosAvanzados">
+                    <div class="row g-3 pt-2">
+                        <div class="col-md-5">
+                            <label for="ventasDesde" class="form-label">Desde</label>
+                            <input id="ventasDesde" type="date" class="form-control">
+                        </div>
+                        <div class="col-md-5">
+                            <label for="ventasHasta" class="form-label">Hasta</label>
+                            <input id="ventasHasta" type="date" class="form-control">
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="button" id="btnLimpiarFiltrosVentas"
+                                    class="btn btn-outline-secondary w-100">Limpiar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </section>
+
+    <section class="nota-bloque">
+        <div class="d-flex justify-content-between align-items-center mb-3 gap-2">
+            <h2 class="h6 fw-bold mb-0">Ventas registradas</h2>
+            <span id="ventasResultado" class="small text-secondary" aria-live="polite"></span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Venta y artículos</th>
+                        <th>Pago</th>
+                        <th>Vendedor</th>
+                        <th>Cliente</th>
+                        <th class="text-end">Total</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaListadoVentas"></tbody>
+            </table>
+        </div>
+        <div id="ventasPaginacion" class="d-flex justify-content-center align-items-center gap-2 mt-3"></div>
+    </section>
+</template>
+
+
 <!-- VENTAS CON NOTA -->
 <template id="tplVentaNota">
 <form id="formVentaNota" novalidate>

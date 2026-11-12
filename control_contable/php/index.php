@@ -25,6 +25,12 @@ switch ($action) {
     case "getCajasVenta":
         $response = $consultas->getCajasVenta();
         break;
+
+    
+case "getVentas":
+    $response = $consultas->getVentas($_POST);
+    break;
+
         
     case "guardarVentaNota":
         $response = $consultas->guardarVentaNota($_POST);
