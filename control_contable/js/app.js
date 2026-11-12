@@ -983,7 +983,7 @@ Swal.fire({
 }
 
 
-function generarPdfNotaVenta(idVenta) {
+function generarPdfNotaVenta_ikd(idVenta) {
     if (!Number.isInteger(Number(idVenta)) || Number(idVenta)<=0) return;
 
     const html = `
@@ -1175,7 +1175,7 @@ function enviarDocumentosNotaVenta(idVenta,opciones) {
 }
 
 
-function generarPdfNotaVenta_old(idVenta) {
+function generarPdfNotaVenta(idVenta) {
     if (!idVenta || Number(idVenta) <= 0) {
         Swal.fire("Aviso", "No se recibió un ID de venta válido.", "warning");
         return;
@@ -1687,7 +1687,6 @@ if (c.status==="PENDIENTE" && Number(c.pending_amount)>0) {
     );
 
     if (tipo==="COBRAR") {
-        $menu.append('<li><hr class="dropdown-divider"></li>');
         agregarAccion(
             "Generar concentrado PDF",
             "file-earmark-pdf",

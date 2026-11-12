@@ -651,12 +651,12 @@ class notaVentaCompleta extends FPDF {
 
 class reporteCxcSanMartinPdf extends FPDF {
     private $datos;
-    private $anchos=[20,65,21,16,12,24,30];
+    private $anchos=[18,54,19,14,10,21,24];
 
     public function __construct($datos) {
         parent::__construct('P','mm','Letter');
         $this->datos=$datos;
-        $this->SetMargins(14,52,14);
+        $this->SetMargins(28,52,28);
         $this->SetAutoPageBreak(false);
     }
 
@@ -688,7 +688,7 @@ class reporteCxcSanMartinPdf extends FPDF {
     }
 
     private function espacio($alto,$tabla=false) {
-        if ($this->GetY()+$alto>229) {
+        if ($this->GetY()+$alto>228) {
             $this->AddPage();
             if ($tabla) $this->cabeceraTabla();
         }
@@ -735,71 +735,91 @@ class reporteCxcSanMartinPdf extends FPDF {
         return $salida;
     }
 
-    private function renglon($c,$item) {
-        $this->SetFont('Arial','',7.6);
-        $texto=$this->t($item['manual_name'] ?: 'Artículo sin descripción');
-        if (!empty($item['manual_code'])) {
-            $texto.=' ['.$this->t($item['manual_code']).']';
-        }
-
-        $lineas=$this->partir($texto,61);
-        $alto=max(7,count($lineas)*4+2);
-        $this->espacio($alto,true);
-
-        $x=$this->GetX(); $y=$this->GetY();
-        $this->SetDrawColor(75,83,78);
-
-        foreach ($this->anchos as $w) {
-            $this->Rect($this->GetX(),$y,$w,$alto);
-            $this->SetX($this->GetX()+$w);
-        }
-
-        $this->SetTextColor(25,36,29);
-        $this->SetXY($x+1,$y+2);
-        $this->Cell(18,4,$this->fecha($c['fecha']),0,0,'L');
-
-        foreach ($lineas as $k=>$linea) {
-            $this->SetXY($x+21,$y+1+$k*4);
-            $this->Cell(63,4,$linea);
-        }
-
-        $this->SetXY($x+85,$y+2);
-        $this->SetFont('Arial','',7);
-        $this->Cell(21,4,$this->t($c['folio']),0,0,'C');
-        //$this->Cell(16,4,$item['quantity']===null?'—':number_format((float)$item['quantity'],2),0,0,'R');
-        //$this->Cell(12,4,'—',0,0,'C');
-
-$this->Cell(16,4,$item['quantity']===null?$this->t('—'):number_format((float)$item['quantity'],2),0,0,'R');
-$this->Cell(12,4,$this->t('—'),0,0,'C');
-
-        $this->Cell(24,4,$item['price']===null?'—':$this->dinero($item['price']),0,0,'R');
-        $this->Cell(30,4,$this->dinero($item['total']),0,0,'R');
-        $this->SetXY($x,$y+$alto);
+    
+private function renglon($c,$item) {
+    $this->SetFont('Arial','',7.6);
+    $texto=$this->t($item['manual_name'] ?: 'Artículo sin descripción');
+    if (!empty($item['manual_code'])) {
+        $texto.=' ['.$this->t($item['manual_code']).']';
     }
 
+    $lineas=$this->partir($texto,$this->anchos[1]-4);
+    $alto=max(7,count($lineas)*4+2);
+    $this->espacio($alto,true);
+
+    $x=$this->GetX();
+    $y=$this->GetY();
+    $this->SetDrawColor(75,83,78);
+
+    foreach ($this->anchos as $w) {
+        $this->Rect($this->GetX(),$y,$w,$alto);
+        $this->SetX($this->GetX()+$w);
+    }
+
+    $this->SetTextColor(25,36,29);
+    $this->SetXY($x+1,$y+2);
+    $this->Cell($this->anchos[0]-2,4,$this->t($this->fecha($c['fecha'])),0,0,'L');
+
+    foreach ($lineas as $k=>$linea) {
+        $this->SetXY($x+$this->anchos[0]+2,$y+1+$k*4);
+        $this->Cell($this->anchos[1]-4,4,$linea,0,0,'L');
+    }
+
+    $xDato=$x+$this->anchos[0]+$this->anchos[1];
+    $this->SetXY($xDato,$y+2);
+    $this->SetFont('Arial','',7);
+
+    $this->Cell($this->anchos[2],4,$this->t($c['folio']),0,0,'C');
+    $this->Cell($this->anchos[3],4,$item['quantity']===null?$this->t('—'):number_format((float)$item['quantity'],2),0,0,'R');
+    $this->Cell($this->anchos[4],4,$this->t('—'),0,0,'C');
+    $this->Cell($this->anchos[5],4,$item['price']===null?$this->t('—'):$this->dinero($item['price']),0,0,'R');
+    $this->Cell($this->anchos[6],4,$this->dinero($item['total']),0,0,'R');
+
+    $this->SetXY($x,$y+$alto);
+}
+
+
     public function generarArchivo() {
-        $this->AddPage();
-        $this->SetTextColor(29,39,34);
-        $this->SetFont('Arial','',9);
-        $this->Cell(188,6,$this->t('San Martín Huamelúlpam; Tlaxiaco, Oaxaca.  '.date('d/m/Y')),0,1,'R');
-        $this->Ln(7);
-        $this->SetFont('Arial','B',10);
-        $this->Cell(188,6,$this->t('ASUNTO: Presentación de notas pendientes de pago.'),0,1);
-        $this->Ln(2);
-        $this->SetFont('Arial','',9);
-        $this->MultiCell(188,5,$this->t('Estimado(a): '.$this->datos['cliente'].'.'));
-        $this->Ln(2);
-        $this->MultiCell(
-            188,5,
-            $this->t(
-                'Por medio de la presente, CORPORATIVO SAN MARTÍN le entrega el concentrado de notas y cuentas pendientes de liquidación correspondientes al periodo del '.
-                $this->fecha($this->datos['desde']).' al '.$this->fecha($this->datos['hasta']).
-                '. Se detallan sus conceptos e importes para revisión.'
-            )
-        );
-        $this->Ln(6);
-        $this->espacio(14);
-        $this->cabeceraTabla();
+    
+        
+$this->AddPage();
+$ancho=160;
+
+$this->SetTextColor(29,39,34);
+$this->SetFont('Arial','',9);
+$this->Cell($ancho,6,$this->t('San Martín Huamelúlpam; Tlaxiaco, Oaxaca.  '.date('d/m/Y')),0,1,'R');
+$this->Ln(6);
+
+$this->SetFont('Arial','B',10);
+$this->MultiCell($ancho,6,$this->t('ASUNTO: Presentación de notas pendientes de pago.'));
+$this->Ln(3);
+
+$this->SetFont('Arial','',9.2);
+$this->MultiCell($ancho,5,$this->t('Estimado(a) '.$this->datos['cliente'].'.'));
+$this->Ln(2);
+
+$this->MultiCell(
+    $ancho,4.8,
+    $this->t(
+        'Por medio de la presente, reciba un cordial y respetuoso saludo de parte de la dirección y el equipo de trabajo de CORPORATIVO "SAN MARTÍN". Aprovechamos la ocasión para agradecer la confianza depositada en nosotros para el suministro de materiales de construcción en sus proyectos. El motivo principal de este documento es hacerle entrega formal del concentrado de notas por cobrar, el cual ampara los materiales entregados a su digno cargo, correspondientes al periodo del '.
+        $this->fecha($this->datos['desde']).' al '.$this->fecha($this->datos['hasta']).'.'
+    ),
+    0,'J'
+);
+$this->Ln(3);
+
+$this->MultiCell(
+    $ancho,4.8,
+    $this->t(
+        'A continuación, desglosamos detalladamente las remisiones, conceptos y los importes pendientes de liquidación para su revisión:'
+    ),
+    0,'J'
+);
+$this->Ln(5);
+
+$this->espacio(15);
+$this->cabeceraTabla();
+
 
         foreach ($this->datos['cuentas'] as $c) {
             foreach ($c['items'] as $item) {
@@ -807,41 +827,63 @@ $this->Cell(12,4,$this->t('—'),0,0,'C');
             }
         }
 
-        $this->Ln(5);
-        $this->espacio(32);
-        $this->SetFont('Arial','',9);
-        $this->Cell(153,6,'IMPORTE ORIGINAL',0,0,'R');
-        $this->Cell(35,6,$this->dinero($this->datos['total']),0,1,'R');
-        $this->Cell(153,6,'ABONOS REGISTRADOS',0,0,'R');
-        $this->Cell(35,6,$this->dinero($this->datos['abonado']),0,1,'R');
+        
+$this->Ln(5);
+$this->espacio(80);
 
-        $this->SetFillColor(225,245,229);
-        $this->SetFont('Arial','B',10);
-        $this->Cell(153,9,'TOTAL PENDIENTE DE PAGO',1,0,'R',true);
-        $this->Cell(35,9,$this->dinero($this->datos['pendiente']),1,1,'R',true);
-        $this->Ln(5);
+$this->SetTextColor(30,42,35);
+$this->SetFont('Arial','',8.6);
+$this->Cell(125,5,'IMPORTE ORIGINAL',0,0,'R');
+$this->Cell(35,5,$this->dinero($this->datos['total']),0,1,'R');
 
-        $this->SetFont('Arial','',8.6);
-        $this->MultiCell(
-            188,5,
-            $this->t('Agradecemos de antemano su atención y quedamos a sus órdenes para cualquier aclaración. Los saldos reflejan los pagos registrados a la fecha de emisión.')
-        );
+$this->Cell(125,5,'ABONOS REGISTRADOS',0,0,'R');
+$this->Cell(35,5,$this->dinero($this->datos['abonado']),0,1,'R');
 
-        $this->espacio(37);
-        $y=$this->GetY()+4;
-        $firma=__DIR__.'/../recursos/firma.png';
+$this->SetFillColor(225,245,229);
+$this->SetFont('Arial','B',9);
+$this->Cell(125,8,'TOTAL PENDIENTE DE PAGO',1,0,'R',true);
+$this->Cell(35,8,$this->dinero($this->datos['pendiente']),1,1,'R',true);
+$this->Ln(5);
 
-        if (is_file($firma)) {
-            $this->Image($firma,88,$y,40,14,'PNG');
-        }
+$this->espacio(11);
+$this->SetFont('Arial','B',10);
+$this->MultiCell(
+    $ancho,6,
+    $this->t($this->dinero($this->datos['pendiente']).' TOTAL A PAGAR.')
+);
+$this->Ln(4);
 
-        $this->SetDrawColor(60,65,59);
-        $this->Line(69,$y+15,147,$y+15);
-        $this->SetXY(14,$y+17);
-        $this->SetFont('Arial','B',9);
-        $this->Cell(188,5,$this->t('HERMINIO PÉREZ BERNABÉ'),0,1,'C');
-        $this->SetFont('Arial','',8);
-        $this->Cell(188,5,$this->t('CORPORATIVO SAN MARTÍN'),0,1,'C');
+$this->espacio(13);
+$this->SetFont('Arial','',9.2);
+$this->MultiCell(
+    $ancho,5,
+    $this->t(
+        'Sin más por el momento y reiterando nuestro compromiso de brindarle siempre un servicio de calidad, nos despedimos agradeciendo de antemano su pronta y favorable atención a la presente.'
+    ),
+    0,'J'
+);
+$this->Ln(7);
+
+$this->espacio(31);
+$this->SetFont('Arial','B',10);
+$this->Cell($ancho,6,$this->t('A T E N T A M E N T E'),0,1,'C');
+
+$y=$this->GetY()+1;
+$firma=__DIR__.'/../recursos/firma.png';
+
+if (is_file($firma)) {
+    $this->Image($firma,88,$y,40,11,'PNG');
+}
+
+$this->SetDrawColor(60,65,59);
+$this->Line(69,$y+12,147,$y+12);
+$this->SetXY(28,$y+14);
+
+$this->SetFont('Arial','B',9);
+$this->Cell($ancho,5,$this->t('HERMINIO PÉREZ BERNABÉ'),0,1,'C');
+
+$this->SetFont('Arial','',8);
+$this->Cell($ancho,5,$this->t('CORPORATIVO SAN MARTÍN'),0,1,'C');
 
         $carpeta=__DIR__.'/../pdf_generados/cuentas_cobrar/';
 
