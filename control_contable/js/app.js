@@ -2116,7 +2116,7 @@ function consultarListadoVentas(pagina) {
     const parametros = Object.assign({action:"getVentas",pagina:pagina},state.filtrosVentas);
 
     $("#ventasResultado").text("Consultando ventas...");
-    $("#tablaListadoVentas").html('<tr><td colspan="6" class="text-center text-secondary py-5"><span class="spinner-border spinner-border-sm me-2"></span>Cargando historial...</td></tr>');
+    $("#tablaListadoVentas").html('<tr><td colspan="5" class="text-center text-secondary py-5"><span class="spinner-border spinner-border-sm me-2"></span>Cargando historial...</td></tr>');
     $("#ventasPaginacion").empty();
 
     $.ajax({
@@ -2125,7 +2125,7 @@ function consultarListadoVentas(pagina) {
         if (version !== state.versionVista || solicitud !== state.peticionVentas) return;
 
         if (!r || r.status !== "ok") {
-            $("#tablaListadoVentas").html('<tr><td colspan="6" class="text-center text-danger py-4">No se pudo cargar el historial.</td></tr>');
+            $("#tablaListadoVentas").html('<tr><td colspan="5" class="text-center text-danger py-4">No se pudo cargar el historial.</td></tr>');
             $("#ventasResultado").text("Consulta no disponible");
             return Swal.fire("Aviso",r && r.answer || "No fue posible consultar las ventas.","warning");
         }
@@ -2134,66 +2134,94 @@ function consultarListadoVentas(pagina) {
         $("#ventasResultado").text(datos.total + (Number(datos.total) === 1 ? " venta encontrada" : " ventas encontradas"));
 
         if (!datos.ventas.length) {
-            $tabla.append('<tr><td colspan="6" class="text-center text-secondary py-5">No hay ventas que coincidan con la búsqueda.</td></tr>');
+            $tabla.append('<tr><td colspan="5" class="text-center text-secondary py-5">No hay ventas que coincidan con la búsqueda.</td></tr>');
         }
 
-        datos.ventas.forEach(function(v) {
-            const esNota = v.sale_kind === "NOTA", pendientes = Number(v.pending_amount) > 0;
-            const folio = (esNota ? v.note_folio : v.ticket_barcode) || ("#" + v.id);
-            const $tr = $("<tr>");
-            const $descripcion = $('<div class="d-grid gap-1" style="min-width:245px"></div>');
+        
+datos.ventas.forEach(function(v) {
+    const esNota = v.sale_kind === "NOTA", pendiente = Number(v.pending_amount) > 0;
+    const folio = (esNota ? v.note_folio : v.ticket_barcode) || ("#" + v.id);
+    const items = Array.isArray(v.items) ? v.items : [];
+    const $tr = $('<tr class="ventas-fila"></tr>');
 
-            $descripcion.append($("<strong>").text((esNota ? "Nota " : "Venta ") + folio));
-            $descripcion.append($('<small class="text-secondary"></small>').text(v.created_at || ""));
+    const $acciones = $('<div class="ventas-acciones"></div>');
+    $acciones.append($('<div class="ventas-folio"></div>').append(
+        $("<span>").text((esNota ? "Nota " : "Venta ") + folio),
+        $('<i class="bi bi-arrow-right"></i>')
+    ));
+    $acciones.append($('<span class="ventas-estado"></span>')
+        .addClass(pendiente ? "pendiente" : "pagada")
+        .text(pendiente ? "PENDIENTE" : "PAGADA"));
 
-            const $items = $('<div class="small mt-1"></div>');
-            (v.items || []).slice(0,3).forEach(function(item) {
-                $items.append($("<div>").text(item.quantity + " × " + (item.manual_name || "Artículo") + " · " + monedaMXN(item.price)));
-            });
+    const $menu = $('<ul class="dropdown-menu shadow-sm"></ul>');
+    if (esNota) {
+        $menu.append($('<li></li>').append(
+            $('<button type="button" class="dropdown-item js-pdf-venta"><i class="bi bi-file-earmark-pdf me-2"></i>Obtener nota PDF</button>')
+                .attr("data-id", v.id)
+        ));
+    } else {
+        $menu.append('<li><span class="dropdown-item-text text-secondary small">Ticket térmico: próximamente</span></li>');
+    }
+    $acciones.append($('<div class="dropdown"></div>').append(
+        $('<button class="ventas-accion-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Acciones</button>'),
+        $menu
+    ));
 
-            if ((v.items || []).length > 3) {
-                const $extra = $('<details class="text-secondary"></details>');
-                $extra.append($("<summary>").text("Ver " + (v.items.length - 3) + " artículos más"));
-                v.items.slice(3).forEach(function(item) {
-                    $extra.append($("<div>").text(item.quantity + " × " + (item.manual_name || "Artículo") + " · " + monedaMXN(item.price)));
-                });
-                $items.append($extra);
-            }
+    const $descripcion = $('<div class="ventas-descripcion"></div>');
+    $descripcion.append($('<div class="ventas-meta"></div>').append(
+        $('<span class="ventas-fecha"></span>').text(v.created_at || "Sin fecha"),
+        $('<strong class="ventas-total"></strong>').text(monedaMXN(v.total_amount))
+    ));
 
-            $descripcion.append($items);
+    if (items.length) {
+        const $mini = $('<table class="ventas-mini-tabla"></table>');
+        $mini.append('<thead><tr><th>Cant.</th><th>Concepto</th><th>Precio unit.</th></tr></thead>');
+        const $cuerpo = $("<tbody></tbody>");
 
-            const $pago = $('<div class="d-grid gap-2" style="min-width:130px"></div>');
-            $pago.append($('<span class="small fw-semibold"></span>').text(v.payment_method || "—"));
-            $pago.append($('<span class="badge rounded-pill align-self-start"></span>')
-                .addClass(pendientes ? "text-bg-warning" : "bg-success-subtle text-success")
-                .text(pendientes ? "Saldo pendiente" : "Liquidada"));
-
-            const $menu = $('<ul class="dropdown-menu dropdown-menu-end shadow-sm"></ul>');
-
-            if (esNota) {
-                $menu.append($("<li>").append(
-                    $('<button type="button" class="dropdown-item js-pdf-venta"><i class="bi bi-file-earmark-pdf me-2"></i>Obtener nota PDF</button>').attr("data-id",v.id)
-                ));
-            } else {
-                $menu.append($("<li>").append(
-                    '<span class="dropdown-item text-secondary disabled">Ticket 80 mm · Próximamente</span>'
-                ));
-            }
-
-            const $acciones = $('<div class="dropdown"></div>');
-            $acciones.append(
-                '<button type="button" class="btn btn-outline-success btn-sm dropdown-toggle" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false">Acciones</button>',
-                $menu
-            );
-
-            $tr.append($("<td>").append($descripcion));
-            $tr.append($("<td>").append($pago));
-            $tr.append($("<td>").text(esNota ? (v.seller_name || "—") : "Mostrador"));
-            $tr.append($("<td>").text(esNota ? (v.client_name || "—") : "Mostrador"));
-            $tr.append($('<td class="text-end fw-bold text-nowrap"></td>').text(monedaMXN(v.total_amount)));
-            $tr.append($("<td>").append($acciones));
-            $tabla.append($tr);
+        items.forEach(function(item) {
+            const cantidad = Number(item.quantity);
+            $cuerpo.append($("<tr></tr>").append(
+                $("<td>").text(Number.isFinite(cantidad) ? cantidad.toLocaleString("es-MX", {maximumFractionDigits:2}) : "—"),
+                $("<td>").text(item.manual_name || item.manual_code || "Artículo"),
+                $("<td>").text(monedaMXN(item.price))
+            ));
         });
+        $mini.append($cuerpo);
+
+        if (items.length > 3) {
+            const id = "detalle-venta-" + v.id;
+            const $boton = $('<button type="button" class="ventas-detalles-btn" data-bs-toggle="collapse" aria-expanded="false"></button>')
+                .attr({"data-bs-target":"#" + id,"aria-controls":id})
+                .append(
+                    $("<span>").text("Detalles · " + items.length + " artículos"),
+                    '<i class="bi bi-chevron-down"></i>'
+                );
+
+            $descripcion.append(
+                $boton,
+                $('<div class="collapse"></div>').attr("id", id).append($mini)
+            );
+        } else {
+            $descripcion.append($mini);
+        }
+    } else {
+        $descripcion.append('<p class="small text-secondary mb-0">Sin artículos registrados</p>');
+    }
+
+    const $pago = $('<div class="ventas-pago"></div>');
+    $pago.append($('<span class="ventas-metodo"></span>').text(v.payment_method || "No especificado"));
+    $pago.append($('<span class="ventas-pendiente"></span>')
+        .addClass(pendiente ? "con-saldo" : "sin-saldo")
+        .text(pendiente ? "Pendiente: " + monedaMXN(v.pending_amount) : "Sin saldo pendiente"));
+
+    $tr.append($('<td class="ventas-celda-acciones"></td>').append($acciones));
+    $tr.append($('<td class="ventas-celda-descripcion"></td>').append($descripcion));
+    $tr.append($('<td class="ventas-celda-pago"></td>').append($pago));
+    $tr.append($('<td class="ventas-celda-vendedor"></td>').text(esNota ? (v.seller_name || "—") : "Mostrador"));
+    $tr.append($('<td class="ventas-celda-cliente"></td>').text(esNota ? (v.client_name || "—") : "Mostrador"));
+    $tabla.append($tr);
+});
+
 
         const $pag = $("#ventasPaginacion").empty();
 
@@ -2214,7 +2242,7 @@ function consultarListadoVentas(pagina) {
         if (version !== state.versionVista || solicitud !== state.peticionVentas) return;
 
         $("#ventasResultado").text("No se pudo consultar el historial");
-        $("#tablaListadoVentas").html('<tr><td colspan="6" class="text-center text-danger py-4">Error al consultar las ventas.</td></tr>');
+        $("#tablaListadoVentas").html('<tr><td colspan="5" class="text-center text-danger py-4">Error al consultar las ventas.</td></tr>');
         Swal.fire("Error",xhr.responseJSON && xhr.responseJSON.answer || "Error de conexión.","error");
     });
 }

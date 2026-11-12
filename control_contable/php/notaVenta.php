@@ -563,7 +563,7 @@ class notaVentaCompleta extends FPDF {
     public function generarArchivo() {
         $this->prepararMarca();
         $this->AddPage();
-        $this->SetFont('Arial','B',12);
+        $this->SetFont('Arial','B',11);
         $this->SetTextColor(28,99,69);
         $this->Cell(130,9,$this->texto('NOTA DE VENTA · FORMATO CORPORATIVO'),0,0,'L');
         $this->SetFont('Arial','B',11);
@@ -574,7 +574,7 @@ class notaVentaCompleta extends FPDF {
         $this->SetFillColor(247,250,248);
         $this->SetFont('Arial','B',11);
         $this->Cell(180,7,$this->texto('DATOS DEL CLIENTE'),0,1,'L',true);
-        $this->SetFont('Arial','',12);
+        $this->SetFont('Arial','',11);
         $this->MultiCell(180,5,$this->texto('Cliente: '.($this->venta['client_name']??'')));
         $this->MultiCell(180,5,$this->texto('Dirección: '.($this->venta['client_address']?:'No especificada')));
         $this->Cell(95,6,$this->texto('Teléfono: '.($this->venta['client_phone']?:'—')),0,0);
@@ -652,12 +652,15 @@ class notaVentaCompleta extends FPDF {
 
 class reporteCxcSanMartinPdf extends FPDF {
     private $datos;
-    private $anchos=[18,54,19,14,10,21,24];
+    //private $anchos=[18,54,19,14,10,21,24];
+
+private $anchos = [20,63,22,15,11,23,25];
+
 
     public function __construct($datos) {
         parent::__construct('P','mm','Letter');
         $this->datos=$datos;
-        $this->SetMargins(28,52,28);
+        $this->SetMargins(18,52,18);
         //$this->SetAutoPageBreak(false);
         $this->SetAutoPageBreak(true,50);
     }
@@ -798,23 +801,23 @@ $this->Cell(
     
         
 $this->AddPage();
-$ancho=160;
+$ancho=179;
 
 $this->SetTextColor(29,39,34);
-$this->SetFont('Arial','',12);
-$this->Cell($ancho,6,$this->t('San Martín Huamelúlpam; Tlaxiaco, Oaxaca.  '.date('d/m/Y')),0,1,'R');
+$this->SetFont('Arial','',11);
+$this->Cell($ancho,5.5,$this->t('San Martín Huamelúlpam; Tlaxiaco, Oaxaca.  '.date('d/m/Y')),0,1,'R');
 $this->Ln(6);
 
-$this->SetFont('Arial','B',12);
-$this->MultiCell($ancho,6,$this->t('ASUNTO: Presentación de notas pendientes de pago.'));
+$this->SetFont('Arial','B',11);
+$this->MultiCell($ancho,5.5,$this->t('ASUNTO: Presentación de notas pendientes de pago.'));
 $this->Ln(3);
 
-$this->SetFont('Arial','',12);
-$this->MultiCell($ancho,5,$this->t('Estimado(a) '.$this->datos['cliente'].'.'));
+$this->SetFont('Arial','',11);
+$this->MultiCell($ancho,5.5,$this->t('Estimado(a) '.$this->datos['cliente'].'.'));
 $this->Ln(2);
 
 $this->MultiCell(
-    $ancho,6,
+    $ancho,5.5,
     $this->t(
         'Por medio de la presente, reciba un cordial y respetuoso saludo de parte de la dirección y el equipo de trabajo de CORPORATIVO "SAN MARTÍN". Aprovechamos la ocasión para agradecer la confianza depositada en nosotros para el suministro de materiales de construcción en sus proyectos. El motivo principal de este documento es hacerle entrega formal del concentrado de notas por cobrar, el cual ampara los materiales entregados a su digno cargo, correspondientes al periodo del '.
         $this->fecha($this->datos['desde']).' al '.$this->fecha($this->datos['hasta']).'.'
@@ -824,7 +827,7 @@ $this->MultiCell(
 $this->Ln(3);
 
 $this->MultiCell(
-    $ancho,6,
+    $ancho,5.5,
     $this->t(
         'A continuación, desglosamos detalladamente las remisiones, conceptos y los importes pendientes de liquidación para su revisión:'
     ),
@@ -843,15 +846,15 @@ $this->cabeceraTabla();
         }
 
         
-$this->Ln(5);
-$this->espacio(80);
+$this->Ln(3);
+$this->espacio(25);
 
 $this->SetTextColor(30,42,35);
 $this->SetFont('Arial','',11);
-$this->Cell(125,5,'IMPORTE ORIGINAL',0,0,'R');
+$this->Cell(144,5,'IMPORTE ORIGINAL',0,0,'R');
 $this->Cell(35,5,$this->dinero($this->datos['total']),0,1,'R');
 
-$this->Cell(125,5,'ABONOS REGISTRADOS',0,0,'R');
+$this->Cell(144,5,'ABONOS REGISTRADOS',0,0,'R');
 $this->Cell(35,5,$this->dinero($this->datos['abonado']),0,1,'R');
 
 $this->SetFillColor(225,245,229);
@@ -861,7 +864,7 @@ $this->Cell(35,8,$this->dinero($this->datos['pendiente']),1,1,'R',true);
 $this->Ln(5);
 
 $this->espacio(11);
-$this->SetFont('Arial','B',12);
+$this->SetFont('Arial','B',11);
 $this->MultiCell(
     $ancho,6,
     $this->t($this->dinero($this->datos['pendiente']).' TOTAL A PAGAR.')
@@ -869,9 +872,9 @@ $this->MultiCell(
 $this->Ln(4);
 
 $this->espacio(13);
-$this->SetFont('Arial','',12);
+$this->SetFont('Arial','',11);
 $this->MultiCell(
-    $ancho,5,
+    $ancho,5.5,
     $this->t(
         'Sin más por el momento y reiterando nuestro compromiso de brindarle siempre un servicio de calidad, nos despedimos agradeciendo de antemano su pronta y favorable atención a la presente.'
     ),
@@ -880,7 +883,7 @@ $this->MultiCell(
 $this->Ln(7);
 
 $this->espacio(31);
-$this->SetFont('Arial','B',12);
+$this->SetFont('Arial','B',11);
 $this->Cell($ancho,6,$this->t('A T E N T A M E N T E'),0,1,'C');
 
 $y=$this->GetY()+1;
@@ -892,13 +895,14 @@ if (is_file($firma)) {
 
 $this->SetDrawColor(60,65,59);
 $this->Line(69,$y+12,147,$y+12);
-$this->SetXY(28,$y+14);
+//$this->SetXY(28,$y+14);
+$this->SetXY(18,$y+14);
 
 $this->SetFont('Arial','B',11);
-$this->Cell($ancho,5,$this->t('HERMINIO PÉREZ BERNABÉ'),0,1,'C');
+$this->Cell($ancho,5.5,$this->t('HERMINIO PÉREZ BERNABÉ'),0,1,'C');
 
 $this->SetFont('Arial','',8);
-$this->Cell($ancho,5,$this->t('CORPORATIVO SAN MARTÍN'),0,1,'C');
+$this->Cell($ancho,5.5,$this->t('CORPORATIVO SAN MARTÍN'),0,1,'C');
 
         $carpeta=__DIR__.'/../pdf_generados/cuentas_cobrar/';
 

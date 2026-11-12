@@ -212,21 +212,22 @@
             <h2 class="h6 fw-bold mb-0">Ventas registradas</h2>
             <span id="ventasResultado" class="small text-secondary" aria-live="polite"></span>
         </div>
-        <div class="table-responsive">
-            <table class="table table-hover align-middle">
-                <thead class="table-light">
-                    <tr>
-                        <th>Venta y artículos</th>
-                        <th>Pago</th>
-                        <th>Vendedor</th>
-                        <th>Cliente</th>
-                        <th class="text-end">Total</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody id="tablaListadoVentas"></tbody>
-            </table>
-        </div>
+        
+<div class="table-responsive" id="listadoVentasWrap">
+    <table class="table mb-0" id="tablaVentasDiseno">
+        <thead>
+            <tr>
+                <th>ACCIONES</th>
+                <th>DESCRIPCIÓN</th>
+                <th>PAGO</th>
+                <th>VENDEDOR</th>
+                <th>CLIENTE</th>
+            </tr>
+        </thead>
+        <tbody id="tablaListadoVentas"></tbody>
+    </table>
+</div>
+
         <div id="ventasPaginacion" class="d-flex justify-content-center align-items-center gap-2 mt-3"></div>
     </section>
 </template>

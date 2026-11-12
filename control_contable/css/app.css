@@ -148,22 +148,75 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
 }
 
 
-#tablaListadoVentas td {
-    padding: 16px 12px;
-    vertical-align: top;
-}
 
-#tablaListadoVentas tbody tr {
-    border-color: #e6ece8;
-}
+/* HISTORIAL DE VENTAS */
+#listadoVentasWrap{overflow:visible}
+#tablaVentasDiseno{width:100%;table-layout:fixed;border-collapse:separate;border-spacing:0;font-size:13px}
+#tablaVentasDiseno>thead>tr>th{background:#f2f5f3;color:#59675f;font-size:11px;font-weight:700;letter-spacing:.5px;padding:14px 12px;border-bottom:2px solid #dbe4dd}
+#tablaVentasDiseno>thead>tr>th:nth-child(1){width:145px}
+#tablaVentasDiseno>thead>tr>th:nth-child(2){width:40%}
+#tablaVentasDiseno>thead>tr>th:nth-child(3){width:19%}
+#tablaVentasDiseno>thead>tr>th:nth-child(4){width:15%}
+#tablaVentasDiseno>tbody>tr>td{padding:17px 12px;vertical-align:top;border-bottom:1px solid #e1e9e4;color:#29382f;overflow-wrap:anywhere}
+#tablaVentasDiseno>tbody>tr:nth-child(odd)>td{background:#f7f9f8}
+#tablaVentasDiseno>tbody>tr:nth-child(even)>td{background:#fff}
+#tablaVentasDiseno>tbody>tr:hover>td{background:#f0f6f2}
 
-#tablaListadoVentas details > summary {
-    cursor: pointer;
-    color: #087849;
-    font-weight: 600;
-    margin-top: 6px;
-}
+/* ACCIONES */
+.ventas-acciones{display:flex;flex-direction:column;align-items:stretch;gap:8px}
+.ventas-folio{display:flex;align-items:center;justify-content:space-between;gap:6px;background:#fff;border:1px solid #dce5df;border-radius:30px;padding:9px 11px;font-size:12px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,.03)}
+.ventas-folio i{color:#bd8b2a;font-size:17px;flex-shrink:0}
+.ventas-estado{display:block;text-align:center;border-radius:30px;padding:6px 8px;font-size:10px;font-weight:800;letter-spacing:.3px}
+.ventas-estado.pagada{background:#e1f3e8;color:#087849}
+.ventas-estado.pendiente{background:#fff0cd;color:#9a6600}
+.ventas-accion-btn{width:100%;border:1px solid #dae5de;border-radius:24px;background:#fff;color:#405448;padding:9px 12px;font-size:12px;font-weight:650;transition:.2s}
+.ventas-accion-btn:hover,.ventas-accion-btn:focus{border-color:#87bfa0;background:#edf7f1;color:#086b47}
+.ventas-acciones .dropdown-menu{min-width:205px;border:1px solid #e1e9e4;border-radius:13px;padding:7px}
+.ventas-acciones .dropdown-item{border-radius:8px;padding:10px;font-size:12px}
+.ventas-acciones .dropdown-item:hover{background:#eaf5ee;color:#086b47}
 
-#tablaListadoVentas .dropdown-menu {
-    min-width: 210px;
+/* DESCRIPCIÓN */
+.ventas-descripcion{min-width:0}
+.ventas-meta{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:11px}
+.ventas-fecha{background:#edf1f2;color:#66767c;border-radius:30px;padding:5px 10px;font-size:11px;font-weight:650}
+.ventas-total{background:#e8f6ed;color:#087849;border-radius:30px;padding:5px 11px;font-size:12px;font-weight:800;white-space:nowrap}
+
+/* MINI TABLA DE ARTÍCULOS */
+.ventas-mini-tabla{width:100%;table-layout:fixed;border-collapse:separate;border-spacing:0 2px;font-size:11px}
+.ventas-mini-tabla th{background:#e9eeeb;color:#647269;padding:10px 9px;font-size:10px;font-weight:700}
+.ventas-mini-tabla th:first-child{width:55px}
+.ventas-mini-tabla th:last-child{width:93px;text-align:right}
+.ventas-mini-tabla td{background:#f0f3f1;padding:9px!important;border:0!important;vertical-align:top;overflow-wrap:anywhere;line-height:1.5}
+.ventas-mini-tabla td:first-child{font-weight:650}
+.ventas-mini-tabla td:last-child{text-align:right;white-space:nowrap;font-weight:650}
+
+/* DESPLEGABLE DE PRODUCTOS */
+.ventas-detalles-btn{display:flex;align-items:center;justify-content:space-between;width:100%;background:#e9f0f2;color:#3c505b;border:1px solid #d9e4e8;border-radius:12px;padding:13px 15px;font-size:12px;font-weight:700;text-align:left;cursor:pointer;margin-bottom:7px;transition:.2s}
+.ventas-detalles-btn:hover{background:#dfeaec;border-color:#a8bdc4}
+.ventas-detalles-btn i{font-size:14px;transition:transform .2s}
+.ventas-detalles-btn[aria-expanded="true"] i{transform:rotate(180deg)}
+
+/* PAGO */
+.ventas-pago{display:flex;flex-direction:column;gap:8px}
+.ventas-metodo{display:block;background:#edf0ee;border-radius:9px;padding:9px 10px;font-size:11px;font-weight:700;text-align:center;overflow-wrap:anywhere}
+.ventas-pendiente{display:block;border-radius:30px;padding:7px 9px;font-size:10px;text-align:center;font-weight:700}
+.ventas-pendiente.sin-saldo{background:#e2f2e9;color:#087849}
+.ventas-pendiente.con-saldo{background:#fff1ce;color:#996800}
+
+/* MÓVILES Y TABLETAS */
+@media(max-width:991px){
+    #tablaVentasDiseno,#tablaVentasDiseno>tbody,#tablaVentasDiseno>tbody>tr,#tablaVentasDiseno>tbody>tr>td{display:block;width:100%}
+    #tablaVentasDiseno>thead{display:none}
+    #tablaVentasDiseno>tbody>tr{border:1px solid #dfe8e2;border-radius:15px;margin-bottom:13px;overflow:visible}
+    #tablaVentasDiseno>tbody>tr>td{padding:9px 14px;border:0}
+    #tablaVentasDiseno>tbody>tr>td:first-child{padding-top:14px}
+    #tablaVentasDiseno>tbody>tr>td:last-child{padding-bottom:14px}
+    .ventas-acciones{flex-direction:row;flex-wrap:wrap;align-items:center}
+    .ventas-folio{flex:1;min-width:145px}
+    .ventas-estado{min-width:100px}
+    .ventas-acciones .dropdown{width:100%}
+    .ventas-accion-btn{width:100%}
+    #tablaVentasDiseno>tbody>tr>td.ventas-celda-vendedor:before{content:"Vendedor: ";font-weight:700;color:#718178}
+    #tablaVentasDiseno>tbody>tr>td.ventas-celda-cliente:before{content:"Cliente: ";font-weight:700;color:#718178}
+    .ventas-mini-tabla th:last-child{width:85px}
 }
