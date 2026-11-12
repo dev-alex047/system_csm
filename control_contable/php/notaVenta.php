@@ -683,7 +683,8 @@ private $anchos = [20,63,22,15,11,23,25];
         $ruta=__DIR__.'/../recursos/encabezado_cxc.png';
         if (!is_file($ruta)) throw new RuntimeException('Falta el encabezado del concentrado.');
         $this->Image($ruta,0,0,216,44,'PNG');
-        $this->SetY(52);
+        //$this->SetY(52);
+        $this->SetY(48);
     }
 
     public function Footer() {
@@ -806,11 +807,13 @@ $ancho=179;
 $this->SetTextColor(29,39,34);
 $this->SetFont('Arial','',11);
 $this->Cell($ancho,5.5,$this->t('San Martín Huamelúlpam; Tlaxiaco, Oaxaca.  '.date('d/m/Y')),0,1,'R');
-$this->Ln(6);
+//$this->Ln(6);
+$this->Ln(3);
 
 $this->SetFont('Arial','B',11);
 $this->MultiCell($ancho,5.5,$this->t('ASUNTO: Presentación de notas pendientes de pago.'));
-$this->Ln(3);
+$this->Ln(2);
+
 
 $this->SetFont('Arial','',11);
 $this->MultiCell($ancho,5.5,$this->t('Estimado(a) '.$this->datos['cliente'].'.'));
@@ -824,7 +827,7 @@ $this->MultiCell(
     ),
     0,'J'
 );
-$this->Ln(3);
+$this->Ln(2);
 
 $this->MultiCell(
     $ancho,5.5,
@@ -833,7 +836,7 @@ $this->MultiCell(
     ),
     0,'J'
 );
-$this->Ln(5);
+$this->Ln(3);
 
 $this->espacio(15);
 $this->cabeceraTabla();
@@ -859,7 +862,8 @@ $this->Cell(35,5,$this->dinero($this->datos['abonado']),0,1,'R');
 
 $this->SetFillColor(225,245,229);
 $this->SetFont('Arial','B',11);
-$this->Cell(125,8,'TOTAL PENDIENTE DE PAGO',1,0,'R',true);
+//$this->Cell(125,8,'TOTAL PENDIENTE DE PAGO',1,0,'R',true);
+$this->Cell(144,8,'TOTAL PENDIENTE DE PAGO',1,0,'R',true);
 $this->Cell(35,8,$this->dinero($this->datos['pendiente']),1,1,'R',true);
 $this->Ln(5);
 
@@ -880,9 +884,9 @@ $this->MultiCell(
     ),
     0,'J'
 );
-$this->Ln(7);
+$this->Ln(4);
 
-$this->espacio(31);
+$this->espacio(33);
 $this->SetFont('Arial','B',11);
 $this->Cell($ancho,6,$this->t('A T E N T A M E N T E'),0,1,'C');
 
