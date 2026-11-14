@@ -52,7 +52,7 @@ public function generarArchivo($venta, $firmaRuta = '') {
         $lineas = $this->lineasArticuloNota($descripcion, 61);
         $alto = max(8, count($lineas) * 3.8 + 2);
 
-        if ($y + $alto > 155) {
+        if ($y + $alto > 147) {
             $this->AddPage();
             $y = $this->encabezadoNotaFisica($venta);
             $this->marcaAguaNota();
@@ -79,7 +79,7 @@ public function generarArchivo($venta, $firmaRuta = '') {
         $y += $alto;
     }
 
-    while ($y + 8 <= 155) {
+    while ($y + 8 <= 147) {
         $this->SetDrawColor(163, 195, 174);
         foreach ([[7,13],[20,65],[85,23],[108,25]] as $celda) {
             $this->Rect($celda[0], $y, $celda[1], 8);
@@ -217,7 +217,10 @@ private function encabezadoNotaFisica($venta) {
     $this->Rect(106, 7, 27, 19, 'DF');
     $this->SetTextColor(24, 101, 72);
     $this->escribirNota(108, 9, 23, 'NOTA N.º', 6.2, 'B', 'C');
-    $this->escribirNota(107, 16, 25, $venta['note_folio'] ?? '', 8.5, 'B', 'C');
+    //$this->escribirNota(107, 16, 25, $venta['note_folio'] ?? '', 8.5, 'B', 'C');
+
+    $this->escribirNota(107, 16, 25, 'DIG-' . ($venta['note_folio'] ?? ''), 8.5, 'B', 'C');
+
 
 
 // FRANJA VERDE COMPLETA
@@ -350,27 +353,19 @@ private function marcaAguaNota() {
 }
 
 
+
 private function pieNotaFisica($venta, $firmaRuta = '') {
     $this->SetTextColor(35, 45, 39);
-    $this->escribirNota(8, 157, 79, 'Forma de pago: ' . ($venta['payment_method'] ?? ''), 7.8, 'B');
-    $this->escribirNota(8, 164, 79, 'Referencia: ' . (!empty($venta['bank_reference']) ? $venta['bank_reference'] : '—'), 7.5);
+    $this->escribirNota(8, 149, 79, 'Forma de pago: ' . ($venta['payment_method'] ?? ''), 7.8, 'B');
+    $this->escribirNota(8, 156, 79, 'Referencia: ' . (!empty($venta['bank_reference']) ? $venta['bank_reference'] : '—'), 7.5);
 
     if (!empty($venta['notes'])) {
-        $this->escribirNota(8, 173, 79, 'Observaciones:', 7.5, 'B');
-        $this->escribirNota(8, 178, 79, $venta['notes'], 7);
+        $this->escribirNota(8, 165, 79, 'Observaciones:', 7.5, 'B');
+        $this->escribirNota(8, 170, 79, $venta['notes'], 7);
     }
 
-    
-    //$this->Line(19, 190, 78, 190);
-    $this->Line(19,190,78,190);
-    $this->escribirNota(19,191,59,'Recibí / Firma',7.2,'','C');
-
-
-/*if ($firmaRuta !== '' && is_file($firmaRuta)) {
-    $this->Image($firmaRuta, 30, 176, 35, 12, 'PNG');
-}
-
-    $this->escribirNota(19, 191, 59, ($firmaRuta !== '' ? 'Firma de autorización' : 'Recibí / Firma'), 7.2, '', 'C');*/
+    $this->Line(19, 182, 78, 182);
+    $this->escribirNota(19, 183, 59, 'Recibí / Firma', 7.2, '', 'C');
 
     $filas = [
         ['SUBTOTAL', $this->moneda($venta['total_amount'] ?? 0)],
@@ -381,7 +376,7 @@ private function pieNotaFisica($venta, $firmaRuta = '') {
     ];
 
     foreach ($filas as $i => $fila) {
-        $y = 157 + ($i * 7.4);
+        $y = 149 + ($i * 7.4);
         $ultimo = $i === 4;
         $this->SetFillColor($ultimo ? 27 : 240, $ultimo ? 135 : 248, $ultimo ? 96 : 242);
         $this->Rect(91, $y, 42, 7.4, 'DF');
@@ -390,11 +385,29 @@ private function pieNotaFisica($venta, $firmaRuta = '') {
         $this->escribirNota(110, $y + 1.6, 21, $fila[1], 8, 'B', 'R');
     }
 
-    $this->SetTextColor(37, 95, 67);
-    $this->escribirNota(7, 199, 126, 'CONSERVE SU NOTA PARA PODER RECOGER SU PEDIDO.', 7, 'B', 'C');
-    $this->escribirNota(7, 204, 126, 'No se entregará el pedido sin presentar esta nota en mostrador.', 6.5, '', 'C');
-    $this->escribirNota(7, 207, 126, 'Documento de venta. I.V.A. no desglosado.', 6, '', 'C');
+    
+$forma = strtoupper(trim((string)($venta['payment_method'] ?? '')));
+$saldo = (float)($venta['pending_amount'] ?? 0);
+$yAvisos = 201;
+
+if (in_array($forma, ['CREDITO', 'PARCIALIDADES'], true) && $saldo > 0) {
+    $leyenda = 'Debo y pagaré incondicionalmente a la orden de corporativo San Martín la cantidad de este documento, valor de la mercancía recibida de conformidad. De no ser cubierto oportunamente, causará intereses moratorios de acuerdo a nuestras políticas.';
+
+    $this->SetTextColor(45, 76, 55);
+    $this->SetFont('Arial', 'B', 5.7);
+    $this->SetXY(8, 188);
+    $this->MultiCell(124, 3.1, $this->textoNota($leyenda), 0, 'J');
+
+    $yAvisos = max(201, $this->GetY() + 1);
 }
+
+$this->SetTextColor(37, 95, 67);
+$this->escribirNota(7, $yAvisos, 126, 'CONSERVE SU NOTA PARA PODER RECOGER SU PEDIDO.', 6.5, 'B', 'C');
+$this->escribirNota(7, $yAvisos + 3.5, 126, 'No se entregará el pedido sin presentar esta nota en mostrador.', 5.8, '', 'C');
+$this->escribirNota(7, $yAvisos + 7, 126, 'Documento de venta. I.V.A. no desglosado.', 5.5, '', 'C');
+
+}
+
 
 }
 
