@@ -631,7 +631,19 @@ private function getDatosNotaVentaPdf($idVenta)
 {
     $json = array();
 
-    $stmt = $this->conn->prepare("SELECT id, note_folio, client_name, client_address, client_phone, seller_name, payment_method, bank_reference, total_amount, initial_paid, pending_amount, notes, created_at FROM sales WHERE id = ? AND sale_kind = 'NOTA' LIMIT 1");
+    //$stmt = $this->conn->prepare("SELECT id, note_folio, client_name, client_address, client_phone, seller_name, payment_method, bank_reference, total_amount, initial_paid, pending_amount, notes, created_at FROM sales WHERE id = ? AND sale_kind = 'NOTA' LIMIT 1");
+    
+    
+$stmt = $this->conn->prepare("SELECT s.id, s.note_folio, s.client_name, s.client_address,
+    s.client_phone, s.seller_name, s.payment_method, s.bank_reference,
+    s.total_amount, s.initial_paid, s.pending_amount, s.notes, s.created_at,
+    r.id AS cuenta_id, r.total_amount AS cuenta_total, r.paid_amount AS cuenta_pagado,
+    r.pending_amount AS cuenta_saldo, r.status AS cuenta_estado
+    FROM sales s
+    LEFT JOIN receivables r ON r.sale_id = s.id
+    WHERE s.id = ? AND s.sale_kind = 'NOTA' LIMIT 1");
+
+
     if (!$stmt) {
         return null;
     }
@@ -650,6 +662,24 @@ private function getDatosNotaVentaPdf($idVenta)
     if (!$venta) {
         return null;
     }
+
+
+$total = $this->centavosVenta($venta["total_amount"]);
+$saldo = $this->centavosVenta($venta["pending_amount"]);
+$inicial = $this->centavosVenta($venta["initial_paid"]);
+$tieneCuenta = $venta["cuenta_id"] !== null;
+
+$cuentaLiquidada = $tieneCuenta && $venta["cuenta_estado"] === "PAGADO"
+    && $this->centavosVenta($venta["cuenta_total"]) === $total
+    && $this->centavosVenta($venta["cuenta_pagado"]) === $total
+    && $this->centavosVenta($venta["cuenta_saldo"]) === 0;
+
+$venta["pagada"] = $total !== null && $total > 0 && $saldo === 0
+    && ($tieneCuenta ? $cuentaLiquidada : $inicial === $total);
+
+$venta["pagado_total"] = ($total !== null && $saldo !== null && $saldo >= 0 && $saldo <= $total)
+    ? number_format(($total - $saldo) / 100, 2, ".", "") : $venta["initial_paid"];
+
 
     $stmtItems = $this->conn->prepare("SELECT quantity, price, total, manual_name, manual_code FROM sale_items WHERE sale_id = ? ORDER BY id ASC");
     if (!$stmtItems) {

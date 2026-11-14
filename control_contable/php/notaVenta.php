@@ -79,6 +79,8 @@ public function generarArchivo($venta, $firmaRuta = '') {
         $y += $alto;
     }
 
+    $finArticulos = $y;
+
     while ($y + 8 <= 147) {
         $this->SetDrawColor(163, 195, 174);
         foreach ([[7,13],[20,65],[85,23],[108,25]] as $celda) {
