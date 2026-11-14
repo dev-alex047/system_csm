@@ -86,11 +86,33 @@ public function generarArchivo($venta, $firmaRuta = '') {
         foreach ([[7,13],[20,65],[85,23],[108,25]] as $celda) {
             $this->Rect($celda[0], $y, $celda[1], 8);
         }
+       
         $y += 8;
     }
 
-    //$this->pieNotaFisica($venta);
+    // SELLO DIGITAL DE PAGADO
+    if (!empty($venta["pagada"])) {
+        $selloY = max(108, $finArticulos + 3);
+        $this->SetDrawColor(177, 38, 49);
+        $this->SetTextColor(177, 38, 49);
+        $this->SetLineWidth(0.6);
+
+        if ($selloY + 15 <= 147) {
+            $this->SetFillColor(255, 250, 250);
+            $this->Rect(39, $selloY, 43, 15, "DF");
+            $this->Rect(40, $selloY + 1, 41, 13);
+            $this->SetFont("Arial", "B", 14);
+            $this->SetXY(41, $selloY + 4.2);
+            $this->Cell(39, 6, "PAGADO", 0, 0, "C");
+        } else {
+            $this->escribirNota(108, 21, 23, "PAGADO", 7.5, "B", "C");
+        }
+
+        $this->SetLineWidth(0.25);
+    }
+
     $this->pieNotaFisica($venta, $firmaRuta);
+
 
     $carpeta = __DIR__ . '/../pdf_generados/notas_venta/';
 
@@ -231,16 +253,37 @@ $this->Rect(7, 30, 126, 21, 'F');
 $this->SetTextColor(255, 255, 255);
 
 // CONTACTOS
-$this->iconoContactoNota('telefono', 9, 32.5);
+
+// ICONOS DE CONTACTO
+$iconTelefono = __DIR__ . '/../recursos/logo_telefono.png';
+$iconWhatsapp = __DIR__ . '/../recursos/logo_whatsapp.png';
+$iconUbicacion = __DIR__ . '/../recursos/ubi.png';
+
+// TELÉFONO
+if (is_file($iconTelefono)) {
+    $this->Image($iconTelefono, 9, 32.5, 4.5, 4.5, 'PNG');
+} else {
+    $this->iconoContactoNota('telefono', 9, 32.5);
+}
 $this->escribirNota(15, 32.5, 33, '953 55 212 53', 8.7, 'B');
 
-$this->iconoContactoNota('whatsapp', 51, 32.5);
+// WHATSAPP
+if (is_file($iconWhatsapp)) {
+    $this->Image($iconWhatsapp, 51, 32.5, 4.5, 4.5, 'PNG');
+} else {
+    $this->iconoContactoNota('whatsapp', 51, 32.5);
+}
 $this->escribirNota(57, 32.5, 41, '951 287 04 99', 8.7, 'B');
 
-// DIRECCIÓN Y RESPONSABLE
-$this->iconoContactoNota('ubicacion', 9, 40);
+// UBICACIÓN
+if (is_file($iconUbicacion)) {
+    $this->Image($iconUbicacion, 9, 40, 4.5, 5, 'PNG');
+} else {
+    $this->iconoContactoNota('ubicacion', 9, 40);
+}
 $this->escribirNota(15, 40, 82, 'CARRETERA YUCUDAA KM. 34 // SAN MARTÍN HUAMELULPAM, TLAX. OAX.', 5.5, 'B');
 $this->escribirNota(15, 45.2, 82, 'HERMINIO PÉREZ BERNABÉ', 6, 'B');
+
 
 // FECHA DENTRO DE LA FRANJA VERDE
 $fecha = strtotime($venta['created_at'] ?? '') ?: time();
@@ -372,7 +415,8 @@ private function pieNotaFisica($venta, $firmaRuta = '') {
     $filas = [
         ['SUBTOTAL', $this->moneda($venta['total_amount'] ?? 0)],
         ['I.V.A.', '—'],
-        ['ABONO', $this->moneda($venta['initial_paid'] ?? 0)],
+        //['ABONO', $this->moneda($venta['initial_paid'] ?? 0)],
+        ['ABONADO', $this->moneda($venta['pagado_total'] ?? ($venta['initial_paid'] ?? 0))],
         ['SALDO', $this->moneda($venta['pending_amount'] ?? 0)],
         ['TOTAL', $this->moneda($venta['total_amount'] ?? 0)]
     ];
