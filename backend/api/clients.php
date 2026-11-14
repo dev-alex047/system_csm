@@ -13,8 +13,7 @@ require_once __DIR__ . '/db.php';
 $pdo = getPDO();
 
 // Devuelve nombres distintos y no vacíos
-$sql = "
-  SELECT DISTINCT TRIM(client_name) AS name
+$sql = "SELECT DISTINCT TRIM(client_name) AS name
   FROM sales
   WHERE client_name IS NOT NULL AND TRIM(client_name) <> ''
   ORDER BY name ASC

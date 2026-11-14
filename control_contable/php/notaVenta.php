@@ -265,7 +265,7 @@ if (is_file($iconTelefono)) {
 } else {
     $this->iconoContactoNota('telefono', 9, 32.5);
 }
-$this->escribirNota(15, 32.5, 33, '953 55 212 53', 8.7, 'B');
+$this->escribirNota(15, 32.5, 33, '220 286 2755', 8.7, 'B');
 
 // WHATSAPP
 if (is_file($iconWhatsapp)) {

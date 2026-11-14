@@ -1,0 +1,46 @@
+
+:root{--verde:#086b47;--verde-oscuro:#075337;--verde-suave:#eaf5ee;--tinta:#26392d;--muted:#708076;--borde:#dce7e0}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--tinta);background:#fff;-webkit-font-smoothing:antialiased}
+.acceso{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:34px 16px}
+.tarjeta{width:100%;max-width:458px;background:#fff;border:1px solid #e3ebe6;border-radius:24px;box-shadow:0 22px 70px rgba(23,61,38,.09);overflow:hidden}
+.cabecera{padding:25px 30px 21px;border-bottom:1px solid #e8eee9;background:linear-gradient(125deg,#fff 50%,#f1f8f3)}
+.identidad{display:flex;align-items:center;gap:13px}
+.logotipo{width:52px;height:52px;border:1px solid #d8e9de;background:#f3faf5;border-radius:15px;display:grid;place-items:center;flex-shrink:0}
+.logotipo img{display:block;width:43px;height:43px;object-fit:contain}
+.nombre{display:block;color:var(--verde);font-size:23px;font-weight:800;letter-spacing:-.9px;line-height:1.1}
+.empresa{display:block;margin-top:5px;font-size:11px;font-weight:600;color:#64786b}
+.etiqueta{display:inline-block;margin-top:20px;color:#658776;letter-spacing:1.7px;font-size:9px;font-weight:800}
+.contenido{padding:29px 30px 32px}
+.pasos{display:flex;align-items:center;gap:10px;margin-bottom:23px}
+.paso{display:inline-flex;align-items:center;gap:6px;color:#9cad9f;font-size:11px;font-weight:800;white-space:nowrap}
+.paso.activo,.paso.completado{color:var(--verde)}
+.linea-pasos{height:1px;flex:1;background:#e2eae4}
+h1{font-size:clamp(23px,4vw,29px);line-height:1.2;letter-spacing:-.75px;margin:0 0 8px;font-weight:800}
+.descripcion{color:var(--muted);font-size:13px;line-height:1.65;margin:0 0 27px}
+label{display:block;font-size:12px;font-weight:750;margin-bottom:9px;color:#3d5145}
+.campo{position:relative;display:flex;align-items:center;min-height:52px;border:1px solid #dce5df;border-radius:12px;background:#fff;transition:border-color .18s,box-shadow .18s}
+.campo:focus-within{border-color:#328b65;box-shadow:0 0 0 4px rgba(8,107,71,.085)}
+.campo>svg{width:18px;height:18px;flex-shrink:0;margin-left:14px;stroke:#7b9785;stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.campo input{min-width:0;flex:1;border:0;outline:0;padding:15px 12px;color:var(--tinta);background:transparent;font:inherit;font-size:14px}
+.campo input::placeholder{color:#9ca9a0}
+.boton-primario{margin-top:19px;width:100%;min-height:51px;border:0;border-radius:12px;background:var(--verde);color:#fff;display:flex;justify-content:center;align-items:center;gap:10px;cursor:pointer;font-size:14px;font-weight:750;transition:background .2s,transform .2s}
+.boton-primario span{font-size:21px;font-weight:400}
+.boton-primario:hover{background:var(--verde-oscuro)}
+.boton-primario:active{transform:translateY(1px)}
+.boton-primario:disabled{opacity:.65;cursor:wait;transform:none}
+.boton-primario:focus-visible,.volver:focus-visible,.ver-clave:focus-visible{outline:3px solid #7cc59b;outline-offset:3px}
+.volver{border:0;background:none;color:var(--verde);padding:0;margin:0 0 17px;cursor:pointer;font-size:12px;font-weight:700}
+.volver span{font-size:18px;vertical-align:middle;margin-right:4px}
+.correo-seleccionado{display:flex;align-items:center;gap:9px;padding:11px 12px;margin-bottom:23px;border-radius:11px;background:#f1f7f3;color:#3e6551;overflow-wrap:anywhere;font-size:12px}
+.correo-icono{border-radius:50%;width:23px;height:23px;display:grid;place-items:center;background:#deefe3;color:var(--verde);font-weight:800}
+.ver-clave{border:0;background:none;color:var(--verde);cursor:pointer;font-size:11px;font-weight:750;padding:10px 13px}
+.recuperacion{text-align:center;margin:24px 0 0;font-size:12px;color:#76887a;line-height:1.65}
+.recuperacion span{display:block;color:#536f5b}
+.mensaje-error{margin:17px 0 0;border:1px solid #f1cccc;border-radius:10px;padding:12px;background:#fff4f3;color:#aa3d39;font-size:12px;line-height:1.55}
+.pie-tarjeta{border-top:1px solid #edf0ec;padding:15px;text-align:center;color:#78877c;font-size:10px;background:#fcfdfc}
+.pie-pagina{font-size:11px;color:#8a9a8f;margin:21px 0 0;text-align:center}
+[hidden]{display:none!important}
+@media(max-width:480px){.acceso{padding:16px 13px}.tarjeta{border-radius:20px}.cabecera{padding:23px 22px 19px}.contenido{padding:26px 22px 29px}.logotipo{width:47px;height:47px}.logotipo img{width:39px;height:39px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;scroll-behavior:auto!important}}

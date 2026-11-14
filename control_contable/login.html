@@ -1,0 +1,111 @@
+
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="description" content="Acceso al sistema de Corporativo San Martín">
+    <title>Iniciar sesión | SM Corp</title>
+    <link rel="stylesheet" href="css/login.css">
+    
+</head>
+<body>
+    <main class="acceso">
+        <section class="tarjeta" aria-labelledby="tituloLogin">
+            <header class="cabecera">
+                <div class="identidad">
+                    <div class="logotipo">
+                        <img src="recursos/logo.png" alt="Corporativo San Martín">
+                    </div>
+                    <div>
+                        <span class="nombre">SM Corp</span>
+                        <span class="empresa">Corporativo San Martín</span>
+                    </div>
+                </div>
+                <span class="etiqueta">CONTROL CONTABLE</span>
+            </header>
+
+            <div class="contenido">
+                <div class="pasos">
+                    <span class="paso activo" id="pasoCorreo">1 <span>Correo</span></span>
+                    <span class="linea-pasos"></span>
+                    <span class="paso" id="pasoClave">2 <span>Contraseña</span></span>
+                </div>
+
+                <h1 id="tituloLogin">Bienvenido de nuevo</h1>
+                <p class="descripcion" id="mensajePaso">
+                    Introduce tu correo para acceder al sistema.
+                </p>
+
+                <form id="formAcceso" autocomplete="on" novalidate>
+                    <div id="vistaCorreo">
+                        <label for="correo">Correo electrónico</label>
+                        <div class="campo">
+                            <svg aria-hidden="true" viewBox="0 0 24 24">
+                                <rect x="3" y="5" width="18" height="14" rx="3"/>
+                                <path d="m4 7 8 6 8-6"/>
+                            </svg>
+                            <input id="correo" name="correo" type="email"
+                                   autocomplete="username" inputmode="email"
+                                   maxlength="190" placeholder="nombre@empresa.com"
+                                   spellcheck="false" required>
+                        </div>
+
+                        <button class="boton-primario" id="btnContinuar" type="submit">
+                            Continuar <span aria-hidden="true">→</span>
+                        </button>
+                    </div>
+
+                    <div id="vistaClave" hidden>
+                        <button class="volver" type="button" id="btnVolver">
+                            <span aria-hidden="true">←</span> Cambiar correo
+                        </button>
+
+                        <div class="correo-seleccionado">
+                            <span class="correo-icono">@</span>
+                            <strong id="correoElegido"></strong>
+                        </div>
+
+                        <label for="clave">Contraseña</label>
+                        <div class="campo">
+                            <svg aria-hidden="true" viewBox="0 0 24 24">
+                                <rect x="5" y="10" width="14" height="11" rx="2"/>
+                                <path d="M8 10V7a4 4 0 0 1 8 0v3"/>
+                            </svg>
+                            <input id="clave" name="clave" type="password"
+                                   autocomplete="current-password" minlength="8"
+                                   maxlength="72" placeholder="Introduce tu contraseña"
+                                   required>
+                            <button class="ver-clave" type="button" id="btnVerClave"
+                                    aria-label="Mostrar contraseña" aria-pressed="false">
+                                Mostrar
+                            </button>
+                        </div>
+
+                        <button class="boton-primario" type="submit" id="btnEntrar">
+                            Iniciar sesión <span aria-hidden="true">→</span>
+                        </button>
+
+                        <p class="recuperacion">
+                            ¿Olvidaste tu contraseña?
+                            <span>Solicita ayuda al administrador.</span>
+                        </p>
+                    </div>
+
+                    <p id="errorLogin" class="mensaje-error"
+                       role="alert" aria-live="polite" hidden></p>
+                </form>
+            </div>
+
+            <footer class="pie-tarjeta">
+                Acceso exclusivo para personal autorizado
+            </footer>
+        </section>
+
+        <p class="pie-pagina">© SM Corp · Corporativo San Martín</p>
+    </main>
+</body>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js" defer></script>
+<script src="js/login.js" defer></script>
+</html>
