@@ -153,7 +153,7 @@ class ticketVentaTermico extends FPDF {
         $this->separador();
 
         // INFORMACIÓN DE VENTA
-        $folio = trim((string)$this->venta["note_folio"]);
+        $folio = 'DIG-' . trim((string)$this->venta["note_folio"]);
         if ($folio === "") $folio = trim((string)$this->venta["ticket_barcode"]);
         if ($folio === "") $folio = "V-" . $this->venta["id"];
 
