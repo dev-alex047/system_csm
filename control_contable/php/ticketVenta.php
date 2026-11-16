@@ -16,7 +16,8 @@ class ticketVentaTermico extends FPDF {
         $this->venta = $venta;
         $this->items = $items;
         $this->anchoPapel = (int)$ancho;
-        $this->margen = $ancho === 58 ? 5 : 4;
+        //$this->margen = $ancho === 58 ? 5 : 4;
+        $this->margen = $ancho === 58 ? 6 : 8;
         $this->util = $ancho - (2 * $this->margen);
         $this->SetMargins($this->margen, 3, $this->margen);
         $this->SetAutoPageBreak(false);
@@ -88,7 +89,7 @@ class ticketVentaTermico extends FPDF {
         }
     }
 
-    private function columnas($izquierda, $derecha, $tam, $alto, $estilo = "") {
+    private function columnas_old($izquierda, $derecha, $tam, $alto, $estilo = "") {
         $this->SetFont("Arial", $estilo, $tam);
 
         $w1 = $this->util * 0.64;
@@ -109,6 +110,52 @@ class ticketVentaTermico extends FPDF {
             $this->yTicket += $alto;
         }
     }
+
+
+private function columnas($izquierda, $derecha, $tam, $alto, $estilo = "") {
+    $this->SetFont("Arial", $estilo, $tam);
+
+    $w1 = $this->util * 0.54;
+    $w2 = $this->util - $w1;
+
+    $l1 = $this->partir($this->texto($izquierda), $w1 - 1);
+    $importe = $this->texto($derecha);
+
+    // El importe derecho no se divide en varias líneas.
+    $tamImporte = $tam;
+    $this->SetFont("Arial", $estilo, $tamImporte);
+
+    while ($tamImporte > 6 &&
+           $this->GetStringWidth($importe) > $w2 - 1.5) {
+        $tamImporte -= 0.25;
+        $this->SetFont("Arial", $estilo, $tamImporte);
+    }
+
+    $lineas = max(1, count($l1));
+
+    for ($i = 0; $i < $lineas; $i++) {
+        if (!$this->medir) {
+            $this->SetXY($this->margen, $this->yTicket);
+
+            $this->SetFont("Arial", $estilo, $tam);
+            $this->Cell(
+                $w1, $alto, $l1[$i] ?? "",
+                0, 0, "L"
+            );
+
+            if ($i === 0) {
+                $this->SetFont("Arial", $estilo, $tamImporte);
+                $this->Cell(
+                    $w2, $alto, $importe,
+                    0, 0, "R"
+                );
+            }
+        }
+
+        $this->yTicket += $alto;
+    }
+}
+
 
     private function separador() {
         if (!$this->medir) {
@@ -153,9 +200,19 @@ class ticketVentaTermico extends FPDF {
         $this->separador();
 
         // INFORMACIÓN DE VENTA
-        $folio = 'DIG-' . trim((string)$this->venta["note_folio"]);
-        if ($folio === "") $folio = trim((string)$this->venta["ticket_barcode"]);
-        if ($folio === "") $folio = "V-" . $this->venta["id"];
+        
+$folioBase = trim((string)($this->venta["note_folio"] ?? ""));
+
+if ($folioBase === "") {
+    $folioBase = trim((string)($this->venta["ticket_barcode"] ?? ""));
+}
+
+if ($folioBase === "") {
+    $folioBase = "V-" . (int)$this->venta["id"];
+}
+
+$folio = strpos($folioBase, "DIG-") === 0 ? $folioBase : "DIG-" . $folioBase;
+
 
         $titulo = $this->venta["sale_kind"] === "RAPIDA" ? "TICKET" : "NOTA DE VENTA";
 
