@@ -13,10 +13,8 @@ body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(
 .empresa{display:block;margin-top:5px;font-size:11px;font-weight:600;color:#64786b}
 .etiqueta{display:inline-block;margin-top:20px;color:#658776;letter-spacing:1.7px;font-size:9px;font-weight:800}
 .contenido{padding:29px 30px 32px}
-.pasos{display:flex;align-items:center;gap:10px;margin-bottom:23px}
-.paso{display:inline-flex;align-items:center;gap:6px;color:#9cad9f;font-size:11px;font-weight:800;white-space:nowrap}
-.paso.activo,.paso.completado{color:var(--verde)}
-.linea-pasos{height:1px;flex:1;background:#e2eae4}
+
+
 h1{font-size:clamp(23px,4vw,29px);line-height:1.2;letter-spacing:-.75px;margin:0 0 8px;font-weight:800}
 .descripcion{color:var(--muted);font-size:13px;line-height:1.65;margin:0 0 27px}
 label{display:block;font-size:12px;font-weight:750;margin-bottom:9px;color:#3d5145}
@@ -44,3 +42,15 @@ label{display:block;font-size:12px;font-weight:750;margin-bottom:9px;color:#3d51
 [hidden]{display:none!important}
 @media(max-width:480px){.acceso{padding:16px 13px}.tarjeta{border-radius:20px}.cabecera{padding:23px 22px 19px}.contenido{padding:26px 22px 29px}.logotipo{width:47px;height:47px}.logotipo img{width:39px;height:39px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;scroll-behavior:auto!important}}
+
+
+/* LOGIN: FLECHA DENTRO DEL CORREO */
+.campo-correo{padding-right:6px}
+.campo-correo input{padding-right:5px}
+.btn-siguiente{width:39px;height:39px;flex-shrink:0;border:0;border-radius:50%;background:var(--verde);color:#fff;display:grid;place-items:center;cursor:pointer;transition:background .2s,transform .2s,box-shadow .2s}
+.btn-siguiente svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
+.btn-siguiente:disabled{background:#e8eeea;color:#a4b3a9;cursor:not-allowed}
+.btn-siguiente:not(:disabled):hover{background:var(--verde-oscuro);box-shadow:0 4px 12px rgba(8,107,71,.18)}
+.btn-siguiente:not(:disabled):active{transform:scale(.95)}
+.btn-siguiente:focus-visible{outline:3px solid #80c5a0;outline-offset:3px}
+.correo-seleccionado strong{min-width:0;overflow-wrap:anywhere}

@@ -1,79 +1,31 @@
 
-var pasoLogin = 1;
-var csrfLogin = "";
-var enviandoLogin = false;
+let pasoLogin = 1;
+let enviandoLogin = false;
 
 // INICIALIZACIÓN
 $(document).ready(function() {
-    $("#btnContinuar, #btnEntrar").prop("disabled", true);
-    verificarSesionLogin();
 
-    $("#formAcceso").on("submit", function(e) {
-        e.preventDefault();
-        if (enviandoLogin) return;
+    $("#correo").on("input", function() {
+        const valor = this.value.trim();
+        const valido = this.checkValidity() &&
+            /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(valor);
 
-        if (pasoLogin === 1) {
-            const correo = $("#correo")[0];
+        $("#btnSiguienteCorreo").prop("disabled", !valido);
+        mostrarErrorLogin("");
+    });
 
-            if (!correo.checkValidity()) {
-                correo.reportValidity();
-                return;
-            }
-
-            cambiarPasoLogin(2);
-            return;
+    $("#correo").on("keydown", function(e) {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            $("#btnSiguienteCorreo").trigger("click");
         }
+    });
 
-        const correo = $("#correo").val().trim().toLowerCase();
-        const clave = $("#clave").val();
+    $("#btnSiguienteCorreo").on("click", function() {
+        if ($(this).prop("disabled")) return;
 
-        if (!clave || clave.length < 8) {
-            mostrarErrorLogin("Introduce tu contraseña.");
-            $("#clave").trigger("focus");
-            return;
-        }
-
-        if (!csrfLogin) {
-            mostrarErrorLogin("No se pudo verificar la sesión. Actualiza la página.");
-            return;
-        }
-
-        enviandoLogin = true;
-        $("#btnEntrar").prop("disabled", true).text("Verificando acceso...");
-
-        $.ajax({
-            type: "POST",
-            url: "php/login.php",
-            dataType: "json",
-            data: {
-                action: "entrar",
-                correo: correo,
-                clave: clave
-            },
-            headers: {
-                "X-CSRF-Token": csrfLogin
-            }
-        }).done(function(data) {
-            if (!data || data.status !== "ok") {
-                mostrarErrorLogin(data && data.answer ? data.answer : "Correo o contraseña incorrectos.");
-                $("#clave").val("").trigger("focus");
-                return;
-            }
-
-            window.location.replace("index.html");
-
-        }).fail(function(xhr) {
-            const data = xhr.responseJSON || {};
-
-            mostrarErrorLogin(data.answer || "No fue posible iniciar sesión. Inténtalo nuevamente.");
-            $("#clave").val("").trigger("focus");
-
-            if (xhr.status === 403) verificarSesionLogin();
-
-        }).always(function() {
-            enviandoLogin = false;
-            $("#btnEntrar").prop("disabled", false).html('Iniciar sesión <span aria-hidden="true">→</span>');
-        });
+        $("#correo").val($("#correo").val().trim().toLowerCase());
+        cambiarPasoLogin(2);
     });
 
     $("#btnVolver").on("click", function() {
@@ -82,74 +34,121 @@ $(document).ready(function() {
 
     $("#btnVerClave").on("click", function() {
         const visible = $("#clave").attr("type") === "text";
-
         $("#clave").attr("type", visible ? "password" : "text");
+
         $(this).text(visible ? "Mostrar" : "Ocultar")
-            .attr("aria-label", visible ? "Mostrar contraseña" : "Ocultar contraseña")
-            .attr("aria-pressed", String(!visible));
+            .attr("aria-pressed", String(!visible))
+            .attr("aria-label", visible ? "Mostrar contraseña" : "Ocultar contraseña");
     });
 
-    $("#correo, #clave").on("input", function() {
+    $("#clave").on("input", function() {
         mostrarErrorLogin("");
     });
+
+    $("#formAcceso").on("submit", function(e) {
+        e.preventDefault();
+        if (enviandoLogin) return;
+
+        if (pasoLogin === 1) {
+            $("#btnSiguienteCorreo").trigger("click");
+            return;
+        }
+
+        const correo = $("#correo").val().trim();
+        const clave = $("#clave").val();
+
+        if (clave.length < 8) {
+            mostrarErrorLogin("Introduce una contraseña de al menos 8 caracteres.");
+            $("#clave").trigger("focus");
+            return;
+        }
+
+        enviandoLogin = true;
+        $("#btnEntrar").prop("disabled", true).text("Verificando acceso...");
+        mostrarErrorLogin("");
+
+        // Solicitar token CSRF únicamente al intentar iniciar sesión.
+        $.ajax({
+            type: "POST",
+            url: "php/login.php",
+            data: {action:"estado"},
+            dataType: "json"
+        }).done(function(r) {
+
+            if (r && r.status === "ok" && r.results && r.results.autenticado) {
+                window.location.replace("index.html");
+                return;
+            }
+
+            const csrf = r && r.results ? r.results.csrf : "";
+
+            if (!csrf) {
+                mostrarErrorLogin("No fue posible preparar el inicio de sesión.");
+                enviandoLogin = false;
+                $("#btnEntrar").prop("disabled", false).html('Iniciar sesión <span aria-hidden="true">→</span>');
+                return;
+            }
+
+            $.ajax({
+                type: "POST",
+                url: "php/login.php",
+                dataType: "json",
+                data: {
+                    action: "entrar",
+                    correo: correo,
+                    clave: clave
+                },
+                headers: {"X-CSRF-Token":csrf}
+            }).done(function(data) {
+                if (data && data.status === "ok") {
+                    window.location.replace("index.html");
+                    return;
+                }
+
+                mostrarErrorLogin(data && data.answer ? data.answer : "No fue posible iniciar sesión.");
+                $("#clave").val("").trigger("focus");
+
+            }).fail(function(xhr) {
+                const data = xhr.responseJSON || {};
+                mostrarErrorLogin(data.answer || "No fue posible validar las credenciales.");
+                $("#clave").val("").trigger("focus");
+
+            }).always(function() {
+                enviandoLogin = false;
+                $("#btnEntrar").prop("disabled", false).html('Iniciar sesión <span aria-hidden="true">→</span>');
+            });
+
+        }).fail(function(xhr) {
+            mostrarErrorLogin(xhr.status === 404
+                ? "El inicio de sesión todavía no está configurado en PHP."
+                : "No fue posible conectar con el servidor.");
+
+            enviandoLogin = false;
+            $("#btnEntrar").prop("disabled", false).html('Iniciar sesión <span aria-hidden="true">→</span>');
+        });
+    });
+    cambiarPasoLogin(1);
+    $("#correo").trigger("input");
 });
 
-// VERIFICAR SESIÓN
-function verificarSesionLogin() {
-    $.ajax({
-        type: "POST",
-        url: "php/login.php",
-        dataType: "json",
-        cache: false,
-        data: {action: "estado"}
-    }).done(function(data) {
-        if (!data || data.status !== "ok" || !data.results) {
-            mostrarErrorLogin("No fue posible verificar el acceso.");
-            return;
-        }
-
-        if (data.results.autenticado) {
-            window.location.replace("index.html");
-            return;
-        }
-
-        csrfLogin = data.results.csrf || "";
-
-        if (!csrfLogin) {
-            mostrarErrorLogin("No se pudo preparar el inicio de sesión.");
-            return;
-        }
-
-        $("#btnContinuar, #btnEntrar").prop("disabled", false);
-
-    }).fail(function(xhr) {
-        const data = xhr.responseJSON || {};
-        mostrarErrorLogin(data.answer || "No hay conexión con el servidor. Actualiza la página.");
-    });
-}
-
-// CAMBIAR ENTRE CORREO Y CONTRASEÑA
+// CAMBIAR DE CORREO A CONTRASEÑA
 function cambiarPasoLogin(paso) {
     pasoLogin = paso;
 
     $("#vistaCorreo").prop("hidden", paso !== 1);
     $("#vistaClave").prop("hidden", paso !== 2);
 
-    $("#pasoCorreo").toggleClass("activo", paso === 1)
-        .toggleClass("completado", paso === 2);
-
-    $("#pasoClave").toggleClass("activo", paso === 2);
-
-    $("#tituloLogin").text(paso === 1 ? "Bienvenido de nuevo" : "Introduce tu contraseña");
+    $("#tituloLogin").text(paso === 1
+        ? "Bienvenido de nuevo" : "Introduce tu contraseña");
 
     $("#mensajePaso").text(paso === 1
         ? "Introduce tu correo para acceder al sistema."
-        : "Continúa con tu cuenta para entrar a Control Contable.");
+        : "Ingresa tu contraseña para continuar.");
 
     mostrarErrorLogin("");
 
     if (paso === 2) {
-        $("#correoElegido").text($("#correo").val().trim().toLowerCase());
+        $("#correoElegido").text($("#correo").val());
         $("#clave").trigger("focus");
     } else {
         $("#clave").val("").attr("type", "password");
@@ -158,7 +157,7 @@ function cambiarPasoLogin(paso) {
     }
 }
 
-// MOSTRAR ERRORES
+// MOSTRAR MENSAJES
 function mostrarErrorLogin(mensaje) {
     $("#errorLogin").text(mensaje || "").prop("hidden", !mensaje);
 }
