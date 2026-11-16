@@ -117,6 +117,13 @@ $(document).on("click", ".js-pdf-venta", function() {
     if (Number.isInteger(id) && id > 0) generarPdfNotaVenta(id);
 });
 
+$(document).on("click", ".js-ticket-venta", function() {
+    const id = Number($(this).attr("data-id"));
+
+    if (Number.isInteger(id) && id > 0) {
+        abrirTicketVenta(id);
+    }
+});
 
 }
 
@@ -2153,15 +2160,21 @@ datos.ventas.forEach(function(v) {
         .addClass(pendiente ? "pendiente" : "pagada")
         .text(pendiente ? "PENDIENTE" : "PAGADA"));
 
-    const $menu = $('<ul class="dropdown-menu shadow-sm"></ul>');
-    if (esNota) {
-        $menu.append($('<li></li>').append(
-            $('<button type="button" class="dropdown-item js-pdf-venta"><i class="bi bi-file-earmark-pdf me-2"></i>Obtener nota PDF</button>')
-                .attr("data-id", v.id)
-        ));
-    } else {
-        $menu.append('<li><span class="dropdown-item-text text-secondary small">Ticket térmico: próximamente</span></li>');
-    }
+    
+const $menu = $('<ul class="dropdown-menu shadow-sm"></ul>');
+
+if (esNota) {
+    $menu.append($('<li></li>').append(
+        $('<button type="button" class="dropdown-item js-pdf-venta"><i class="bi bi-file-earmark-pdf me-2"></i>Obtener nota PDF</button>')
+            .attr("data-id", v.id)
+    ));
+}
+
+$menu.append($('<li></li>').append(
+    $('<button type="button" class="dropdown-item js-ticket-venta"><i class="bi bi-printer me-2"></i>Imprimir ticket térmico</button>')
+        .attr("data-id", v.id)
+));
+
     $acciones.append($('<div class="dropdown"></div>').append(
         $('<button class="ventas-accion-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Acciones</button>'),
         $menu
