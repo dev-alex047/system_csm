@@ -220,40 +220,28 @@ $folio = strpos($folioBase, "DIG-") === 0 ? $folioBase : "DIG-" . $folioBase;
 
         //$fecha = strtotime((string)$this->venta["created_at"]);
         //$this->bloque("Fecha: " . ($fecha ? date("d/m/Y H:i", $fecha) : "No disponible"), $cuerpo, $linea);
+        $fecha = strtotime((string)$this->venta["created_at"]);
+        $this->bloque("FECHA DE VENTA: " . ($fecha ? date("d/m/Y H:i", $fecha) : "No disponible"), $cuerpo, $linea);
+        $this->bloque("CONSULTADO: " . date("d/m/Y H:i"), $pequeno ? 6.5 : 7.3, $linea);
 
-$fecha = strtotime((string)$this->venta["created_at"]);
-
-$this->bloque(
-    "Fecha de venta: " .
-    ($fecha ? date("d/m/Y H:i", $fecha) : "No disponible"),
-    $cuerpo,
-    $linea
-);
-
-$this->bloque(
-    "Impreso: " . date("d/m/Y H:i"),
-    $pequeno ? 6.5 : 7.3,
-    $linea
-);
-
-        $this->bloque("Cliente: " . ($this->venta["client_name"] ?: "Mostrador"), $cuerpo, $linea);
+        $this->bloque("CLIENTE: " . ($this->venta["client_name"] ?: "Mostrador"), $cuerpo, $linea);
 
         if (!empty($this->venta["client_address"])) {
-            $this->bloque("Dirección: " . $this->venta["client_address"], $cuerpo, $linea);
+            $this->bloque("DIRECCIÓN: " . $this->venta["client_address"], $cuerpo, $linea);
         }
 
         if (!empty($this->venta["client_phone"])) {
-            $this->bloque("Teléfono: " . $this->venta["client_phone"], $cuerpo, $linea);
+            $this->bloque("TELÉFONO: " . $this->venta["client_phone"], $cuerpo, $linea);
         }
 
         if (!empty($this->venta["seller_name"])) {
-            $this->bloque("Atendió: " . $this->venta["seller_name"], $cuerpo, $linea);
+            $this->bloque("ATENDIÓ: " . $this->venta["seller_name"], $cuerpo, $linea);
         }
 
-        $this->bloque("Tipo de pago: " . $this->venta["payment_method"], $cuerpo, $linea);
+        $this->bloque("TIPO DE PAGO: " . $this->venta["payment_method"], $cuerpo, $linea);
 
         if (!empty($this->venta["bank_reference"])) {
-            $this->bloque("Referencia: " . $this->venta["bank_reference"], $cuerpo, $linea);
+            $this->bloque("REFERENCIA: " . $this->venta["bank_reference"], $cuerpo, $linea);
         }
 
         $this->separador();
