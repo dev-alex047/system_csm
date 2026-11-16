@@ -233,7 +233,7 @@ class ticketVentaTermico extends FPDF {
         // PIE DE TICKET
         $this->bloque("Gracias por su preferencia", $cuerpo, 4.1, "I", "C");
         $this->bloque(
-            "Carretera a Yucudaa km 34+800, San Martín Huamelúlpam, Tlaxiaco, Oaxaca",
+            "Carretera a Yucudaa km 34.5, San Martín Huamelúlpam, Tlaxiaco, Oaxaca",
             $pequeno ? 6.3 : 7.1,
             3.4,
             "",
