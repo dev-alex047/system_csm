@@ -2,10 +2,12 @@
 class consultas{
     private $token;
     private $conn;
-    private $usuarioOperador = 1; // ID real del operador en la tabla users
+    //private $usuarioOperador = 1; // ID real del operador en la tabla users
+    private $usuarioOperador = 0;
 
     public function __construct() {
         //$this->token = $session;
+        $this->usuarioOperador = isset($_SESSION['csm_user_id']) ? (int)$_SESSION['csm_user_id'] : 0;
         $this->connectToDatabase();
     }
 
@@ -2519,6 +2521,121 @@ $stmt = $this->ejecutarSqlVenta(
     }
     return $json;
 }
+
+
+public function generarTicketVenta($data) {
+    $json = [];
+
+    if (!$this->conn) {
+        $json["status"] = "error";
+        $json["answer"] = "No hay conexión con MySQL.";
+        $json["code"] = 500;
+    } else {
+        try {
+            $idTexto = isset($data["id"]) && is_scalar($data["id"]) ? (string)$data["id"] : "";
+            $anchoTexto = isset($data["ancho"]) && is_scalar($data["ancho"]) ? (string)$data["ancho"] : "";
+
+            if (!ctype_digit($idTexto) || (int)$idTexto <= 0 || !in_array($anchoTexto, ["58", "80"], true)) {
+                throw new InvalidArgumentException("Selecciona una venta y un ancho de 58 u 80 mm.");
+            }
+
+            $id = (int)$idTexto;
+            $ancho = (int)$anchoTexto;
+
+            $stmt = $this->ejecutarSqlVenta(
+                "SELECT s.id,s.sale_kind,s.note_folio,s.ticket_barcode,
+                        s.client_name,s.client_address,s.client_phone,s.seller_name,
+                        s.payment_method,s.bank_reference,s.total_amount,
+                        s.initial_paid,s.pending_amount,s.created_at,
+                        (SELECT r.pending_amount FROM receivables r
+                         WHERE r.sale_id=s.id ORDER BY r.id DESC LIMIT 1) AS saldo_cuenta
+                 FROM sales s
+                 WHERE s.id=? AND s.sale_kind IN ('NOTA','RAPIDA')
+                 LIMIT 1",
+                "i",
+                [$id]
+            );
+
+            $venta = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if (!$venta) {
+                throw new DomainException("No existe una venta válida con ese ID.");
+            }
+
+            $stmt = $this->ejecutarSqlVenta(
+                "SELECT si.quantity,si.price,si.total,si.manual_code,
+                        COALESCE(
+                            NULLIF(TRIM(si.manual_name),''),
+                            NULLIF(TRIM(p_id.name),''),
+                            'ARTICULO'
+                        ) AS descripcion,
+                        COALESCE(
+                            NULLIF(TRIM(p_id.unit),''),
+                            NULLIF(TRIM(pc.unit),''),
+                            '-'
+                        ) AS unidad
+                 FROM sale_items si
+                 LEFT JOIN products p_id ON p_id.id=si.product_id
+                 LEFT JOIN (
+                     SELECT code,MAX(unit) AS unit
+                     FROM products
+                     WHERE code IS NOT NULL AND code<>''
+                     GROUP BY code
+                     HAVING COUNT(*)=1
+                 ) pc ON pc.code=si.manual_code
+                 WHERE si.sale_id=?
+                 ORDER BY si.id",
+                "i",
+                [$id]
+            );
+
+            $articulos = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            $stmt->close();
+
+            if (!$articulos) {
+                throw new DomainException("La venta no contiene artículos para imprimir.");
+            }
+
+            $venta["saldo_ticket"] = $venta["saldo_cuenta"] !== null
+                ? $venta["saldo_cuenta"]
+                : $venta["pending_amount"];
+
+            $pdf = new ticketVentaTermico($venta, $articulos, $ancho);
+            $archivo = $pdf->generarArchivo();
+
+            $json["status"] = "ok";
+            $json["answer"] = "Ticket generado correctamente.";
+            $json["results"] = [
+                "id" => $id,
+                "ancho" => $ancho,
+                "nombre" => $archivo["nombre"],
+                "archivo" => $archivo["ruta_web"]
+            ];
+            $json["code"] = 200;
+
+        } catch (InvalidArgumentException $e) {
+            $json["status"] = "warning";
+            $json["answer"] = $e->getMessage();
+            $json["code"] = 400;
+
+        } catch (DomainException $e) {
+            $json["status"] = "warning";
+            $json["answer"] = $e->getMessage();
+            $json["code"] = 404;
+
+        } catch (Throwable $e) {
+            error_log("generarTicketVenta: " . $e->getMessage());
+
+            $json["status"] = "error";
+            $json["answer"] = "No fue posible generar el ticket.";
+            $json["code"] = 500;
+        }
+    }
+
+    return $json;
+}
+
 
 
     

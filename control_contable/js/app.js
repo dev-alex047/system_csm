@@ -2246,3 +2246,74 @@ datos.ventas.forEach(function(v) {
         Swal.fire("Error",xhr.responseJSON && xhr.responseJSON.answer || "Error de conexión.","error");
     });
 }
+
+
+function abrirTicketVenta(idVenta) {
+    if (!Number.isInteger(Number(idVenta)) || Number(idVenta) <= 0) return;
+
+    Swal.fire({
+        title: "Imprimir ticket",
+        html: `
+            <p class="text-secondary mb-3">Selecciona el ancho del papel.</p>
+            <div class="text-start p-2">
+                <label class="border rounded-3 p-3 d-block mb-2">
+                    <input type="radio" name="anchoTicket" value="58" class="form-check-input me-2">
+                    <strong>58 mm</strong>
+                    <small class="d-block ms-4 text-secondary">Ticket compacto</small>
+                </label>
+                <label class="border rounded-3 p-3 d-block">
+                    <input type="radio" name="anchoTicket" value="80" class="form-check-input me-2" checked>
+                    <strong>80 mm</strong>
+                    <small class="d-block ms-4 text-secondary">Más espacio para los artículos</small>
+                </label>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: "Generar ticket",
+        cancelButtonText: "Cancelar",
+        confirmButtonColor: "#086b47",
+        preConfirm: function() {
+            return document.querySelector('input[name="anchoTicket"]:checked').value;
+        }
+    }).then(function(eleccion) {
+        if (!eleccion.isConfirmed) return;
+
+        $.ajax({
+            url: "php/index.php",
+            type: "POST",
+            dataType: "json",
+            data: {
+                action: "generarTicketVenta",
+                id: idVenta,
+                ancho: eleccion.value
+            }
+        }).done(function(r) {
+            if (!r || r.status !== "ok") {
+                return Swal.fire("Aviso", (r && r.answer) || "No se pudo generar el ticket.", "warning");
+            }
+
+            const url = new URL(r.results.archivo, window.location.href);
+            const carpeta = new URL("pdf_generados/tickets/", window.location.href);
+
+            if (url.origin !== carpeta.origin || !url.pathname.startsWith(carpeta.pathname)) {
+                return Swal.fire("Error", "Ruta de ticket no válida.", "error");
+            }
+
+            const $a = $('<a class="btn btn-success d-block" target="_blank" rel="noopener noreferrer">Abrir e imprimir ticket</a>')
+                .attr("href", url.href);
+
+            Swal.fire({
+                icon: "success",
+                title: "Ticket listo",
+                html: $("<div></div>").append($a)[0],
+                confirmButtonText: "Cerrar"
+            });
+        }).fail(function(xhr) {
+            Swal.fire(
+                "Error",
+                (xhr.responseJSON && xhr.responseJSON.answer) || "Error de comunicación.",
+                "error"
+            );
+        });
+    });
+}

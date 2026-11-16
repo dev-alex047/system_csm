@@ -12,6 +12,11 @@ error_reporting(E_ALL);
 require_once __DIR__ . "/conexion.php";
 require_once __DIR__ . "/consultas.php";
 require_once __DIR__ . "/notaVenta.php";
+require_once __DIR__ . "/ticketVenta.php";
+
+require_once __DIR__ . '/sesion.php';
+csmExigirSesion();
+
 
 $action = isset($_POST["action"]) ? trim((string)$_POST["action"]) : "";
 $consultas = new consultas();
@@ -25,13 +30,11 @@ switch ($action) {
     case "getCajasVenta":
         $response = $consultas->getCajasVenta();
         break;
-
-    
-case "getVentas":
-    $response = $consultas->getVentas($_POST);
-    break;
-
         
+    case "getVentas":
+        $response = $consultas->getVentas($_POST);
+        break;
+ 
     case "guardarVentaNota":
         $response = $consultas->guardarVentaNota($_POST);
         break;
@@ -44,12 +47,14 @@ case "getVentas":
         $idVenta = isset($_POST["id"]) ? (int)$_POST["id"] : 0;
         $response = $consultas->generarPdfNotaVenta($idVenta);
         break;
-
-    
-case "generarDocumentosNotaVenta":
-    $response = $consultas->generarDocumentosNotaVenta($_POST);
-    break;
-
+        
+    case "generarDocumentosNotaVenta":
+        $response = $consultas->generarDocumentosNotaVenta($_POST);
+        break;
+        
+    case "generarTicketVenta":
+        $response = $consultas->generarTicketVenta($_POST);
+        break;
 
     case "getControlCaja":
         $response = $consultas->getControlCaja($_POST);
@@ -76,35 +81,34 @@ case "generarDocumentosNotaVenta":
         break;
     
     case "crearCuenta":
-    $response = $consultas->crearCuenta($_POST);
-    break;
-case "getDetalleCuenta":
-    $response = $consultas->getDetalleCuenta($_POST);
-    break;
-case "registrarAbonoCuenta":
-    $response = $consultas->registrarAbonoCuenta($_POST);
-    break;
+        $response = $consultas->crearCuenta($_POST);
+        break;
+    
+    case "getDetalleCuenta":
+        $response = $consultas->getDetalleCuenta($_POST);
+        break;
+    
+    case "registrarAbonoCuenta":
+        $response = $consultas->registrarAbonoCuenta($_POST);
+        break;
+        
+    case "getPersonasCuentas":
+        $response = $consultas->getPersonasCuentas($_POST);
+        break;
+    
+    case "getAbonosCuentas":
+        $response = $consultas->getAbonosCuentas($_POST);
+        break;
 
-
-case "getPersonasCuentas":
-    $response = $consultas->getPersonasCuentas($_POST);
-    break;
-case "getAbonosCuentas":
-    $response = $consultas->getAbonosCuentas($_POST);
-    break;
-
-
-case "generarConcentradoCxc":
-    $response = $consultas->generarConcentradoCxc($_POST);
-    break;
-
-
+    case "generarConcentradoCxc":
+        $response = $consultas->generarConcentradoCxc($_POST);
+        break;
 
     default:
         $response["status"] = "warning";
         $response["answer"] = "La acción solicitada no es válida.";
         $response["code"] = 400;
-    break;
+        break;
 }
 
 http_response_code(isset($response["code"]) ? (int)$response["code"] : 500);

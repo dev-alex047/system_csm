@@ -57,10 +57,14 @@ $(document).ready(function() {
         const correo = $("#correo").val().trim();
         const clave = $("#clave").val();
 
-        if (clave.length < 8) {
+        /*if (clave.length < 8) {
             mostrarErrorLogin("Introduce una contraseña de al menos 8 caracteres.");
             $("#clave").trigger("focus");
             return;
+        }*/
+
+        if (!clave) { 
+            mostrarErrorLogin("Introduce tu contraseña."); 
         }
 
         enviandoLogin = true;
