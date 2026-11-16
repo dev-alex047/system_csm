@@ -243,6 +243,11 @@ private function encabezadoNotaFisica($venta) {
     $this->SetTextColor(60, 78, 68);
     $this->escribirNota(31, 15, 73, 'Renta de maquinaria y venta de materiales', 6.6);
     $this->escribirNota(31, 19, 73, 'para la construcción', 6.6);
+    $this->escribirNota(
+    31, 24, 73,
+    'Impreso: ' . date('d/m/Y H:i'),
+    5.5
+);
 
     $this->SetFillColor(235, 247, 239);
     $this->Rect(106, 7, 27, 19, 'DF');
@@ -296,8 +301,26 @@ $this->escribirNota(15, 45.2, 82, 'HERMINIO PÉREZ BERNABÉ', 6, 'B');
 
 
 // FECHA DENTRO DE LA FRANJA VERDE
-$fecha = strtotime($venta['created_at'] ?? '') ?: time();
-$valoresFecha = [date('d', $fecha), date('m', $fecha), date('Y', $fecha)];
+//$fecha = strtotime($venta['created_at'] ?? '') ?: time();
+//$valoresFecha = [date('d', $fecha), date('m', $fecha), date('Y', $fecha)];
+
+$fechaOriginal = trim((string)($venta["created_at"] ?? ""));
+$fecha = $fechaOriginal !== "" ? strtotime($fechaOriginal) : false;
+
+if ($fecha === false) {
+    throw new RuntimeException(
+        "La venta no tiene una fecha válida para generar el PDF."
+    );
+}
+
+$valoresFecha = [
+    date("d", $fecha),
+    date("m", $fecha),
+    date("Y", $fecha)
+];
+
+
+
 $etiquetasFecha = ['DÍA', 'MES', 'AÑO'];
 
 foreach ($valoresFecha as $i => $valor) {
@@ -661,7 +684,21 @@ $this->SetXY($x,$y+$h);
         $this->SetTextColor(50,60,54);
         $this->Cell(50,9,$this->texto('Folio: '.$this->venta['note_folio']),0,1,'R');
         $this->SetFont('Arial','',8.5);
-        $this->Cell(180,6,$this->texto('Fecha: '.date('d/m/Y H:i',strtotime($this->venta['created_at']))),0,1);
+        //$this->Cell(180,6,$this->texto('Fecha: '.date('d/m/Y H:i',strtotime($this->venta['created_at']))),0,1);
+
+$this->Cell(
+    180, 6,
+    $this->texto("Fecha de venta: " .
+        date("d/m/Y H:i", strtotime($this->venta["created_at"]))),
+    0, 1
+);
+
+$this->Cell(
+    180, 5,
+    $this->texto("Fecha de impresión: " . date("d/m/Y H:i")),
+    0, 1
+);
+
         $this->SetFillColor(247,250,248);
         $this->SetFont('Arial','B',11);
         $this->Cell(180,7,$this->texto('DATOS DEL CLIENTE'),0,1,'L',true);

@@ -587,7 +587,11 @@ public function guardarVentaNota($data) {
             } else {
                 $fecha = date('Y-m-d H:i:s');
                 $idCajaVenta = $pagadoCentavos > 0 && $metodoCobro === 'EFECTIVO' ? $cajaId : null;
-                $fechaOperacion = $this->fechaOperacion($venta, $idCajaVenta);
+                //$fechaOperacion = $this->fechaOperacion($venta, $idCajaVenta);
+                $fechaOperacion = $this->fechaOperacion($venta);
+
+// Fecha del movimiento de efectivo: corresponde al turno actual.
+$fechaCobro = $idCajaVenta !== null ? $fecha : $fechaOperacion;
                 $folioInicial = $folioManual !== '' ? $folioManual : null;
                 $ticketInicial = null;
 
@@ -722,7 +726,7 @@ $etapa = "registrar_cobro";
 
                         $stmt = $this->ejecutarSqlVenta(
                             "INSERT INTO cash_flows (cash_register_id,user_id,amount,`type`,description,reference,created_at) VALUES (?,?,?,'IN',?,?,?)",
-                            'iissss', [$idCajaVenta,$this->usuarioOperador,$pagado,$descripcion,$folio,$fechaOperacion]
+                            'iissss', [$idCajaVenta,$this->usuarioOperador,$pagado,$descripcion,$folio,$fecha]
                         );
                         $stmt->close();
 
@@ -1050,7 +1054,9 @@ public function guardarVentaRapida($data) {
 
             $fecha = date("Y-m-d H:i:s");
             $idCajaVenta = $forma === "EFECTIVO" ? $cajaId : null;
-            $fechaOperacion = $this->fechaOperacion($venta, $idCajaVenta);
+            //$fechaOperacion = $this->fechaOperacion($venta, $idCajaVenta);
+            $fechaOperacion = $this->fechaOperacion($venta);
+            $fechaCobro = $idCajaVenta !== null ? $fecha : $fechaOperacion;
 
             if ($idCajaVenta !== null) {
                 $stmt = $this->ejecutarSqlVenta(
@@ -1134,7 +1140,7 @@ $stmtItem->close();
             $stmt = $this->ejecutarSqlVenta(
                 "INSERT INTO account_moves (`date`,`type`,`origin`,cash_register_id,user_reference_name,reference,amount,user_id,link_type,link_id,ticket_number,status,note,notes,created_at,updated_at) VALUES (?,'VENTA',?,?,?,?,?,?,'VENTA',?,?,'PAGADO',?,?,?,?)",
                 "ssisssiisssss",
-                [$fechaOperacion, $origen, $idCajaVenta, "Mostrador", $referenciaMovimiento, $total, $usuario, $idVenta, $numero, "Cobro de venta rápida", $observaciones, $fecha, $fecha]
+                [$fechaCobro, $origen, $idCajaVenta, "Mostrador", $referenciaMovimiento, $total, $usuario, $idVenta, $numero, "Cobro de venta rápida", $observaciones, $fecha, $fecha]
             );
             $stmt->close();
 

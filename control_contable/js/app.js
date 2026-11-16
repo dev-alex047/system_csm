@@ -490,8 +490,23 @@ function revisarVentaNota() {
     if (!validarVentaNota()) return;
 
     const venta = state.ventaNota;
+
+const fechaSeleccionada = window.CSM_ES_ADMIN
+    ? String($("#notaFechaOperacion").val() || "").trim()
+    : "";
+
     const importes = obtenerImportesVentaNota();
     const $resumen = $('<div class="text-start small"></div>');
+
+$resumen.append(
+    $("<p class='fw-semibold text-success'></p>").text(
+        "Fecha de venta: " +
+        (fechaSeleccionada
+            ? fechaSeleccionada.replace("T", " ")
+            : "Automática al guardar")
+    )
+);
+
 
     $resumen.append($('<p></p>').text("Cliente: "+venta.cliente.trim()+" · Vendedor: "+venta.vendedor.trim()));
     $resumen.append($('<p></p>').text("Folio: "+(venta.folio.trim() || "Automático al guardar")+" · Pago: "+venta.forma_pago));
@@ -517,7 +532,9 @@ Swal.fire({
     confirmButtonColor:"#086b47",
     width:"630px"
 }).then(function(resultado) {
-    if (resultado.isConfirmed) guardarVentaNota();
+    //if (resultado.isConfirmed) guardarVentaNota();
+    
+    if (resultado.isConfirmed) guardarVentaNota(fechaSeleccionada);
 });
 
 }
@@ -845,7 +862,18 @@ function revisarVentaRapida() {
     if (!validarVentaRapida()) return;
 
     const venta = state.ventaRapida;
+    const fechaSeleccionada = window.CSM_ES_ADMIN
+    ? String($("#rapidaFechaOperacion").val() || "").trim()
+    : "";
     const $resumen = $('<div class="text-start small"></div>');
+    $resumen.append(
+    $("<p class='fw-semibold text-success'></p>").text(
+        "Fecha de venta: " +
+        (fechaSeleccionada
+            ? fechaSeleccionada.replace("T", " ")
+            : "Automática al guardar")
+    )
+);
     const $lista = $('<div class="border rounded-3 p-3 my-3"></div>');
 
     venta.items.forEach(function(item){
@@ -870,13 +898,13 @@ Swal.fire({
     confirmButtonColor:"#086b47",
     width:"600px"
 }).then(function(resultado) {
-    if (resultado.isConfirmed) guardarVentaRapida();
+    //if (resultado.isConfirmed) guardarVentaRapida();
+    if (resultado.isConfirmed) guardarVentaRapida(fechaSeleccionada);
 });
 
 }
 
-
-function guardarVentaRapida() {
+function guardarVentaRapida(fechaSeleccionada = "") {
     if (state.guardandoVentaRapida) return;
     if (!validarVentaRapida()) return;
 
@@ -887,7 +915,7 @@ function guardarVentaRapida() {
         forma_pago:venta.forma_pago,
         referencia:venta.forma_pago === "TRANSFERENCIA" ? venta.referencia : "",
         observaciones:venta.observaciones,
-        fecha_operacion: window.CSM_ES_ADMIN ? $("#rapidaFechaOperacion").val() : "",
+        fecha_operacion: fechaSeleccionada,
         items:venta.items.map(function(item){
             return {
                 origen:"MANUAL",
@@ -1026,8 +1054,7 @@ function getCajasVenta() {
     });
 }
 
-
-function guardarVentaNota() {
+function guardarVentaNota(fechaSeleccionada = "") {
     if (state.guardandoVentaNota) return;
     if (!validarVentaNota()) return;
 
@@ -1046,7 +1073,7 @@ function guardarVentaNota() {
         metodo_abono:venta.metodo_abono,
         referencia_abono:venta.referencia_abono,
         caja_id:venta.caja_id,
-        fecha_operacion: window.CSM_ES_ADMIN ? $("#notaFechaOperacion").val() : "",
+        fecha_operacion: fechaSeleccionada,
         items:venta.items.map(function(item){
             return {
                 origen:"MANUAL",
