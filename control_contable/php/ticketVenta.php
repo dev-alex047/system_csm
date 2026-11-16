@@ -148,7 +148,7 @@ class ticketVentaTermico extends FPDF {
         $this->bloque("CORPORATIVO SAN MARTÍN", $pequeno ? 10 : 11, 4.8, "B", "C");
         $this->bloque("Renta de maquinaria y materiales para construcción", $pequeno ? 6.8 : 7.6, 3.4, "", "C");
         $this->bloque("RFC: QUSA8001193T1", 7.4, 3.8, "", "C");
-        $this->bloque("Tel. 953 55 212 53 / 951 287 04 99", $pequeno ? 6.6 : 7.7, 3.5, "", "C");
+        $this->bloque("Tel. 220 286 2755 / 951 287 04 99", $pequeno ? 6.6 : 7.7, 3.5, "", "C");
         $this->bloque("jpebernabe@hotmail.com", 7, 3.6, "", "C");
         $this->separador();
 
