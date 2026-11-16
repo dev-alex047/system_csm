@@ -296,10 +296,16 @@
                         <label class="form-label" for="notaVendedor">Vendedor *</label>
                         <input id="notaVendedor" data-campo-nota="vendedor" class="form-control" maxlength="100" placeholder="Nombre del vendedor" required>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Fecha y hora</label>
-                        <div class="form-control nota-solo-lectura">Al guardar la nota</div>
-                    </div>
+                    
+<div class="col-md-4">
+    <label class="form-label" for="notaFechaOperacion">Fecha y hora</label>
+    <div class="form-control nota-solo-lectura fecha-automatica">Automática al guardar</div>
+    <div class="fecha-admin d-none">
+        <input type="datetime-local" id="notaFechaOperacion" class="form-control">
+        <div class="form-text">Administrador: puedes registrar una venta anterior.</div>
+    </div>
+</div>
+
                     <div class="col-md-6">
                         <label class="form-label" for="notaCliente">Cliente *</label>
                         <input id="notaCliente" data-campo-nota="cliente" class="form-control" maxlength="100" placeholder="Nombre completo o razón social" required>
@@ -468,9 +474,17 @@
                     </div>
                     <span class="badge rounded-pill text-success bg-success-subtle border border-success-subtle px-3 py-2">Sin nota</span>
                 </div>
-                <div class="alert alert-light border rounded-3 small mb-0">
-                    <i class="bi bi-clock me-2 text-success"></i>La fecha y hora se asignarán automáticamente al guardar la venta.
-                </div>
+                
+<div class="alert alert-light border rounded-3 small mb-0 fecha-automatica">
+    <i class="bi bi-clock me-2 text-success"></i>
+    La fecha y hora se asignarán automáticamente al guardar la venta.
+</div>
+<div class="fecha-admin d-none">
+    <label class="form-label" for="rapidaFechaOperacion">Fecha y hora de venta</label>
+    <input type="datetime-local" id="rapidaFechaOperacion" class="form-control">
+    <div class="form-text">Selecciona la fecha real en que se realizó esta venta.</div>
+</div>
+
             </section>
 
             <section class="nota-bloque mb-3">
@@ -678,16 +692,23 @@
                 <div class="nota-seccion-titulo"><i class="bi bi-arrow-up-right-circle"></i><div><h2>Registrar gasto o salida</h2><small>Control manual de los egresos del negocio.</small></div></div>
                 <form id="formEgreso" novalidate>
 
-<div class="col-md-6">
-    <label for="egresoFechaMovimiento" class="form-label">Fecha y hora del movimiento *</label>
-    <input id="egresoFechaMovimiento" type="datetime-local" class="form-control" required>
-    <div class="form-text">Puedes cambiarla si el gasto ocurrió anteriormente.</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-6">
+        <label class="form-label" for="egresoFechaMovimiento">Fecha del movimiento</label>
+        <div class="form-control nota-solo-lectura fecha-automatica">Automática al guardar</div>
+        <div class="fecha-admin d-none">
+            <input id="egresoFechaMovimiento" type="datetime-local" class="form-control">
+            <div class="form-text">Puedes registrar un egreso anterior.</div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <label class="form-label" for="egresoResponsable">Registrado por</label>
+        <input id="egresoResponsable" class="form-control bg-light" readonly>
+        <div class="form-text">Usuario que inició sesión.</div>
+    </div>
 </div>
-<div class="col-md-6">
-    <label for="egresoResponsable" class="form-label">Registrado por *</label>
-    <input id="egresoResponsable" type="text" class="form-control" maxlength="100" placeholder="Nombre del responsable" required>
-    <div class="form-text">Indica quién está capturando este movimiento.</div>
-</div>
+
 
                     <div class="row g-3">
                         <div class="col-md-6"><label for="egresoBeneficiario" class="form-label">Beneficiario / proveedor *</label><input id="egresoBeneficiario" class="form-control" maxlength="100" required></div>
@@ -747,6 +768,13 @@
                 <div class="col-md-6"><label for="cuentaReferencia" class="form-label">Factura, folio o documento</label><input id="cuentaReferencia" class="form-control" maxlength="80" placeholder="Referencia administrativa"></div>
                 <div class="col-md-6"><label for="cuentaMonto" class="form-label">Importe de la deuda *</label><input id="cuentaMonto" type="number" min="0.01" step="0.01" class="form-control" required></div>
                 <div class="col-md-6"><label for="cuentaVencimiento" class="form-label">Fecha de vencimiento</label><input id="cuentaVencimiento" type="date" class="form-control"></div>
+                
+<div class="col-md-6 fecha-admin d-none">
+    <label class="form-label" for="cuentaFechaOperacion">Fecha de origen de la deuda</label>
+    <input id="cuentaFechaOperacion" type="datetime-local" class="form-control">
+    <div class="form-text">Solo administradores pueden indicar una fecha anterior.</div>
+</div>
+
                 <div class="col-12"><label for="cuentaConcepto" class="form-label">Concepto / descripción *</label><textarea id="cuentaConcepto" class="form-control" rows="2" maxlength="255" required></textarea></div>
                 <div class="col-12 d-flex flex-wrap gap-2">
                     <button type="submit" class="btn btn-success" id="btnGuardarCuenta"><i class="bi bi-check-circle me-2"></i>Guardar cuenta</button>
@@ -808,6 +836,14 @@
         <div class="col-12" id="abonoCajaBox"><label for="abonoCaja" class="form-label">Caja con turno abierto *</label><select id="abonoCaja" class="form-select"><option value="">Consultando cajas...</option></select></div>
         <div class="col-12 d-none" id="abonoReferenciaBox"><label for="abonoReferencia" class="form-label">Referencia bancaria *</label><input id="abonoReferencia" class="form-control" maxlength="100" placeholder="Número de transferencia o comprobante"></div>
         <div class="col-12"><label for="abonoNotas" class="form-label">Observaciones</label><textarea id="abonoNotas" class="form-control" rows="2" maxlength="500"></textarea></div>
+    
+<div class="col-12 fecha-admin d-none">
+    <label for="abonoFechaOperacion" class="form-label">Fecha del cobro o pago</label>
+    <input id="abonoFechaOperacion" type="datetime-local" class="form-control">
+    <div class="form-text">Solo para registrar movimientos de fechas anteriores.</div>
+</div>
+
+    
     </div>
     <p class="small text-secondary mt-3 mb-0">Confirma únicamente pagos o cobros realmente realizados. No se permite superar el saldo pendiente.</p>
 </div>

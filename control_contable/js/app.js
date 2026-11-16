@@ -62,6 +62,17 @@ $(document).ready(function() {
 
         window.CSM_CSRF = data.results.csrf;
 
+window.CSM_ES_ADMIN = Number(data.results.role_id) === 1;
+window.CSM_NOMBRE_OPERADOR = data.results.nombre || data.results.username || "Usuario";
+
+
+
+const rolesMenu = {1:"ADMIN",2:"USER",3:"SALES"};
+const nombreUsuario = data.results.username || data.results.nombre || "Usuario";
+const nombreRol = rolesMenu[data.results.role_id] || ("ROL " + data.results.role_id);
+$("#menuUsuarioActual").text(nombreUsuario + " · " + nombreRol);
+
+
         // AÑADIR EL TOKEN A TODAS LAS PETICIONES DEL SISTEMA
         $.ajaxPrefilter(function(opciones, originales, xhr) {
             const ruta = (opciones.url || "").split("?")[0];
@@ -318,6 +329,7 @@ function renderVentaConNota() {
     if (!template) {console.error("No existe tplVentaNota en index.html");return;}
     $("#contenidoModulo").empty().append(template.content.cloneNode(true));
     $("#contenidoModulo").prepend('<div class="mb-3"><button id="btnVolverListadoVentas" type="button" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-2"></i>Volver al listado</button></div>');
+    prepararFechasAdmin();
 
     $("#formVentaNota [data-campo-nota]").each(function(){
         $(this).val(state.ventaNota[$(this).attr("data-campo-nota")]);
@@ -686,6 +698,8 @@ function renderVentaRapida() {
 
     $("#contenidoModulo").empty().append(template.content.cloneNode(true));
     $("#contenidoModulo").prepend('<div class="mb-3"><button id="btnVolverListadoVentas" type="button" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-2"></i>Volver al listado</button></div>');
+    prepararFechasAdmin();
+
     $("#formVentaRapida [data-campo-rapida]").each(function(){
         $(this).val(state.ventaRapida[$(this).attr("data-campo-rapida")]);
     });
@@ -835,6 +849,7 @@ function guardarVentaRapida() {
         forma_pago:venta.forma_pago,
         referencia:venta.forma_pago === "TRANSFERENCIA" ? venta.referencia : "",
         observaciones:venta.observaciones,
+        fecha_operacion: window.CSM_ES_ADMIN ? $("#rapidaFechaOperacion").val() : "",
         items:venta.items.map(function(item){
             return {
                 origen:"MANUAL",
@@ -992,6 +1007,7 @@ function guardarVentaNota() {
         metodo_abono:venta.metodo_abono,
         referencia_abono:venta.referencia_abono,
         caja_id:venta.caja_id,
+        fecha_operacion: window.CSM_ES_ADMIN ? $("#notaFechaOperacion").val() : "",
         items:venta.items.map(function(item){
             return {
                 origen:"MANUAL",
@@ -1390,8 +1406,9 @@ function renderControlCaja() {
     //$("#contenidoModulo").empty().append(tpl.content.cloneNode(true));
     //consultarControlCaja();
     $("#contenidoModulo").empty().append(tpl.content.cloneNode(true));
-renderDenominacionesCaja();
-consultarControlCaja();
+    prepararFechasAdmin();
+    renderDenominacionesCaja();
+    consultarControlCaja();
 }
 
 function consultarControlCaja() {
@@ -1480,6 +1497,7 @@ function renderEgresos() {
     const tpl = document.getElementById("tplEgresos");
     if (!tpl) return console.error("Falta tplEgresos");
     $("#contenidoModulo").empty().append(tpl.content.cloneNode(true));
+    prepararFechasAdmin();
     alternarMetodoEgreso();
     consultarEgresos();
 }
@@ -1516,7 +1534,8 @@ function confirmarEgreso() {
         beneficiario:$("#egresoBeneficiario").val().trim(),categoria:$("#egresoCategoria").val(),
         metodo:$("#egresoMetodo").val(),caja_id:$("#egresoCaja").val(),
         monto:$("#egresoMonto").val(),referencia:$("#egresoReferencia").val().trim(),
-        notas:$("#egresoNotas").val().trim()
+        notas:$("#egresoNotas").val().trim(),
+        fecha_operacion: window.CSM_ES_ADMIN ? $("#egresoFechaMovimiento").val() : ""
     };
     if (!d.beneficiario || !d.categoria || numeroNotaValido(d.monto,0.01,99999999.99)===null || (d.metodo==="EFECTIVO" && !d.caja_id)) {
         return Swal.fire("Aviso","Completa beneficiario, categoría, importe y caja si pagas en efectivo.","warning");
@@ -1635,6 +1654,7 @@ function renderCuentas(tipo) {
     const tpl = document.getElementById("tplCuentas");
     if (!tpl) return console.error("No existe tplCuentas");
     $("#contenidoModulo").empty().append(tpl.content.cloneNode(true));
+    prepararFechasAdmin();
     $("#tituloNuevaCuenta").text(tipo==="COBRAR" ? "Registrar cuenta por cobrar" : "Registrar cuenta por pagar");
     $("#cuentaNombreLabel").text(tipo==="COBRAR" ? "Cliente *" : "Proveedor *");
     $("#cuentasBuscar").attr("placeholder",tipo==="COBRAR" ? "Nombre del cliente, folio o ID" : "Proveedor, factura o ID");
@@ -1804,7 +1824,8 @@ function guardarCuentaNueva() {
         referencia:$("#cuentaReferencia").val().trim(),
         concepto:$("#cuentaConcepto").val().trim(),
         monto:$("#cuentaMonto").val(),
-        vencimiento:$("#cuentaVencimiento").val()
+        vencimiento:$("#cuentaVencimiento").val(),
+        fecha_operacion: window.CSM_ES_ADMIN ? $("#cuentaFechaOperacion").val() : ""
     };
     if (!d.nombre || !d.concepto || numeroNotaValido(d.monto,0.01,99999999.99)===null) return Swal.fire("Aviso","Completa el nombre, concepto e importe.","warning");
     Swal.fire({title:"¿Registrar esta cuenta?",text:d.nombre+" · "+monedaMXN(d.monto),icon:"question",showCancelButton:true,confirmButtonText:"Registrar",cancelButtonText:"Cancelar",confirmButtonColor:"#086b47"}).then(function(c){
@@ -1883,6 +1904,7 @@ function abrirAbonoCuenta(id,saldo) {
         confirmButtonText:tipo==="COBRAR" ? "Confirmar cobro" : "Confirmar pago",
         cancelButtonText:"Cancelar",confirmButtonColor:"#086b47",
         didOpen:function(){
+            prepararFechasAdmin(Swal.getHtmlContainer());
             $.ajax({url:"php/index.php",type:"POST",dataType:"json",data:{action:"getCajasVenta"}}).done(function(r){
                 const $select = $("#abonoCaja");
                 if (!$select.length) return;
@@ -1898,7 +1920,18 @@ function abrirAbonoCuenta(id,saldo) {
             if (cantidad===null || Math.round(cantidad*100)>Math.round(saldo*100)) {Swal.showValidationMessage("El importe debe ser mayor que cero y no superar el saldo.");return false;}
             if (metodo==="EFECTIVO" && !cajaId) {Swal.showValidationMessage("Selecciona una caja con turno abierto.");return false;}
             if (metodo==="TRANSFERENCIA" && !referencia) {Swal.showValidationMessage("Captura la referencia bancaria.");return false;}
-            return {action:"registrarAbonoCuenta",tipo:tipo,id:id,solicitud_id:state.tokenAbonoCuenta,monto:monto,metodo:metodo,caja_id:metodo==="EFECTIVO"?cajaId:"",referencia:metodo==="TRANSFERENCIA"?referencia:"",notas:$("#abonoNotas").val().trim()};
+            return {
+                action:"registrarAbonoCuenta",
+                tipo:tipo,
+                id:id,
+                solicitud_id:state.tokenAbonoCuenta,
+                monto:monto,
+                metodo:metodo,
+                caja_id:metodo==="EFECTIVO"?cajaId:"",
+                referencia:metodo==="TRANSFERENCIA"?referencia:"",
+                notas:$("#abonoNotas").val().trim(),
+                fecha_operacion: window.CSM_ES_ADMIN ? $("#abonoFechaOperacion").val() : ""
+            };
         }
     }).then(function(c){
         if (!c.isConfirmed || !c.value || state.guardandoAbono) return;
@@ -2136,6 +2169,7 @@ $(document).on("submit", "#formCierreCaja", function(e) {
 function renderListadoVentas() {
     const tpl = document.getElementById("tplListadoVentas");
     $("#contenidoModulo").empty().append(tpl.content.cloneNode(true));
+    prepararFechasAdmin();
     $("#ventasBuscar").val(state.filtrosVentas.buscar);
     $("#ventasTipo").val(state.filtrosVentas.tipo);
     $("#ventasDesde").val(state.filtrosVentas.inicio);
@@ -2397,4 +2431,24 @@ function cerrarSesion() {
             $("#btnCerrarSesion").prop("disabled", false);
         });
     });
+}
+
+
+function prepararFechasAdmin(contenedor) {
+    const $raiz = contenedor ? $(contenedor) : $("#contenidoModulo");
+    const admin = window.CSM_ES_ADMIN === true;
+    const fecha = new Date();
+    const dos = n => String(n).padStart(2, "0");
+    const ahora = fecha.getFullYear() + "-" + dos(fecha.getMonth() + 1) + "-" +
+        dos(fecha.getDate()) + "T" + dos(fecha.getHours()) + ":" + dos(fecha.getMinutes());
+
+    $raiz.find(".fecha-admin").toggleClass("d-none", !admin);
+    $raiz.find(".fecha-automatica").toggleClass("d-none", admin);
+
+    $raiz.find(".fecha-admin input[type='datetime-local']").each(function() {
+        this.max = ahora;
+        //this.placeholder = "Automática al dejar vacío";
+    });
+
+    $raiz.find("#egresoResponsable").val(window.CSM_NOMBRE_OPERADOR || "Usuario");
 }

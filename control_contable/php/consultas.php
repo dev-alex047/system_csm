@@ -144,7 +144,67 @@ private function textoVenta($datos, $campo, $maximo) {
     return $valor;
 }
 
+private function fechaOperacion($datos, $cajaId = null) {
+    $ahora = date("Y-m-d H:i:s");
+    $valor = isset($datos["fecha_operacion"]) ? $datos["fecha_operacion"] : "";
 
+    if ($valor === "" || $valor === null) return $ahora;
+
+    if (!is_string($valor) ||
+        !preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/D', $valor)) {
+        throw new InvalidArgumentException("Formato de fecha inválido.");
+    }
+
+    $stmt = $this->ejecutarSqlVenta(
+        "SELECT role_id FROM users WHERE id = ? AND is_active = 1 LIMIT 1",
+        "i", [$this->usuarioOperador]
+    );
+    $usuario = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$usuario || (int)$usuario["role_id"] !== 1) {
+        throw new InvalidArgumentException("Solo un administrador puede cambiar la fecha de una operación.");
+    }
+
+    $fecha = DateTime::createFromFormat("!Y-m-d\TH:i", $valor);
+
+    if (!$fecha || $fecha->format("Y-m-d\TH:i") !== $valor) {
+        throw new InvalidArgumentException("La fecha indicada no es válida.");
+    }
+
+    $fechaSql = $fecha->format("Y-m-d H:i:s");
+
+    if ($fechaSql > $ahora || $fechaSql < "2000-01-01 00:00:00") {
+        throw new InvalidArgumentException("Selecciona una fecha pasada válida, no futura.");
+    }
+
+    if ($cajaId !== null && $cajaId > 0) {
+        $stmt = $this->ejecutarSqlVenta(
+            "SELECT opened_at FROM cash_shifts
+             WHERE cash_register_id = ? AND status = 'ABIERTO'
+             ORDER BY id DESC LIMIT 1",
+            "i", [$cajaId]
+        );
+        $turno = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$turno) {
+            throw new InvalidArgumentException("La caja no tiene un turno abierto.");
+        }
+
+        if ($fechaSql < $turno["opened_at"]) {
+            throw new InvalidArgumentException(
+                "La fecha del movimiento no puede ser anterior a la apertura del turno de caja."
+            );
+        }
+
+        /*if ($fechaSql < $turno["opened_at"]) {
+            $fechaSql = $turno["opened_at"];
+        }*/
+    }
+
+    return $fechaSql;
+}
 
 public function getCajasVenta() {
     $json = [];
@@ -435,6 +495,7 @@ public function guardarVentaNota($data) {
             } else {
                 $fecha = date('Y-m-d H:i:s');
                 $idCajaVenta = $pagadoCentavos > 0 && $metodoCobro === 'EFECTIVO' ? $cajaId : null;
+                $fechaOperacion = $this->fechaOperacion($venta, $idCajaVenta);
                 $folioInicial = $folioManual !== '' ? $folioManual : null;
                 $ticketInicial = null;
 
@@ -458,7 +519,7 @@ if (!$turnoAbierto) throw new InvalidArgumentException("Debes abrir un turno de 
                 $stmt = $this->ejecutarSqlVenta(
                     'INSERT INTO sales (user_id,client_name,client_address,client_phone,payment_method,bank_reference,cash_register_id,pending_amount,total_amount,ticket_barcode,notes,created_at,updated_at,sale_kind,note_folio,seller_name,initial_paid,request_token) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
                     'isssssisssssssssss',
-                    [$this->usuarioOperador,$cliente,$direccion,$telefono,$forma,$referenciaCobro,$idCajaVenta,$saldo,$total,$ticketInicial,$observaciones,$fecha,$fecha,'NOTA',$folioInicial,$vendedor,$pagado,$token]
+                    [$this->usuarioOperador,$cliente,$direccion,$telefono,$forma,$referenciaCobro,$idCajaVenta,$saldo,$total,$ticketInicial,$observaciones,$fechaOperacion,$fecha,'NOTA',$folioInicial,$vendedor,$pagado,$token]
                 );
                 $stmt->close();
 
@@ -525,7 +586,7 @@ if ($saldoCentavos > 0) {
             $this->usuarioOperador,
             $total,
             $pagado,
-            $fecha,
+            $fechaOperacion,
             $fecha,
             $descripcionCuenta,
             $folio,
@@ -536,8 +597,6 @@ if ($saldoCentavos > 0) {
     $stmt->close();
 }
 
-
-
 $etapa = "registrar_cobro";
                 if ($pagadoCentavos > 0) {
                     $origen = $metodoCobro === 'EFECTIVO' ? 'CAJA' : 'BANCO';
@@ -546,7 +605,7 @@ $etapa = "registrar_cobro";
 
                     $stmt = $this->ejecutarSqlVenta(
                         "INSERT INTO account_moves (`date`,`type`,`origin`,cash_register_id,user_reference_name,reference,amount,user_id,link_type,link_id,ticket_number,status,note,notes,created_at,updated_at) VALUES (?,'VENTA',?,?,?,?,?,?,'VENTA',?,?,'PAGADO',?,?,?,?)",
-                        'ssisssiisssss', [$fecha,$origen,$idCajaVenta,$vendedor,$referenciaMovimiento,$pagado,$this->usuarioOperador,$idVenta,$folio,$notaMovimiento,$observaciones,$fecha,$fecha]
+                        'ssisssiisssss', [$fechaOperacion,$origen,$idCajaVenta,$vendedor,$referenciaMovimiento,$pagado,$this->usuarioOperador,$idVenta,$folio,$notaMovimiento,$observaciones,$fecha,$fecha]
                     );
                     $stmt->close();
 
@@ -555,7 +614,7 @@ $etapa = "registrar_cobro";
 
                         $stmt = $this->ejecutarSqlVenta(
                             "INSERT INTO cash_flows (cash_register_id,user_id,amount,`type`,description,reference,created_at) VALUES (?,?,?,'IN',?,?,?)",
-                            'iissss', [$idCajaVenta,$this->usuarioOperador,$pagado,$descripcion,$folio,$fecha]
+                            'iissss', [$idCajaVenta,$this->usuarioOperador,$pagado,$descripcion,$folio,$fechaOperacion]
                         );
                         $stmt->close();
 
@@ -858,6 +917,7 @@ public function guardarVentaRapida($data) {
 
             $fecha = date("Y-m-d H:i:s");
             $idCajaVenta = $forma === "EFECTIVO" ? $cajaId : null;
+            $fechaOperacion = $this->fechaOperacion($venta, $idCajaVenta);
 
             if ($idCajaVenta !== null) {
                 $stmt = $this->ejecutarSqlVenta(
@@ -882,7 +942,7 @@ public function guardarVentaRapida($data) {
             $stmt = $this->ejecutarSqlVenta(
                 "INSERT INTO sales (user_id,client_name,client_address,client_phone,payment_method,bank_reference,cash_register_id,pending_amount,total_amount,ticket_barcode,notes,created_at,updated_at,sale_kind,note_folio,seller_name,initial_paid,request_token) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 "isssssisssssssssss",
-                [$usuario, "Mostrador", "", "", $forma, $referencia, $idCajaVenta, "0.00", $total, null, $observaciones, $fecha, $fecha, "RAPIDA", null, "Mostrador", $total, $token]
+                [$usuario, "Mostrador", "", "", $forma, $referencia, $idCajaVenta, "0.00", $total, null, $observaciones, $fechaOperacion, $fecha, "RAPIDA", null, "Mostrador", $total, $token]
             );
             $stmt->close();
 
@@ -928,7 +988,7 @@ public function guardarVentaRapida($data) {
             $stmt = $this->ejecutarSqlVenta(
                 "INSERT INTO account_moves (`date`,`type`,`origin`,cash_register_id,user_reference_name,reference,amount,user_id,link_type,link_id,ticket_number,status,note,notes,created_at,updated_at) VALUES (?,'VENTA',?,?,?,?,?,?,'VENTA',?,?,'PAGADO',?,?,?,?)",
                 "ssisssiisssss",
-                [$fecha, $origen, $idCajaVenta, "Mostrador", $referenciaMovimiento, $total, $usuario, $idVenta, $numero, "Cobro de venta rápida", $observaciones, $fecha, $fecha]
+                [$fechaOperacion, $origen, $idCajaVenta, "Mostrador", $referenciaMovimiento, $total, $usuario, $idVenta, $numero, "Cobro de venta rápida", $observaciones, $fecha, $fecha]
             );
             $stmt->close();
 
@@ -936,7 +996,7 @@ public function guardarVentaRapida($data) {
                 $stmt = $this->ejecutarSqlVenta(
                     "INSERT INTO cash_flows (cash_register_id,user_id,amount,`type`,description,reference,created_at) VALUES (?,?,?,'IN',?,?,?)",
                     "iissss",
-                    [$idCajaVenta, $usuario, $total, "Cobro venta rápida " . $numero, $numero, $fecha]
+                    [$idCajaVenta, $usuario, $total, "Cobro venta rápida " . $numero, $numero, $fechaOperacion]
                 );
                 $stmt->close();
 
@@ -1618,6 +1678,7 @@ public function guardarEgreso($data) {
                 $monto = number_format($montoCentavos / 100, 2, ".", "");
                 $origen = $metodo === "EFECTIVO" ? "CAJA" : "BANCO";
                 $idCajaMovimiento = $metodo === "EFECTIVO" ? $idCaja : null;
+                $fechaOperacion = $this->fechaOperacion($data, $idCajaMovimiento);
 
                 if ($idCajaMovimiento !== null) {
                     $stmt = $this->ejecutarSqlVenta(
@@ -1664,7 +1725,7 @@ public function guardarEgreso($data) {
                     VALUES (?, 'SALIDA', ?, ?, ?, ?, ?, ?, NULL, NULL, NULL,
                     'PAGADO', ?, ?, ?, ?, ?, ?)",
                     "ssisssissssss",
-                    [$fecha, $origen, $idCajaMovimiento, $beneficiario,
+                    [$fechaOperacion, $origen, $idCajaMovimiento, $beneficiario,
                     $referencia, $monto, $this->usuarioOperador,
                     $notaMovimiento, $notas, $fecha, $fecha, $categoria, $token]
                 );
@@ -1687,7 +1748,7 @@ public function guardarEgreso($data) {
                         (cash_register_id, user_id, amount, `type`, description, reference, created_at)
                         VALUES (?, ?, ?, 'OUT', ?, ?, ?)",
                         "iissss",
-                        [$idCaja, $this->usuarioOperador, $monto, $descripcion, $folio, $fecha]
+                        [$idCaja, $this->usuarioOperador, $monto, $descripcion, $folio, $fechaOperacion]
                     );
                     $stmt->close();
 
@@ -1854,6 +1915,7 @@ public function crearCuenta($data) {
                 $json["results"]=["id"=>(int)$anterior["id"],"duplicado"=>true]; $json["code"]=200;
             } else {
                 $ahora = date("Y-m-d H:i:s");
+                $fechaOperacion = $this->fechaOperacion($data);
                 $monto = number_format($montoCentavos/100,2,".","");
                 $relacion = $tipo==="COBRAR" ? "sale_id,client_id" : "purchase_id,supplier_id";
                 //$sql = "INSERT INTO `$tabla` ($relacion,`$nombreCol`,user_id,total_amount,paid_amount,pending_amount,status,due_date,created_at,updated_at,description,document_reference,request_token) VALUES (NULL,NULL,?,?,?,0,?,'PENDIENTE',?,?,?,?,?,?)";
@@ -1873,7 +1935,7 @@ $stmt = $this->ejecutarSqlVenta(
         $this->usuarioOperador,
         $monto,
         $fechaVence,
-        $ahora,
+        $fechaOperacion,
         $ahora,
         $concepto,
         $referencia,
@@ -1986,7 +2048,7 @@ public function registrarAbonoCuenta($data) {
                 $transaccion = true;
 
                 $relacion = $meta["relacion"];
-                $stmt = $this->ejecutarSqlVenta("SELECT id,`$nombreCol` AS nombre,total_amount,paid_amount,pending_amount,status,`$relacion` AS documento_id FROM `$tabla` WHERE id=? FOR UPDATE","i",[$id]);
+                $stmt = $this->ejecutarSqlVenta("SELECT id,`$nombreCol` AS nombre,total_amount,paid_amount,pending_amount,status,created_at,`$relacion` AS documento_id FROM `$tabla` WHERE id=? FOR UPDATE","i",[$id]);
                 $cuenta = $stmt->get_result()->fetch_assoc(); $stmt->close();
                 if (!$cuenta) throw new InvalidArgumentException("La cuenta no existe.");
                 if ($cuenta["status"]!=="PENDIENTE") throw new InvalidArgumentException("Esta cuenta ya está liquidada o cancelada.");
@@ -2020,6 +2082,12 @@ public function registrarAbonoCuenta($data) {
                 }
 
                 $ahora = date("Y-m-d H:i:s");
+                $fechaOperacion = $this->fechaOperacion($data, $idCajaMovimiento);
+                
+                if ($fechaOperacion < $cuenta["created_at"]) {
+                    throw new InvalidArgumentException("El pago no puede tener una fecha anterior al registro de la deuda.");
+                }
+
                 $monto = number_format($centavos/100,2,".","");
                 $saldoNuevo = number_format(($saldoAnterior-$centavos)/100,2,".","");
                 $pagadoNuevo = number_format(($pagadoAnterior+$centavos)/100,2,".","");
@@ -2031,7 +2099,7 @@ public function registrarAbonoCuenta($data) {
 
                 $stmt = $this->ejecutarSqlVenta(
                     "INSERT INTO account_settlements (account_type,account_id,amount,method,cash_register_id,reference,notes,user_id,request_token,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
-                    "sissississ",[$tipo,$id,$monto,$metodo,$idCajaMovimiento,$referencia,$notas,$this->usuarioOperador,$token,$ahora]
+                    "sissississ",[$tipo,$id,$monto,$metodo,$idCajaMovimiento,$referencia,$notas,$this->usuarioOperador,$token,$fechaOperacion]
                 );
                 $stmt->close();
                 $idAbono = (int)$this->conn->insert_id;
@@ -2041,7 +2109,7 @@ public function registrarAbonoCuenta($data) {
                 $stmt = $this->ejecutarSqlVenta(
                     "INSERT INTO account_moves (`date`,`type`,`origin`,cash_register_id,user_reference_name,reference,amount,user_id,link_type,link_id,ticket_number,status,note,notes,created_at,updated_at,expense_category,request_token) VALUES (?,?,?,?,?,?,?,?,?,?,?,'PAGADO',?,?,?,?,?,?)",
                     "sssisssisisssssss",
-                    [$ahora,$movTipo,$origen,$idCajaMovimiento,$cuenta["nombre"],$refMovimiento,$monto,$this->usuarioOperador,$tipo==="COBRAR" ? "CXC" : "CXP",$id,$folio,$notaMovimiento,$notas,$ahora,$ahora,$categoria,$token]
+                    [$fechaOperacion,$movTipo,$origen,$idCajaMovimiento,$cuenta["nombre"],$refMovimiento,$monto,$this->usuarioOperador,$tipo==="COBRAR" ? "CXC" : "CXP",$id,$folio,$notaMovimiento,$notas,$ahora,$ahora,$categoria,$token]
                 );
                 $stmt->close();
                 $idMovimiento = (int)$this->conn->insert_id;
@@ -2068,7 +2136,7 @@ $stmt = $this->ejecutarSqlVenta(
                 if ($idCajaMovimiento!==null) {
                     $flujo = $tipo==="COBRAR" ? "IN" : "OUT";
                     $descripcion = $notaMovimiento." ".$folio;
-                    $stmt = $this->ejecutarSqlVenta("INSERT INTO cash_flows (cash_register_id,user_id,amount,`type`,description,reference,created_at) VALUES (?,?,?,?,?,?,?)","iisssss",[$cajaId,$this->usuarioOperador,$monto,$flujo,$descripcion,$folio,$ahora]);
+                    $stmt = $this->ejecutarSqlVenta("INSERT INTO cash_flows (cash_register_id,user_id,amount,`type`,description,reference,created_at) VALUES (?,?,?,?,?,?,?)","iisssss",[$cajaId,$this->usuarioOperador,$monto,$flujo,$descripcion,$folio,$fechaOperacion]);
                     $stmt->close();
 
                     if ($tipo==="COBRAR") {
