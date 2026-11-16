@@ -38,9 +38,51 @@
             <nav id="navSubmodulos" class="nav-submodulos d-none" aria-label="Submódulos"></nav>
         </div>
 
-        <button type="button" class="btn-icono" id="btnConfiguracion" title="Configuración" aria-label="Configuración">
-            <i class="bi bi-gear"></i>
+       
+<div class="dropdown">
+    <button type="button" class="btn-icono" id="btnConfiguracion"
+            data-bs-toggle="dropdown" aria-expanded="false"
+            title="Opciones" aria-label="Abrir opciones">
+        <i class="bi bi-gear"></i>
+    </button>
+
+    <div class="dropdown-menu dropdown-menu-end menu-configuracion"
+         aria-labelledby="btnConfiguracion">
+
+        <div class="menu-config-usuario">
+            <span class="menu-config-avatar"><i class="bi bi-person-circle"></i></span>
+            <div class="min-w-0">
+                <strong id="menuUsuarioActual">Usuario</strong>
+                <small>Sesión activa</small>
+            </div>
+        </div>
+
+        <div class="dropdown-divider"></div>
+
+        <button type="button" class="dropdown-item menu-config-item" disabled>
+            <i class="bi bi-sliders2"></i>
+            <span>Configuración</span>
         </button>
+
+        <button type="button" class="dropdown-item menu-config-item" disabled>
+            <i class="bi bi-people"></i>
+            <span>Usuarios</span>
+        </button>
+
+
+        <button type="button" class="dropdown-item menu-config-item" disabled>
+            <i class="bi bi-moon-stars"></i>
+            <span>Modo oscuro</span>
+        </button>
+
+        <button type="button" class="dropdown-item menu-config-item menu-config-salir"
+                id="btnCerrarSesion" onclick="cerrarSesion()">
+            <i class="bi bi-box-arrow-right"></i>
+            <span>Cerrar sesión</span>
+        </button>
+    </div>
+</div>
+
     </header>
 
     <!-- ========== CONTENIDO PRINCIPAL ========== -->

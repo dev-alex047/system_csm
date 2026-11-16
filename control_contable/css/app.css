@@ -220,3 +220,21 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
     #tablaVentasDiseno>tbody>tr>td.ventas-celda-cliente:before{content:"Cliente: ";font-weight:700;color:#718178}
     .ventas-mini-tabla th:last-child{width:85px}
 }
+
+
+
+/* MENÚ DE CONFIGURACIÓN */
+.menu-configuracion{width:min(290px,calc(100vw - 28px));padding:10px;background:#fff;border:1px solid #dce8e1;border-radius:18px;box-shadow:0 18px 45px rgba(26,55,38,.14);margin-top:10px!important;z-index:1050}
+.menu-config-usuario{display:flex;align-items:center;gap:11px;padding:13px 12px 15px}
+.menu-config-avatar{width:42px;height:42px;flex-shrink:0;display:grid;place-items:center;border-radius:12px;background:#eaf5ee;color:#086b47;font-size:21px}
+.menu-config-usuario strong{display:block;color:#253b2e;font-size:13px;font-weight:750;overflow-wrap:anywhere}
+.menu-config-usuario small{display:block;margin-top:3px;color:#819087;font-size:11px}
+.menu-configuracion .dropdown-divider{margin:7px 5px;border-color:#dfe8e2;opacity:1}
+.menu-config-item{display:flex;align-items:center;gap:12px;min-height:44px;border-radius:10px;padding:10px 12px;color:#304237;font-size:13px;font-weight:600;transition:background .18s,color .18s}
+.menu-config-item i{font-size:17px;width:22px;text-align:center;flex-shrink:0}
+.menu-config-item:not(:disabled):hover,.menu-config-item:not(:disabled):focus{background:#eaf5ee;color:#086b47}
+.menu-config-item:disabled{opacity:.48;cursor:not-allowed}
+.menu-config-salir{color:#b13c37}
+.menu-config-salir:hover,.menu-config-salir:focus{background:#fff0ef!important;color:#ae302c!important}
+#btnConfiguracion[aria-expanded="true"]{background:#eaf5ee;color:#086b47;border-color:#a8d5bb}
+@media(max-width:767px){.menu-configuracion{margin-top:8px!important;border-radius:15px}.menu-config-item{min-height:46px}}

@@ -106,8 +106,10 @@ function bindNavigation() {
         mostrarSubmodulo($(this).data("submodulo"));
     });
 
+    //$("#btnInicio").on("click", mostrarInicio);
+    //$("#btnConfiguracion").on("click", mostrarConfiguracion);
+
     $("#btnInicio").on("click", mostrarInicio);
-    $("#btnConfiguracion").on("click", mostrarConfiguracion);
 
 
 $(document).on("submit", "#formFiltroResumen", function(e) {
@@ -222,24 +224,6 @@ function mostrarSubmodulo(id) {
     }).addClass("active").attr("aria-current", "page");
 
     cargarContenidoModulo(state.moduloActual, id, item);
-}
-
-function mostrarConfiguracion() {
-    state.moduloActual = null;
-    state.submoduloActual = null;
-    state.versionVista++;
-
-    $("#vistaInicio").addClass("d-none");
-    $("#vistaModulo").removeClass("d-none");
-    $("#marcaSistema").removeClass("d-none");
-    $("#navSubmodulos").addClass("d-none").empty();
-    $("#categoriaModulo").text("SISTEMA");
-    $("#tituloPantalla").text("Configuración");
-    $("#descripcionPantalla").text("Datos del negocio y preferencias generales.");
-    $("#iconoPantalla").attr("class", "bi bi-gear");
-
-    mostrarContenidoPendiente("Configuración");
-    window.scrollTo(0, 0);
 }
 
 // CONTENIDO DE MÓDULOS
@@ -2368,6 +2352,49 @@ function abrirTicketVenta(idVenta) {
                 (xhr.responseJSON && xhr.responseJSON.answer) || "Error de comunicación.",
                 "error"
             );
+        });
+    });
+}
+
+
+function cerrarSesion() {
+    Swal.fire({
+        title: "¿Cerrar sesión?",
+        text: "¿Deseas salir de tu cuenta de SM Corp?",
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: "Sí, cerrar sesión",
+        cancelButtonText: "Cancelar",
+        confirmButtonColor: "#086b47",
+        reverseButtons: true
+    }).then(function(r) {
+        if (!r.isConfirmed) return;
+
+        $("#btnCerrarSesion").prop("disabled", true);
+
+        $.ajax({
+            type: "POST",
+            url: "php/login.php",
+            dataType: "json",
+            data: {action: "salir"},
+            headers: {"X-CSRF-Token": window.CSM_CSRF || ""}
+        }).done(function(data) {
+            if (data && data.status === "ok") {
+                window.location.replace("login.html");
+                return;
+            }
+
+            Swal.fire("Aviso", data.answer || "No fue posible cerrar sesión.", "warning");
+        }).fail(function(xhr) {
+            if (xhr.status === 401) {
+                window.location.replace("login.html");
+                return;
+            }
+
+            const data = xhr.responseJSON || {};
+            Swal.fire("Error", data.answer || "No fue posible cerrar sesión.", "error");
+        }).always(function() {
+            $("#btnCerrarSesion").prop("disabled", false);
         });
     });
 }
