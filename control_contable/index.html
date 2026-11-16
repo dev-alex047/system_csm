@@ -338,6 +338,7 @@
                                 <th>Código</th>
                                 <th>Descripción del producto</th>
                                 <th>Cantidad</th>
+                                <th>Unidad</th>
                                 <th>Precio unitario</th>
                                 <th>Importe</th>
                                 <th>Acción</th>
@@ -447,6 +448,36 @@
         <td data-label="Cantidad">
             <input type="number" class="form-control form-control-sm" data-item-campo="cantidad" min="0.01" step="0.01" inputmode="decimal" aria-label="Cantidad">
         </td>
+        
+<td data-label="Unidad">
+    <select class="form-select form-select-sm"
+            data-item-campo="unidad"
+            aria-label="Unidad de medida"
+            style="min-width:105px">
+        <option value="">Seleccionar</option>
+        <option value="PZA">PZA - Pieza</option>
+        <option value="PAQ">PAQ - Paquete</option>
+        <option value="CAJA">CAJA</option>
+        <option value="KG">KG - Kilogramo</option>
+        <option value="G">G - Gramo</option>
+        <option value="TON">TON - Tonelada</option>
+        <option value="M">M - Metro</option>
+        <option value="M2">M² - Metro cuadrado</option>
+        <option value="M3">M³ - Metro cúbico</option>
+        <option value="L">L - Litro</option>
+        <option value="ML">ML - Mililitro</option>
+        <option value="BULTO">BULTO</option>
+        <option value="SACO">SACO</option>
+        <option value="ROLLO">ROLLO</option>
+        <option value="JGO">JGO - Juego</option>
+        <option value="SERV">SERV - Servicio</option>
+        <option value="HORA">HORA</option>
+        <option value="DIA">DÍA</option>
+        <option value="VIAJE">VIAJE</option>
+    </select>
+    <small class="unidad-info text-secondary"></small>
+</td>
+
         <td data-label="Precio unitario">
             <input type="number" class="form-control form-control-sm" data-item-campo="precio" min="0" step="0.01" inputmode="decimal" placeholder="0.00" aria-label="Precio unitario">
         </td>
@@ -507,6 +538,7 @@
                                 <th>Código</th>
                                 <th>Descripción</th>
                                 <th>Cantidad</th>
+                                <th>Unidad</th>
                                 <th>Precio unitario</th>
                                 <th>Importe</th>
                                 <th>Acción</th>
@@ -821,8 +853,6 @@
 
 </div>
 </template>
-
-
 
 <template id="tplAbonoCuenta">
 <div class="text-start">

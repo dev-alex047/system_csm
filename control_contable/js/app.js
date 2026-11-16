@@ -95,6 +95,7 @@ $("#menuUsuarioActual").text(nombreUsuario + " · " + nombreRol);
         bindNavigation();
         bindVentaNota();
         bindVentaRapida();
+        bindUnidadesVenta();
         bindCajaEgresos();
         bindCuentas();
         mostrarInicio();
@@ -343,7 +344,17 @@ function renderVentaConNota() {
 }
 
 function agregarItemVentaNota() {
-    const item = {id:state.ventaNota.siguienteId++,origen:"MANUAL",product_id:null,codigo:"",nombre:"",cantidad:"1",precio:""};
+    const item = {
+        id:state.ventaNota.siguienteId++,
+        origen:"MANUAL",
+        product_id:null,
+        codigo:"",
+        nombre:"",
+        cantidad:"1",
+        unidad:"",
+        unidadCatalogo:false,
+        precio:""
+    };
     state.ventaNota.items.push(item);
     insertarFilaVentaNota(item);
     actualizarTotalesVentaNota();
@@ -358,6 +369,8 @@ function insertarFilaVentaNota(item) {
         $(this).val(item[$(this).attr("data-item-campo")]);
     });
     $("#detalleVentaNota").append(fila);
+    $(fila).find('[data-item-campo="unidad"]').val(item.unidad || "");
+    if (item.codigo) consultarUnidadArticulo(fila);
 }
 
 function numeroNotaValido(texto,minimo,maximo) {
@@ -442,6 +455,12 @@ function validarVentaNota() {
         if (!item.nombre.trim()) return errorVentaNota("El artículo " + (i+1) + " necesita una descripción.",fila+' [data-item-campo="nombre"]');
         if (numeroNotaValido(item.cantidad,0.01,100000) === null) return errorVentaNota("Revisa la cantidad del artículo " + (i+1) + ".",fila+' [data-item-campo="cantidad"]');
         if (numeroNotaValido(item.precio,0,1000000) === null) return errorVentaNota("Revisa el precio del artículo " + (i+1) + ".",fila+' [data-item-campo="precio"]');
+        if (!item.unidad) {
+              return errorVentaNota(
+                "Selecciona la unidad del artículo " + (i + 1) + ".",
+                fila + ' [data-item-campo="unidad"]'
+            );
+        }
     }
 
     const importes = obtenerImportesVentaNota();
@@ -717,7 +736,17 @@ function renderVentaRapida() {
 }
 
 function agregarItemVentaRapida() {
-    const item = {id:state.ventaRapida.siguienteId++,origen:"MANUAL",product_id:null,codigo:"",nombre:"",cantidad:"1",precio:""};
+    const item = {
+        id:state.ventaRapida.siguienteId++,
+        origen:"MANUAL",
+        product_id:null,
+        codigo:"",
+        nombre:"",
+        cantidad:"1",
+        unidad:"",
+        unidadCatalogo:false,
+        precio:""
+    };
     state.ventaRapida.items.push(item);
     insertarFilaVentaRapida(item);
     actualizarTotalesVentaRapida();
@@ -735,6 +764,8 @@ function insertarFilaVentaRapida(item) {
     });
     $(fila).find(".btnEliminarItemNota").removeClass("btnEliminarItemNota").addClass("btnEliminarItemRapida");
     $("#detalleVentaRapida").append(fila);
+    $(fila).find('[data-item-campo="unidad"]').val(item.unidad || "");
+    if (item.codigo) consultarUnidadArticulo(fila);
 }
 
 
@@ -787,6 +818,13 @@ function validarVentaRapida() {
         const item = venta.items[i];
         const fila = '#detalleVentaRapida tr[data-item-id="' + item.id + '"]';
         if (!item.nombre.trim()) return errorVentaRapida("Captura la descripción del artículo " + (i+1) + ".",fila+' [data-item-campo="nombre"]');
+        if (!item.unidad) {
+            return errorVentaRapida(
+                "Selecciona la unidad del artículo " + (i + 1) + ".",
+                fila + ' [data-item-campo="unidad"]'
+            );
+        }
+
         if (numeroNotaValido(item.cantidad,0.01,100000) === null) return errorVentaRapida("Cantidad inválida en el artículo " + (i+1) + ".",fila+' [data-item-campo="cantidad"]');
         if (numeroNotaValido(item.precio,0,1000000) === null) return errorVentaRapida("Precio inválido en el artículo " + (i+1) + ".",fila+' [data-item-campo="precio"]');
     }
@@ -856,6 +894,7 @@ function guardarVentaRapida() {
                 codigo:item.codigo,
                 nombre:item.nombre,
                 cantidad:item.cantidad,
+                unidad:item.unidad,
                 precio:item.precio
             };
         })
@@ -1014,6 +1053,7 @@ function guardarVentaNota() {
                 codigo:item.codigo,
                 nombre:item.nombre,
                 cantidad:item.cantidad,
+                unidad:item.unidad,
                 precio:item.precio
             };
         })
@@ -2164,8 +2204,6 @@ $(document).on("submit", "#formCierreCaja", function(e) {
     }, "¿Cerrar turno? Diferencia: " + monedaMXN(diferencia));
 });
 
-
-
 function renderListadoVentas() {
     const tpl = document.getElementById("tplListadoVentas");
     $("#contenidoModulo").empty().append(tpl.content.cloneNode(true));
@@ -2253,7 +2291,15 @@ $menu.append($('<li></li>').append(
         items.forEach(function(item) {
             const cantidad = Number(item.quantity);
             $cuerpo.append($("<tr></tr>").append(
-                $("<td>").text(Number.isFinite(cantidad) ? cantidad.toLocaleString("es-MX", {maximumFractionDigits:2}) : "—"),
+                //$("<td>").text(Number.isFinite(cantidad) ? cantidad.toLocaleString("es-MX", {maximumFractionDigits:2}) : "—"),
+
+$("<td>").text(
+    (Number.isFinite(cantidad)
+        ? cantidad.toLocaleString("es-MX", {maximumFractionDigits:2})
+        : "—") +
+    (item.unidad ? " " + item.unidad : "")
+),
+
                 $("<td>").text(item.manual_name || item.manual_code || "Artículo"),
                 $("<td>").text(monedaMXN(item.price))
             ));
@@ -2451,4 +2497,109 @@ function prepararFechasAdmin(contenedor) {
     });
 
     $raiz.find("#egresoResponsable").val(window.CSM_NOMBRE_OPERADOR || "Usuario");
+}
+
+
+function obtenerItemUnidad($fila) {
+    const id = Number($fila.attr("data-item-id"));
+    const nota = $fila.closest("#detalleVentaNota").length > 0;
+    const items = nota ? state.ventaNota.items : state.ventaRapida.items;
+
+    return items.find(function(item) {
+        return item.id === id;
+    }) || null;
+}
+
+function consultarUnidadArticulo(fila) {
+    const $fila = $(fila);
+    const item = obtenerItemUnidad($fila);
+    if (!item) return;
+
+    const codigo = String($fila.find('[data-item-campo="codigo"]').val() || "").trim();
+    const $unidad = $fila.find('[data-item-campo="unidad"]');
+
+    if (!codigo) {
+        $unidad.prop("disabled", false);
+        return;
+    }
+
+    $.ajax({
+        type: "POST",
+        url: "php/index.php",
+        dataType: "json",
+        data: {
+            action: "getUnidadProducto",
+            codigo: codigo
+        }
+    }).done(function(data) {
+        if (!$.contains(document.documentElement, $fila[0])) return;
+
+        const codigoActual = String($fila.find('[data-item-campo="codigo"]').val() || "").trim();
+        if (codigoActual !== codigo) return;
+
+        if (data && data.status === "ok" && data.results &&
+            data.results.encontrado && data.results.unidad) {
+
+            const valor = String(data.results.unidad);
+
+            const existe = $unidad.find("option").filter(function() {
+                return this.value === valor;
+            }).length > 0;
+
+            if (!existe) {
+                $unidad.append(new Option(valor, valor));
+            }
+
+            $unidad.val(valor).prop("disabled", true);
+            item.unidad = valor;
+            item.unidadCatalogo = true;
+            $fila.find(".unidad-info").text("Unidad del catálogo");
+        } else {
+            $unidad.prop("disabled", false);
+            item.unidadCatalogo = false;
+            $fila.find(".unidad-info").text("Selecciona la unidad");
+        }
+    }).fail(function() {
+        if (String($fila.find('[data-item-campo="codigo"]').val() || "").trim() !== codigo) return;
+        $unidad.prop("disabled", false);
+        $fila.find(".unidad-info").text("No se pudo consultar el catálogo");
+    });
+}
+
+
+function bindUnidadesVenta() {
+    const selectorCodigo =
+        '#detalleVentaNota [data-item-campo="codigo"], ' +
+        '#detalleVentaRapida [data-item-campo="codigo"]';
+
+    const selectorUnidad =
+        '#detalleVentaNota [data-item-campo="unidad"], ' +
+        '#detalleVentaRapida [data-item-campo="unidad"]';
+
+    $(document).on("input", selectorCodigo, function() {
+        const $fila = $(this).closest("tr");
+        const item = obtenerItemUnidad($fila);
+        if (!item) return;
+
+        item.unidad = "";
+        item.unidadCatalogo = false;
+
+        $fila.find('[data-item-campo="unidad"]')
+            .val("")
+            .prop("disabled", false);
+
+        $fila.find(".unidad-info").text("");
+    });
+
+    $(document).on("change", selectorCodigo, function() {
+        consultarUnidadArticulo($(this).closest("tr"));
+    });
+
+    $(document).on("change", selectorUnidad, function() {
+        const item = obtenerItemUnidad($(this).closest("tr"));
+
+        if (item) {
+            item.unidad = this.value;
+        }
+    });
 }

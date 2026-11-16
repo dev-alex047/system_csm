@@ -30,6 +30,10 @@ switch ($action) {
     case "getCajasVenta":
         $response = $consultas->getCajasVenta();
         break;
+
+    case "getUnidadProducto":
+        $response = $consultas->getUnidadProducto($_POST);
+        break;
         
     case "getVentas":
         $response = $consultas->getVentas($_POST);

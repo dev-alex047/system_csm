@@ -136,6 +136,96 @@ private function centavosVenta($valor) {
     return (int)$partes[0] * 100 + (int)str_pad(isset($partes[1]) ? $partes[1] : '', 2, '0');
 }
 
+
+private function unidadCatalogoCodigo($codigo) {
+    if ($codigo === '') return null;
+
+    $stmt = $this->ejecutarSqlVenta(
+        "SELECT unit FROM products WHERE code = ? LIMIT 2",
+        "s", [$codigo]
+    );
+
+    $resultado = $stmt->get_result();
+    $primera = $resultado->fetch_assoc();
+    $segunda = $resultado->fetch_assoc();
+    $stmt->close();
+
+    // Solo aceptar una coincidencia inequívoca.
+    if (!$primera || $segunda) return null;
+
+    $unidad = trim((string)$primera["unit"]);
+    if ($unidad === '') return null;
+
+    if (strlen($unidad) > 40) {
+        throw new InvalidArgumentException("La unidad del catálogo excede 40 caracteres.");
+    }
+
+    return $unidad;
+}
+
+private function unidadVenta($item, $codigo) {
+    $catalogo = $this->unidadCatalogoCodigo($codigo);
+
+    if ($catalogo !== null) {
+        return $catalogo;
+    }
+
+    $unidad = strtoupper($this->textoVenta($item, "unidad", 40));
+
+    $permitidas = [
+        "PZA", "PAQ", "CAJA", "KG", "G", "TON",
+        "M", "M2", "M3", "L", "ML", "BULTO",
+        "SACO", "ROLLO", "JGO", "SERV",
+        "HORA", "DIA", "VIAJE"
+    ];
+
+    if (!in_array($unidad, $permitidas, true)) {
+        throw new InvalidArgumentException("Selecciona una unidad válida para cada artículo.");
+    }
+
+    return $unidad;
+}
+
+public function getUnidadProducto($data = []) {
+    if (!$this->conn) {
+        return [
+            "status"=>"error",
+            "answer"=>"No existe conexión con MySQL.",
+            "code"=>500
+        ];
+    }
+
+    try {
+        $codigo = $this->textoVenta($data, "codigo", 80);
+        $unidad = $this->unidadCatalogoCodigo($codigo);
+
+        return [
+            "status"=>"ok",
+            "answer"=>"Unidad consultada correctamente.",
+            "results"=>[
+                "encontrado"=>$unidad !== null,
+                "unidad"=>$unidad === null ? "" : $unidad
+            ],
+            "code"=>200
+        ];
+    } catch (InvalidArgumentException $e) {
+        return [
+            "status"=>"warning",
+            "answer"=>$e->getMessage(),
+            "code"=>400
+        ];
+    } catch (Throwable $e) {
+        error_log("getUnidadProducto: " . $e->getMessage());
+
+        return [
+            "status"=>"error",
+            "answer"=>"No fue posible consultar la unidad.",
+            "code"=>500
+        ];
+    }
+}
+
+
 private function textoVenta($datos, $campo, $maximo) {
     $valor = isset($datos[$campo]) ? $datos[$campo] : '';
     if (!is_string($valor) && !is_numeric($valor)) throw new InvalidArgumentException('Dato inválido: ' . $campo);
@@ -345,9 +435,9 @@ public function getVentas($data = []) {
                 $marcas = implode(",", array_fill(0, count($ids), "?"));
 
                 $stmt = $this->ejecutarSqlVenta(
-                    "SELECT sale_id, quantity, price, total, manual_name, manual_code
-                     FROM sale_items WHERE sale_id IN (" . $marcas . ")
-                     ORDER BY sale_id, id",
+                    "SELECT sale_id, quantity, price, total, manual_name, manual_code, unit_code AS unidad 
+                    FROM sale_items WHERE sale_id IN (" . $marcas . ")
+                    ORDER BY sale_id, id",
                     str_repeat("i", count($ids)), $ids
                 );
 
@@ -428,6 +518,7 @@ public function guardarVentaNota($data) {
 
                 $nombre = $this->textoVenta($item, 'nombre', 200);
                 $codigo = $this->textoVenta($item, 'codigo', 80);
+                $unidad = $this->unidadVenta($item, $codigo);
                 $cantidad100 = $this->centavosVenta(isset($item['cantidad']) ? $item['cantidad'] : '');
                 $precioCentavos = $this->centavosVenta(isset($item['precio']) ? $item['precio'] : '');
 
@@ -445,6 +536,7 @@ public function guardarVentaNota($data) {
                     'nombre'=>$nombre,
                     'codigo'=>$codigo,
                     'cantidad'=>number_format($cantidad100 / 100, 2, '.', ''),
+                    'unidad'=>$unidad,
                     'precio'=>number_format($precioCentavos / 100, 2, '.', ''),
                     'importe'=>number_format($importeCentavos / 100, 2, '.', '')
                 ];
@@ -530,27 +622,43 @@ if (!$turnoAbierto) throw new InvalidArgumentException("Debes abrir un turno de 
                 $stmt->close();
 
                 $etapa = "insertar_articulos";
-                $stmtItem = $this->conn->prepare("INSERT INTO sale_items (sale_id,product_id,quantity,price,total,item_origin,manual_name,manual_code) VALUES (?,NULL,?,?,?,'MANUAL',?,?)");
-                if (!$stmtItem) throw new RuntimeException($this->conn->error, (int)$this->conn->errno);
+                
+$stmtItem = $this->conn->prepare(
+    "INSERT INTO sale_items
+    (sale_id,product_id,quantity,price,total,item_origin,manual_name,manual_code,unit_code)
+    VALUES (?,NULL,?,?,?,'MANUAL',?,?,?)"
+);
 
-                $cantidad = $precio = $importe = '0.00';
-                $nombreArticulo = $codigoArticulo = '';
-                $stmtItem->bind_param('isssss', $idVenta, $cantidad, $precio, $importe, $nombreArticulo, $codigoArticulo);
+if (!$stmtItem) throw new RuntimeException($this->conn->error);
 
-                foreach ($items as $item) {
-                    $cantidad = $item['cantidad'];
-                    $precio = $item['precio'];
-                    $importe = $item['importe'];
-                    $nombreArticulo = $item['nombre'];
-                    $codigoArticulo = $item['codigo'];
+$cantidad = $precio = $importe = '0.00';
+$nombreArticulo = $codigoArticulo = $unidadArticulo = '';
 
-                    if (!$stmtItem->execute()) {
-                        $error = new RuntimeException($stmtItem->error, (int)$stmtItem->errno);
-                        $stmtItem->close();
-                        throw $error;
-                    }
-                }
-                $stmtItem->close();
+if (!$stmtItem->bind_param(
+    'issssss',
+    $idVenta, $cantidad, $precio, $importe,
+    $nombreArticulo, $codigoArticulo, $unidadArticulo
+)) {
+    throw new RuntimeException($stmtItem->error);
+}
+
+foreach ($items as $item) {
+    $cantidad = $item['cantidad'];
+    $precio = $item['precio'];
+    $importe = $item['importe'];
+    $nombreArticulo = $item['nombre'];
+    $codigoArticulo = $item['codigo'];
+    $unidadArticulo = $item['unidad'];
+
+    if (!$stmtItem->execute()) {
+        $error = new RuntimeException($stmtItem->error);
+        $stmtItem->close();
+        throw $error;
+    }
+}
+
+$stmtItem->close();
+
 
                 /*if ($saldoCentavos > 0) {
                     $stmt = $this->ejecutarSqlVenta(
@@ -742,7 +850,30 @@ $venta["pagado_total"] = ($total !== null && $saldo !== null && $saldo >= 0 && $
     ? number_format(($total - $saldo) / 100, 2, ".", "") : $venta["initial_paid"];
 
 
-    $stmtItems = $this->conn->prepare("SELECT quantity, price, total, manual_name, manual_code FROM sale_items WHERE sale_id = ? ORDER BY id ASC");
+    //$stmtItems = $this->conn->prepare("SELECT quantity, price, total, manual_name, manual_code FROM sale_items WHERE sale_id = ? ORDER BY id ASC");
+    
+$stmtItems = $this->conn->prepare(
+    "SELECT si.quantity, si.price, si.total, si.manual_name, si.manual_code,
+            COALESCE(
+                NULLIF(TRIM(si.unit_code), ''),
+                NULLIF(TRIM(p.unit), ''),
+                pc.unit,
+                '-'
+            ) AS unidad
+     FROM sale_items si
+     LEFT JOIN products p ON p.id = si.product_id
+     LEFT JOIN (
+         SELECT code, MAX(NULLIF(TRIM(unit), '')) AS unit
+         FROM products
+         WHERE code IS NOT NULL AND code <> ''
+         GROUP BY code
+         HAVING COUNT(*) = 1
+     ) pc ON pc.code = si.manual_code
+     WHERE si.sale_id = ?
+     ORDER BY si.id ASC"
+);
+
+    
     if (!$stmtItems) {
         return null;
     }
@@ -857,6 +988,7 @@ public function guardarVentaRapida($data) {
 
             $nombre = $this->textoVenta($item, "nombre", 200);
             $codigo = $this->textoVenta($item, "codigo", 80);
+            $unidad = $this->unidadVenta($item, $codigo);
             $cantidad100 = $this->centavosVenta($item["cantidad"] ?? "");
             $precioCentavos = $this->centavosVenta($item["precio"] ?? "");
 
@@ -873,6 +1005,7 @@ public function guardarVentaRapida($data) {
                 "nombre" => $nombre,
                 "codigo" => $codigo,
                 "cantidad" => number_format($cantidad100 / 100, 2, ".", ""),
+                "unidad" => $unidad,
                 "precio" => number_format($precioCentavos / 100, 2, ".", ""),
                 "importe" => number_format($importeCentavos / 100, 2, ".", "")
             ];
@@ -955,32 +1088,45 @@ public function guardarVentaRapida($data) {
             );
             $stmt->close();
 
-            $stmtItem = $this->conn->prepare(
-                "INSERT INTO sale_items (sale_id,product_id,quantity,price,total,item_origin,manual_name,manual_code) VALUES (?,NULL,?,?,?,'MANUAL',?,?)"
-            );
-            if (!$stmtItem) throw new RuntimeException($this->conn->error, (int)$this->conn->errno);
+            
+$stmtItem = $this->conn->prepare(
+    "INSERT INTO sale_items
+    (sale_id,product_id,quantity,price,total,item_origin,manual_name,manual_code,unit_code)
+    VALUES (?,NULL,?,?,?,'MANUAL',?,?,?)"
+);
 
-            $cantidad = $precio = $importe = "0.00";
-            $nombreArticulo = $codigoArticulo = "";
+if (!$stmtItem) {
+    throw new RuntimeException($this->conn->error);
+}
 
-            if (!$stmtItem->bind_param("isssss", $idVenta, $cantidad, $precio, $importe, $nombreArticulo, $codigoArticulo)) {
-                throw new RuntimeException("No se pudieron preparar los artículos.");
-            }
+$cantidad = $precio = $importe = "0.00";
+$nombreArticulo = $codigoArticulo = $unidadArticulo = "";
 
-            foreach ($items as $item) {
-                $cantidad = $item["cantidad"];
-                $precio = $item["precio"];
-                $importe = $item["importe"];
-                $nombreArticulo = $item["nombre"];
-                $codigoArticulo = $item["codigo"];
+if (!$stmtItem->bind_param(
+    "issssss",
+    $idVenta, $cantidad, $precio, $importe,
+    $nombreArticulo, $codigoArticulo, $unidadArticulo
+)) {
+    throw new RuntimeException($stmtItem->error);
+}
 
-                if (!$stmtItem->execute()) {
-                    $error = new RuntimeException($stmtItem->error, (int)$stmtItem->errno);
-                    $stmtItem->close();
-                    throw $error;
-                }
-            }
-            $stmtItem->close();
+foreach ($items as $item) {
+    $cantidad = $item["cantidad"];
+    $precio = $item["precio"];
+    $importe = $item["importe"];
+    $nombreArticulo = $item["nombre"];
+    $codigoArticulo = $item["codigo"];
+    $unidadArticulo = $item["unidad"];
+
+    if (!$stmtItem->execute()) {
+        $error = new RuntimeException($stmtItem->error);
+        $stmtItem->close();
+        throw $error;
+    }
+}
+
+$stmtItem->close();
+
 
             $origen = $forma === "EFECTIVO" ? "CAJA" : "BANCO";
             $referenciaMovimiento = $referencia !== "" ? $referencia : $numero;
@@ -2505,11 +2651,14 @@ public function generarConcentradoCxc($data) {
 $stmt = $this->ejecutarSqlVenta(
     "SELECT si.sale_id, si.product_id, si.manual_name,
             si.manual_code, si.quantity, si.price, si.total,
-            COALESCE(
-                NULLIF(TRIM(p_id.unit), ''),
-                p_codigo.unit,
-                '-'
-            ) AS unidad
+            
+COALESCE(
+    NULLIF(TRIM(si.unit_code), ''),
+    NULLIF(TRIM(p_id.unit), ''),
+    p_codigo.unit,
+    '-'
+) AS unidad
+
      FROM sale_items si
      LEFT JOIN products p_id
          ON p_id.id = si.product_id
@@ -2638,11 +2787,14 @@ public function generarTicketVenta($data) {
                             NULLIF(TRIM(p_id.name),''),
                             'ARTICULO'
                         ) AS descripcion,
-                        COALESCE(
-                            NULLIF(TRIM(p_id.unit),''),
-                            NULLIF(TRIM(pc.unit),''),
-                            '-'
-                        ) AS unidad
+                        
+COALESCE(
+    NULLIF(TRIM(si.unit_code),''),
+    NULLIF(TRIM(p_id.unit),''),
+    NULLIF(TRIM(pc.unit),''),
+    '-'
+) AS unidad
+
                  FROM sale_items si
                  LEFT JOIN products p_id ON p_id.id=si.product_id
                  LEFT JOIN (

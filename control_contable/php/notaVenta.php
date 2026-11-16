@@ -49,7 +49,9 @@ public function generarArchivo($venta, $firmaRuta = '') {
         $descripcion = trim((string)($item['manual_name'] ?? ''));
         if (!empty($item['manual_code'])) $descripcion .= ' [' . $item['manual_code'] . ']';
 
-        $lineas = $this->lineasArticuloNota($descripcion, 61);
+        //$lineas = $this->lineasArticuloNota($descripcion, 61);
+        $unidad = trim((string)($item['unidad'] ?? '-'));
+        $lineas = $this->lineasArticuloNota($descripcion, 47);
         $alto = max(8, count($lineas) * 3.8 + 2);
 
         if ($y + $alto > 147) {
@@ -59,7 +61,8 @@ public function generarArchivo($venta, $firmaRuta = '') {
         }
 
         $this->SetDrawColor(126, 169, 140);
-        foreach ([[7,13],[20,65],[85,23],[108,25]] as $celda) {
+        //foreach ([[7,13],[20,65],[85,23],[108,25]] as $celda) {
+        foreach ([[7,13],[20,15],[35,50],[85,23],[108,25]] as $celda) {
             $this->Rect($celda[0], $y, $celda[1], $alto);
         }
 
@@ -67,11 +70,14 @@ public function generarArchivo($venta, $firmaRuta = '') {
         $cant = (float)($item['quantity'] ?? 0);
         $cantidad = rtrim(rtrim(number_format($cant, 2, '.', ''), '0'), '.');
 
-        $this->escribirNota(7.5, $y + 2, 12, $cantidad, 7.7, '', 'C');
+        
+$this->escribirNota(7.5, $y + 2, 12, $cantidad, 7.7, '', 'C');
+$this->escribirNota(20.4, $y + 2, 14.2, $unidad, 6.4, '', 'C');
 
-        foreach ($lineas as $i => $linea) {
-            $this->escribirNota(22, $y + 1.1 + $i * 3.8, 61, $linea, 7.1);
-        }
+foreach ($lineas as $i => $linea) {
+    $this->escribirNota(36, $y + 1.1 + $i * 3.8, 47, $linea, 7.1);
+}
+
 
         $this->escribirNota(86, $y + 2, 21, $this->moneda($item['price'] ?? 0), 7.6, '', 'R');
         $this->escribirNota(109, $y + 2, 23, $this->moneda($item['total'] ?? 0), 7.6, 'B', 'R');
@@ -83,7 +89,8 @@ public function generarArchivo($venta, $firmaRuta = '') {
 
     while ($y + 8 <= 147) {
         $this->SetDrawColor(163, 195, 174);
-        foreach ([[7,13],[20,65],[85,23],[108,25]] as $celda) {
+        //foreach ([[7,13],[20,65],[85,23],[108,25]] as $celda) {
+        foreach ([[7,13],[20,15],[35,50],[85,23],[108,25]] as $celda) {
             $this->Rect($celda[0], $y, $celda[1], 8);
         }
        
@@ -257,19 +264,22 @@ $this->SetTextColor(255, 255, 255);
 // ICONOS DE CONTACTO
 $iconTelefono = __DIR__ . '/../recursos/logo_telefono.png';
 $iconWhatsapp = __DIR__ . '/../recursos/logo_whatsapp.png';
+$iconContact = __DIR__ . '/../recursos/logo_contact.png';
 $iconUbicacion = __DIR__ . '/../recursos/ubi.png';
 
 // TELÉFONO
-if (is_file($iconTelefono)) {
-    $this->Image($iconTelefono, 9, 32.5, 4.5, 4.5, 'PNG');
+if (is_file($iconContact)) {
+    //$this->Image($iconTelefono, 9, 32.5, 4.5, 4.5, 'PNG');
+    $this->Image($iconContact, 9, 32.5, 4.5, 4.5, 'PNG');
 } else {
     $this->iconoContactoNota('telefono', 9, 32.5);
 }
 $this->escribirNota(15, 32.5, 33, '220 286 2755', 8.7, 'B');
 
 // WHATSAPP
-if (is_file($iconWhatsapp)) {
-    $this->Image($iconWhatsapp, 51, 32.5, 4.5, 4.5, 'PNG');
+if (is_file($iconContact)) {
+    //$this->Image($iconWhatsapp, 51, 32.5, 4.5, 4.5, 'PNG');
+    $this->Image($iconContact, 51, 32.5, 4.5, 4.5, 'PNG');
 } else {
     $this->iconoContactoNota('whatsapp', 51, 32.5);
 }
@@ -327,10 +337,15 @@ $this->SetDrawColor(72, 150, 116);
     $this->SetFont('Arial', 'B', 7.2);
     $this->SetTextColor(29, 80, 55);
 
-    $columnas = [
-        [7,13,'CANT.'], [20,65,'DESCRIPCIÓN'],
-        [85,23,'P. UNIT.'], [108,25,'IMPORTE']
-    ];
+    
+$columnas = [
+    [7,13,'CANT.'],
+    [20,15,'UND.'],
+    [35,50,'DESCRIPCIÓN'],
+    [85,23,'P. UNIT.'],
+    [108,25,'IMPORTE']
+];
+
 
     foreach ($columnas as $c) {
         $this->Rect($c[0], 78, $c[1], 7, 'DF');
@@ -558,10 +573,13 @@ class notaVentaCompleta extends FPDF {
         $this->SetFillColor(226,243,233);
         $this->SetTextColor(24,96,67);
         $this->SetFont('Arial','B',8);
-        $this->Cell(105,9,$this->texto('DESCRIPCIÓN / CONCEPTO'),1,0,'L',true);
-        $this->Cell(18,9,'CANT.',1,0,'C',true);
-        $this->Cell(27,9,'P. UNIT.',1,0,'R',true);
-        $this->Cell(30,9,'IMPORTE',1,1,'R',true);
+       
+$this->Cell(84,9,$this->texto('DESCRIPCIÓN / CONCEPTO'),1,0,'L',true);
+$this->Cell(18,9,'CANT.',1,0,'C',true);
+$this->Cell(21,9,'UNIDAD',1,0,'C',true);
+$this->Cell(27,9,'P. UNIT.',1,0,'R',true);
+$this->Cell(30,9,'IMPORTE',1,1,'R',true);
+
     }
 
     private function lineas($texto,$ancho) {
@@ -593,7 +611,8 @@ class notaVentaCompleta extends FPDF {
         $this->SetTextColor(37,49,41);
         $desc=$this->texto(trim((string)($r['manual_name']??'')));
         if (!empty($r['manual_code'])) $desc.=' ['.$this->texto($r['manual_code']).']';
-        $filas=$this->lineas($desc,105);
+        //$filas=$this->lineas($desc,105);
+        $filas=$this->lineas($desc,84);
         $h=max(9,count($filas)*5+3);
         if ($this->GetY()+$h>263) {
             $this->AddPage();
@@ -602,17 +621,30 @@ class notaVentaCompleta extends FPDF {
             $this->SetTextColor(37,49,41);
         }
         $x=$this->GetX(); $y=$this->GetY();
-        foreach ([105,18,27,30] as $w) {
-            $this->Rect($this->GetX(),$y,$w,$h);
-            $this->SetX($this->GetX()+$w);
-        }
-        $this->SetXY($x+2,$y+1.5);
-        foreach ($filas as $linea) $this->Cell(101,5,$linea,0,2);
-        $this->SetXY($x+105,$y+2);
-        $this->Cell(18,5,number_format((float)$r['quantity'],2,'.',','),0,0,'C');
-        $this->Cell(27,5,$this->dinero($r['price']),0,0,'R');
-        $this->Cell(30,5,$this->dinero($r['total']),0,0,'R');
-        $this->SetXY($x,$y+$h);
+        
+foreach ([84,18,21,27,30] as $w) {
+    $this->Rect($this->GetX(),$y,$w,$h);
+    $this->SetX($this->GetX()+$w);
+}
+
+$this->SetXY($x+2,$y+1.5);
+foreach ($filas as $linea) {
+    $this->Cell(80,5,$linea,0,2);
+}
+
+$this->SetXY($x+84,$y+2);
+$this->Cell(18,5,number_format((float)$r['quantity'],2,'.',','),0,0,'C');
+
+$unidad = trim((string)($r['unidad'] ?? '-'));
+$this->SetFont('Arial','',7);
+$this->Cell(21,5,$this->texto($unidad),0,0,'C');
+
+$this->SetFont('Arial','',8.5);
+$this->Cell(27,5,$this->dinero($r['price']),0,0,'R');
+$this->Cell(30,5,$this->dinero($r['total']),0,0,'R');
+
+$this->SetXY($x,$y+$h);
+
     }
 
     private function espacio($alto) {
