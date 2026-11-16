@@ -131,6 +131,7 @@ $(document).ready(function() {
     $("#correo").trigger("input");
 });
 
+
 // CAMBIAR DE CORREO A CONTRASEÑA
 function cambiarPasoLogin(paso) {
     pasoLogin = paso;
