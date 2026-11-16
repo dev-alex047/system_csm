@@ -9,14 +9,14 @@ ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 error_reporting(E_ALL);
 
+require_once __DIR__ . '/sesion.php';
+csmExigirSesion();
+
+
 require_once __DIR__ . "/conexion.php";
 require_once __DIR__ . "/consultas.php";
 require_once __DIR__ . "/notaVenta.php";
 require_once __DIR__ . "/ticketVenta.php";
-
-require_once __DIR__ . '/sesion.php';
-csmExigirSesion();
-
 
 $action = isset($_POST["action"]) ? trim((string)$_POST["action"]) : "";
 $consultas = new consultas();

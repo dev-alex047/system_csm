@@ -45,15 +45,56 @@ state.ventaRapida = crearBorradorVentaRapida();
 state.filtrosVentas = {buscar:"",tipo:"TODAS",inicio:"",fin:""};
 state.peticionVentas = 0;
 
-// INICIALIZACIÓN
-window.addEventListener("DOMContentLoaded", function() {
-    bindNavigation();
-    bindVentaNota();
-    bindVentaRapida();
-    bindCajaEgresos();
-    bindCuentas();
-    mostrarInicio();
+
+$(document).ready(function() {
+    $.ajax({
+        type: "POST",
+        url: "php/login.php",
+        dataType: "json",
+        data: {action: "estado"},
+        cache: false
+    }).done(function(data) {
+        if (!data || data.status !== "ok" || !data.results ||
+            !data.results.autenticado || !data.results.csrf) {
+            window.location.replace("login.html");
+            return;
+        }
+
+        window.CSM_CSRF = data.results.csrf;
+
+        // AÑADIR EL TOKEN A TODAS LAS PETICIONES DEL SISTEMA
+        $.ajaxPrefilter(function(opciones, originales, xhr) {
+            const ruta = (opciones.url || "").split("?")[0];
+
+            if ((opciones.type || "").toUpperCase() === "POST" &&
+                /(^|\/)php\/index\.php$/.test(ruta)) {
+                xhr.setRequestHeader("X-CSRF-Token", window.CSM_CSRF);
+            }
+        });
+
+        // DETECTAR SESIONES EXPIRADAS
+        $(document).ajaxError(function(evento, xhr, opciones) {
+            if (xhr.status === 401 &&
+                /(^|\/)php\/index\.php(?:\?|$)/.test(opciones.url)) {
+                window.location.replace("login.html");
+            }
+        });
+
+        // INICIALIZAR EL SISTEMA DESPUÉS DE VALIDAR LA SESIÓN
+        bindNavigation();
+        bindVentaNota();
+        bindVentaRapida();
+        bindCajaEgresos();
+        bindCuentas();
+        mostrarInicio();
+
+        $("body").removeClass("csm-verificando");
+
+    }).fail(function() {
+        window.location.replace("login.html");
+    });
 });
+
 
 // EVENTOS
 function bindNavigation() {
