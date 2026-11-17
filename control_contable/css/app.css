@@ -238,3 +238,38 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
 .menu-config-salir:hover,.menu-config-salir:focus{background:#fff0ef!important;color:#ae302c!important}
 #btnConfiguracion[aria-expanded="true"]{background:#eaf5ee;color:#086b47;border-color:#a8d5bb}
 @media(max-width:767px){.menu-configuracion{margin-top:8px!important;border-radius:15px}.menu-config-item{min-height:46px}}
+
+
+
+/* AUTOCOMPLETADO DE PRODUCTOS */
+.ui-autocomplete {
+    z-index: 3000 !important;
+    min-width: 290px;
+    max-width: calc(100vw - 24px);
+    max-height: 290px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 6px;
+    background: #fff;
+    border: 1px solid #dce8e1;
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, .14);
+}
+
+.ui-autocomplete .ui-menu-item-wrapper {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    color: #263c30;
+    font-family: inherit;
+    font-size: 12px;
+    white-space: normal;
+    line-height: 1.5;
+}
+
+.ui-autocomplete .ui-state-active {
+    background: #e8f5ec !important;
+    border-color: #a8d5bb !important;
+    color: #086b47 !important;
+    margin: 0;
+}

@@ -13,6 +13,8 @@
 
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.14.1/themes/base/jquery-ui.css">
+
 
     <!-- Estilos propios -->
     <link href="css/app.css" rel="stylesheet">
@@ -440,10 +442,26 @@
 <template id="tplFilaVentaNota">
     <tr>
         <td data-label="Código">
-            <input class="form-control form-control-sm" data-item-campo="codigo" maxlength="80" placeholder="Opcional" aria-label="Código del artículo">
+            
+<input class="form-control form-control-sm"
+       data-item-campo="codigo"
+       maxlength="80"
+       autocomplete="off"
+       placeholder="Código o buscar..."
+       aria-label="Código del artículo">
+
         </td>
         <td data-label="Descripción">
-            <input class="form-control form-control-sm" data-item-campo="nombre" maxlength="200" placeholder="Nombre del artículo" aria-label="Nombre del artículo">
+
+<input class="form-control form-control-sm"
+       data-item-campo="nombre"
+       maxlength="200"
+       autocomplete="off"
+       placeholder="Buscar producto o escribir uno nuevo..."
+       aria-label="Nombre del artículo"
+       style="min-width:220px">
+
+
         </td>
         <td data-label="Cantidad">
             <input type="number" class="form-control form-control-sm" data-item-campo="cantidad" min="0.01" step="0.01" inputmode="decimal" aria-label="Cantidad">
@@ -474,6 +492,7 @@
         <option value="HORA">HORA</option>
         <option value="DIA">DÍA</option>
         <option value="VIAJE">VIAJE</option>
+        <option value="SET">SET</option>
     </select>
     <small class="unidad-info text-secondary"></small>
 </td>
@@ -885,6 +904,8 @@
 
 <!-- jQuery -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://code.jquery.com/ui/1.14.1/jquery-ui.min.js"></script>
+
 
 <!-- Bootstrap -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

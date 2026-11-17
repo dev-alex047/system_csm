@@ -371,6 +371,8 @@ function insertarFilaVentaNota(item) {
     $("#detalleVentaNota").append(fila);
     $(fila).find('[data-item-campo="unidad"]').val(item.unidad || "");
     if (item.codigo) consultarUnidadArticulo(fila);
+
+    activarAutocompleteProducto(fila);
 }
 
 function numeroNotaValido(texto,minimo,maximo) {
@@ -783,6 +785,8 @@ function insertarFilaVentaRapida(item) {
     $("#detalleVentaRapida").append(fila);
     $(fila).find('[data-item-campo="unidad"]').val(item.unidad || "");
     if (item.codigo) consultarUnidadArticulo(fila);
+
+    activarAutocompleteProducto(fila);
 }
 
 
@@ -2613,11 +2617,40 @@ function bindUnidadesVenta() {
         '#detalleVentaNota [data-item-campo="unidad"], ' +
         '#detalleVentaRapida [data-item-campo="unidad"]';
 
+    
+const selectorNombre =
+    '#detalleVentaNota [data-item-campo="nombre"], ' +
+    '#detalleVentaRapida [data-item-campo="nombre"]';
+
+$(document).on("input", selectorNombre, function() {
+    const $fila = $(this).closest("tr");
+    const item = obtenerItemUnidad($fila);
+
+    if (!item || !item.product_id) return;
+
+    item.product_id = null;
+    item.codigo = "";
+    item.unidad = "";
+    item.unidadCatalogo = false;
+
+    $fila.find('[data-item-campo="codigo"]').val("");
+
+    $fila.find('[data-item-campo="unidad"]')
+        .val("")
+        .prop("disabled", false);
+
+    $fila.find(".unidad-info").text(
+        "Producto manual: selecciona la unidad"
+    );
+});
+
+
     $(document).on("input", selectorCodigo, function() {
         const $fila = $(this).closest("tr");
         const item = obtenerItemUnidad($fila);
         if (!item) return;
 
+        item.product_id = null;
         item.unidad = "";
         item.unidadCatalogo = false;
 
@@ -2637,6 +2670,122 @@ function bindUnidadesVenta() {
 
         if (item) {
             item.unidad = this.value;
+        }
+    });
+}
+
+
+
+function activarAutocompleteProducto(fila) {
+    const $fila = $(fila);
+
+    if (!$.fn.autocomplete) {
+        console.error("No se cargó jQuery UI Autocomplete.");
+        return;
+    }
+
+    const $campos = $fila.find(
+        '[data-item-campo="nombre"], [data-item-campo="codigo"]'
+    );
+
+    $campos.autocomplete({
+        minLength: 2,
+        delay: 280,
+        appendTo: "body",
+        autoFocus: false,
+
+        source: function(request, response) {
+            $.ajax({
+                type: "POST",
+                url: "php/index.php",
+                dataType: "json",
+                data: {
+                    action: "buscarProductosVenta",
+                    buscar: request.term
+                }
+            }).done(function(data) {
+                const productos = data &&
+                    data.status === "ok" &&
+                    Array.isArray(data.results)
+                    ? data.results
+                    : [];
+
+                response(productos.map(function(p) {
+                    const precio = p.precio === ""
+                        ? "Precio manual"
+                        : monedaMXN(p.precio);
+
+                    return {
+                        label: p.nombre +
+                            " | " + (p.codigo || "Sin código") +
+                            " | " + (p.unidad || "Sin unidad") +
+                            " | " + precio,
+                        value: p.nombre,
+                        producto: p
+                    };
+                }));
+            }).fail(function() {
+                response([]);
+            });
+        },
+
+        select: function(event, ui) {
+            const p = ui.item.producto;
+            const item = obtenerItemUnidad($fila);
+
+            if (!item) return false;
+
+            item.product_id = Number(p.id);
+            item.codigo = String(p.codigo || "");
+            item.nombre = String(p.nombre || "");
+            item.unidad = String(p.unidad || "").trim();
+            item.unidadCatalogo = item.unidad !== "";
+
+            if (p.precio !== "") {
+                item.precio = String(p.precio);
+            }
+
+            $fila.find('[data-item-campo="codigo"]')
+                .val(item.codigo);
+
+            $fila.find('[data-item-campo="nombre"]')
+                .val(item.nombre);
+
+            $fila.find('[data-item-campo="precio"]')
+                .val(item.precio);
+
+            const $unidad = $fila.find(
+                '[data-item-campo="unidad"]'
+            );
+
+            if (item.unidad) {
+                const existe = $unidad.find("option").filter(function() {
+                    return this.value === item.unidad;
+                }).length > 0;
+
+                if (!existe) {
+                    $unidad.append(
+                        new Option(item.unidad, item.unidad)
+                    );
+                }
+            }
+
+            $unidad.val(item.unidad)
+                .prop("disabled", item.unidadCatalogo);
+
+            $fila.find(".unidad-info").text(
+                item.unidadCatalogo
+                    ? "Unidad del catálogo"
+                    : "Selecciona la unidad"
+            );
+
+            if ($fila.closest("#detalleVentaNota").length) {
+                actualizarTotalesVentaNota();
+            } else {
+                actualizarTotalesVentaRapida();
+            }
+
+            return false;
         }
     });
 }

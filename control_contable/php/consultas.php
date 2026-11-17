@@ -172,12 +172,22 @@ private function unidadVenta($item, $codigo) {
 
     $unidad = strtoupper($this->textoVenta($item, "unidad", 40));
 
-    $permitidas = [
+    
+    /*$permitidas = [
         "PZA", "PAQ", "CAJA", "KG", "G", "TON",
         "M", "M2", "M3", "L", "ML", "BULTO",
         "SACO", "ROLLO", "JGO", "SERV",
         "HORA", "DIA", "VIAJE"
-    ];
+    ];*/
+
+
+$permitidas = [
+    "PZA", "PAQ", "CAJA", "SET", "KG", "G",
+    "TON", "M", "M2", "M3", "L", "ML",
+    "BULTO", "SACO", "ROLLO", "JGO",
+    "SERV", "HORA", "DIA", "VIAJE"
+];
+
 
     if (!in_array($unidad, $permitidas, true)) {
         throw new InvalidArgumentException("Selecciona una unidad válida para cada artículo.");
@@ -185,6 +195,113 @@ private function unidadVenta($item, $codigo) {
 
     return $unidad;
 }
+
+
+public function buscarProductosVenta($data = []) {
+    if (!$this->conn) {
+        return [
+            "status" => "error",
+            "answer" => "No existe conexión con MySQL.",
+            "code" => 500
+        ];
+    }
+
+    try {
+        $buscar = $this->textoVenta($data, "buscar", 100);
+
+        if (strlen($buscar) < 2) {
+            return [
+                "status" => "ok",
+                "results" => [],
+                "code" => 200
+            ];
+        }
+
+        $escapado = str_replace(
+            ["!", "%", "_"],
+            ["!!", "!%", "!_"],
+            $buscar
+        );
+
+        $contiene = "%" . $escapado . "%";
+        $empieza = $escapado . "%";
+
+        $stmt = $this->ejecutarSqlVenta(
+            "SELECT id, code, name, unit, public_price
+             FROM products
+             WHERE name LIKE ? ESCAPE '!'
+                OR code LIKE ? ESCAPE '!'
+                OR barcode LIKE ? ESCAPE '!'
+             ORDER BY
+                CASE
+                    WHEN code = ? THEN 0
+                    WHEN code LIKE ? ESCAPE '!' THEN 1
+                    WHEN name LIKE ? ESCAPE '!' THEN 2
+                    ELSE 3
+                END,
+                name ASC
+             LIMIT 12",
+            "ssssss",
+            [
+                $contiene,
+                $contiene,
+                $contiene,
+                $buscar,
+                $empieza,
+                $empieza
+            ]
+        );
+
+        $productos = [];
+
+        $resultado = $stmt->get_result();
+
+        while ($fila = $resultado->fetch_assoc()) {
+            $productos[] = [
+                "id" => (int)$fila["id"],
+                "codigo" => (string)($fila["code"] ?? ""),
+                "nombre" => (string)$fila["name"],
+                "unidad" => (string)($fila["unit"] ?? ""),
+                "precio" => $fila["public_price"] === null
+                    ? ""
+                    : number_format(
+                        (float)$fila["public_price"],
+                        2,
+                        ".",
+                        ""
+                    )
+            ];
+        }
+
+        $stmt->close();
+
+        return [
+            "status" => "ok",
+            "answer" => "Productos consultados.",
+            "results" => $productos,
+            "code" => 200
+        ];
+
+    } catch (InvalidArgumentException $e) {
+        return [
+            "status" => "warning",
+            "answer" => $e->getMessage(),
+            "code" => 400
+        ];
+
+    } catch (Throwable $e) {
+        error_log(
+            "buscarProductosVenta: " . $e->getMessage()
+        );
+
+        return [
+            "status" => "error",
+            "answer" => "No fue posible buscar productos.",
+            "code" => 500
+        ];
+    }
+}
+
 
 public function getUnidadProducto($data = []) {
     if (!$this->conn) {
