@@ -490,6 +490,33 @@ public function guardarVentaNota($data) {
             $venta = isset($data['venta']) && is_string($data['venta']) ? json_decode($data['venta'], true) : null;
             if (!is_array($venta)) throw new InvalidArgumentException('No se recibieron datos válidos de la venta.');
 
+$modoFecha = isset($venta["modo_fecha"])
+    ? (string)$venta["modo_fecha"]
+    : "";
+
+$fechaSolicitada = isset($venta["fecha_operacion"])
+    ? trim((string)$venta["fecha_operacion"])
+    : "";
+
+if (!in_array($modoFecha, ["AUTOMATICA", "MANUAL"], true)) {
+    throw new InvalidArgumentException(
+        "Actualiza la página. Se detectó una versión anterior del formulario."
+    );
+}
+
+if ($modoFecha === "MANUAL" && $fechaSolicitada === "") {
+    throw new InvalidArgumentException(
+        "No se recibió la fecha seleccionada por el administrador."
+    );
+}
+
+if ($modoFecha === "AUTOMATICA" && $fechaSolicitada !== "") {
+    throw new InvalidArgumentException(
+        "La modalidad de fecha no coincide con la fecha enviada."
+    );
+}
+
+
             $token = $this->textoVenta($venta, 'solicitud_id', 32);
             if (!preg_match('/^[a-f0-9]{32}$/D', $token)) throw new InvalidArgumentException('Identificador de solicitud inválido.');
 
@@ -574,11 +601,30 @@ public function guardarVentaNota($data) {
             $stmt->close();
             if (!$existeUsuario) throw new InvalidArgumentException('El usuario operador configurado no existe en users.');
 
-            $stmt = $this->ejecutarSqlVenta('SELECT id, note_folio FROM sales WHERE request_token = ? LIMIT 1', 's', [$token]);
+            
+            //$stmt = $this->ejecutarSqlVenta('SELECT id, note_folio FROM sales WHERE request_token = ? LIMIT 1', 's', [$token]);
+            
+            $stmt = $this->ejecutarSqlVenta(
+    "SELECT id, note_folio, created_at FROM sales WHERE request_token = ? LIMIT 1",
+    "s",
+    [$token]
+);
             $anterior = $stmt->get_result()->fetch_assoc();
             $stmt->close();
 
             if ($anterior) {
+
+if ($modoFecha === "MANUAL") {
+    $fechaEsperada = str_replace("T", " ", $fechaSolicitada);
+
+    if (substr((string)$anterior["created_at"], 0, 16) !== $fechaEsperada) {
+        throw new InvalidArgumentException(
+            "Esta nota ya fue registrada con una fecha diferente. " .
+            "No se modificó la venta existente."
+        );
+    }
+}
+
                 $json = [
                     'status'=>'ok','answer'=>'Esta nota ya estaba registrada; no se duplicó.',
                     'results'=>['id'=>(int)$anterior['id'],'folio'=>$anterior['note_folio'],'duplicada'=>true],
@@ -624,6 +670,31 @@ if (!$turnoAbierto) throw new InvalidArgumentException("Debes abrir un turno de 
 
                 $stmt = $this->ejecutarSqlVenta('UPDATE sales SET note_folio = ?, ticket_barcode = ? WHERE id = ?', 'ssi', [$folio,$folio,$idVenta]);
                 $stmt->close();
+
+
+$stmtFecha = $this->ejecutarSqlVenta(
+    "SELECT created_at FROM sales WHERE id = ? LIMIT 1",
+    "i",
+    [$idVenta]
+);
+
+$filaFecha = $stmtFecha->get_result()->fetch_assoc();
+$stmtFecha->close();
+
+$fechaGuardada = isset($filaFecha["created_at"])
+    ? (string)$filaFecha["created_at"]
+    : "";
+
+if ($modoFecha === "MANUAL") {
+    $fechaEsperada = str_replace("T", " ", $fechaSolicitada);
+
+    if (substr($fechaGuardada, 0, 16) !== $fechaEsperada) {
+        throw new RuntimeException(
+            "La fecha almacenada no coincide con la fecha seleccionada."
+        );
+    }
+}
+
 
                 $etapa = "insertar_articulos";
                 
@@ -717,7 +788,23 @@ $etapa = "registrar_cobro";
 
                     $stmt = $this->ejecutarSqlVenta(
                         "INSERT INTO account_moves (`date`,`type`,`origin`,cash_register_id,user_reference_name,reference,amount,user_id,link_type,link_id,ticket_number,status,note,notes,created_at,updated_at) VALUES (?,'VENTA',?,?,?,?,?,?,'VENTA',?,?,'PAGADO',?,?,?,?)",
-                        'ssisssiisssss', [$fechaOperacion,$origen,$idCajaVenta,$vendedor,$referenciaMovimiento,$pagado,$this->usuarioOperador,$idVenta,$folio,$notaMovimiento,$observaciones,$fecha,$fecha]
+                        
+'ssisssiisssss', [
+    $fechaCobro,
+    $origen,
+    $idCajaVenta,
+    $vendedor,
+    $referenciaMovimiento,
+    $pagado,
+    $this->usuarioOperador,
+    $idVenta,
+    $folio,
+    $notaMovimiento,
+    $observaciones,
+    $fecha,
+    $fecha
+]
+
                     );
                     $stmt->close();
 
@@ -776,11 +863,29 @@ $json["diagnostico"] = [
 
             if ((int)$e->getCode() === 1062) {
                 try {
-                    $stmt = $this->ejecutarSqlVenta('SELECT id, note_folio FROM sales WHERE request_token = ? LIMIT 1', 's', [$token]);
+                    //$stmt = $this->ejecutarSqlVenta('SELECT id, note_folio FROM sales WHERE request_token = ? LIMIT 1', 's', [$token]);
+                    
+$stmt = $this->ejecutarSqlVenta(
+    "SELECT id, note_folio, created_at
+     FROM sales
+     WHERE request_token = ?
+     LIMIT 1",
+    "s",
+    [$token]
+);
+
+                    
                     $repetida = $stmt->get_result()->fetch_assoc();
                     $stmt->close();
 
-                    if ($repetida) {
+                    if (
+    $repetida &&
+    (
+        $modoFecha !== "MANUAL" ||
+        substr((string)$repetida["created_at"], 0, 16) ===
+        str_replace("T", " ", $fechaSolicitada)
+    )
+) {
                         $json = [
                             'status'=>'ok','answer'=>'La venta ya había sido registrada; no se duplicó.',
                             'results'=>['id'=>(int)$repetida['id'],'folio'=>$repetida['note_folio'],'duplicada'=>true],
@@ -971,6 +1076,34 @@ public function guardarVentaRapida($data) {
         $venta = isset($data["venta"]) && is_string($data["venta"]) ? json_decode($data["venta"], true) : null;
         if (!is_array($venta)) throw new InvalidArgumentException("Datos de venta inválidos.");
 
+
+$modoFecha = isset($venta["modo_fecha"])
+    ? (string)$venta["modo_fecha"]
+    : "";
+
+$fechaSolicitada = isset($venta["fecha_operacion"])
+    ? trim((string)$venta["fecha_operacion"])
+    : "";
+
+if (!in_array($modoFecha, ["AUTOMATICA", "MANUAL"], true)) {
+    throw new InvalidArgumentException(
+        "Actualiza la página. Se detectó una versión anterior del formulario."
+    );
+}
+
+if ($modoFecha === "MANUAL" && $fechaSolicitada === "") {
+    throw new InvalidArgumentException(
+        "No se recibió la fecha seleccionada por el administrador."
+    );
+}
+
+if ($modoFecha === "AUTOMATICA" && $fechaSolicitada !== "") {
+    throw new InvalidArgumentException(
+        "La modalidad de fecha no coincide con la fecha enviada."
+    );
+}
+
+
         $token = $this->textoVenta($venta, "solicitud_id", 32);
         if (!preg_match('/^[a-f0-9]{32}$/D', $token)) throw new InvalidArgumentException("Identificador de solicitud inválido.");
 
@@ -1022,13 +1155,27 @@ public function guardarVentaRapida($data) {
         if ($usuario <= 0) throw new InvalidArgumentException("Configura el operador.");
 
         $stmt = $this->ejecutarSqlVenta(
-            "SELECT id, sale_kind, ticket_barcode, total_amount, payment_method FROM sales WHERE request_token = ? LIMIT 1",
+            "SELECT id, sale_kind, ticket_barcode, total_amount, payment_method, created_at FROM sales WHERE request_token = ? LIMIT 1",
             "s", [$token]
         );
         $anterior = $stmt->get_result()->fetch_assoc();
         $stmt->close();
 
         if ($anterior) {
+
+
+if ($modoFecha === "MANUAL") {
+    $fechaEsperada = str_replace("T", " ", $fechaSolicitada);
+
+    if (substr((string)$anterior["created_at"], 0, 16) !== $fechaEsperada) {
+        throw new InvalidArgumentException(
+            "Esta solicitud ya tiene una venta registrada con otra fecha. " .
+            "No se modificó el registro existente."
+        );
+    }
+}
+
+
             if ($anterior["sale_kind"] !== "RAPIDA" || $anterior["payment_method"] !== $forma || $this->centavosVenta($anterior["total_amount"]) !== $totalCentavos) {
                 throw new InvalidArgumentException("Este identificador ya se utilizó para otra operación.");
             }
@@ -1094,6 +1241,28 @@ public function guardarVentaRapida($data) {
             );
             $stmt->close();
 
+
+if ($modoFecha === "MANUAL") {
+    $stmtFecha = $this->ejecutarSqlVenta(
+        "SELECT created_at FROM sales WHERE id = ? LIMIT 1",
+        "i",
+        [$idVenta]
+    );
+
+    $filaFecha = $stmtFecha->get_result()->fetch_assoc();
+    $stmtFecha->close();
+
+    $fechaGuardada = (string)($filaFecha["created_at"] ?? "");
+    $fechaEsperada = str_replace("T", " ", $fechaSolicitada);
+
+    if (substr($fechaGuardada, 0, 16) !== $fechaEsperada) {
+        throw new RuntimeException(
+            "La fecha almacenada no coincide con la fecha seleccionada."
+        );
+    }
+}
+
+
             
 $stmtItem = $this->conn->prepare(
     "INSERT INTO sale_items
@@ -1148,7 +1317,7 @@ $stmtItem->close();
                 $stmt = $this->ejecutarSqlVenta(
                     "INSERT INTO cash_flows (cash_register_id,user_id,amount,`type`,description,reference,created_at) VALUES (?,?,?,'IN',?,?,?)",
                     "iissss",
-                    [$idCajaVenta, $usuario, $total, "Cobro venta rápida " . $numero, $numero, $fechaOperacion]
+                    [$idCajaVenta, $usuario, $total, "Cobro venta rápida " . $numero, $numero, $fecha]
                 );
                 $stmt->close();
 
@@ -1192,13 +1361,25 @@ $stmtItem->close();
         if ((int)$e->getCode() === 1062 && $token !== "") {
             try {
                 $stmt = $this->ejecutarSqlVenta(
-                    "SELECT id,sale_kind,ticket_barcode,total_amount,payment_method FROM sales WHERE request_token = ? LIMIT 1",
+                    "SELECT id,sale_kind,ticket_barcode,total_amount,payment_method,created_at FROM sales WHERE request_token = ? LIMIT 1",
                     "s", [$token]
                 );
                 $repetida = $stmt->get_result()->fetch_assoc();
                 $stmt->close();
 
-                if ($repetida && $repetida["sale_kind"] === "RAPIDA" && $repetida["payment_method"] === $forma && $this->centavosVenta($repetida["total_amount"]) === $totalCentavos) {
+                
+if (
+    $repetida &&
+    $repetida["sale_kind"] === "RAPIDA" &&
+    $repetida["payment_method"] === $forma &&
+    $this->centavosVenta($repetida["total_amount"]) === $totalCentavos &&
+    (
+        $modoFecha !== "MANUAL" ||
+        substr((string)$repetida["created_at"], 0, 16) ===
+        str_replace("T", " ", $fechaSolicitada)
+    )
+) {
+
                     $json["status"] = "ok";
                     $json["answer"] = "La venta ya estaba registrada; no se duplicó.";
                     $json["results"] = [
@@ -2862,8 +3043,619 @@ COALESCE(
     return $json;
 }
 
+//Nuevas funciones
+private function enteroCosteo($valor, int $decimales): int {
+    if (!is_string($valor) && !is_int($valor)) {
+        throw new InvalidArgumentException('Importe numérico inválido.');
+    }
+
+    $valor = trim((string)$valor);
+
+    if (!preg_match('/^\d{1,8}(?:\.\d{1,' . $decimales . '})?$/D', $valor)) {
+        throw new InvalidArgumentException(
+            'Revisa los números; utiliza punto decimal y valores no negativos.'
+        );
+    }
+
+    $partes = explode('.', $valor, 2);
+    $escala = 10 ** $decimales;
+
+    return ((int)$partes[0] * $escala) +
+        (int)str_pad($partes[1] ?? '', $decimales, '0');
+}
+
+public function getCatalogosCosteo(): array {
+    $json = [];
+
+    try {
+        if (!$this->conn) {
+            throw new RuntimeException('Conexión no disponible.');
+        }
+
+        $stmt = $this->ejecutarSqlVenta(
+            'SELECT role_id FROM users WHERE id=? AND is_active=1 LIMIT 1',
+            'i',
+            [$this->usuarioOperador]
+        );
+        $operador = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$operador || (int)$operador['role_id'] !== 1) {
+            throw new DomainException(
+                'Solo administración puede consultar costos y utilidades.'
+            );
+        }
+
+        $sqls = [
+            'materiales' => 'SELECT id,codigo,nombre,unidad,costo_unitario
+                FROM materiales_costeo WHERE activo=1 ORDER BY nombre',
+
+            'listas' => 'SELECT id,nombre
+                FROM listas_precios_costeo WHERE activo=1 ORDER BY nombre',
+
+            'tarifas' => 'SELECT t.material_id,t.lista_id,t.recargo_pct
+                FROM tarifas_material_costeo t
+                JOIN materiales_costeo m ON m.id=t.material_id AND m.activo=1
+                JOIN listas_precios_costeo l ON l.id=t.lista_id AND l.activo=1
+                WHERE t.activo=1',
+
+            'vehiculos' => 'SELECT id,nombre,tipo,unidad_capacidad,capacidad,
+                rendimiento_km_litro,costo_fijo_viaje
+                FROM vehiculos_costeo WHERE activo=1 ORDER BY nombre',
+
+            'destinos' => 'SELECT id,nombre,distancia_ida_km,casetas_por_viaje
+                FROM destinos_costeo WHERE activo=1 ORDER BY nombre'
+        ];
+
+        $resultados = [];
+
+        foreach ($sqls as $clave => $sql) {
+            $stmt = $this->ejecutarSqlVenta($sql);
+            $resultados[$clave] = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            $stmt->close();
+        }
+
+        $json = [
+            'status' => 'ok',
+            'answer' => 'Catálogos consultados.',
+            'results' => $resultados,
+            'code' => 200
+        ];
+
+    } catch (DomainException $e) {
+        $json = [
+            'status' => 'warning',
+            'answer' => $e->getMessage(),
+            'code' => 403
+        ];
+
+    } catch (Throwable $e) {
+        error_log('getCatalogosCosteo: ' . $e->getMessage());
+
+        $json = [
+            'status' => 'error',
+            'answer' => 'No fue posible consultar los catálogos.',
+            'code' => 500
+        ];
+    }
+
+    return $json;
+}
 
 
-    
+public function cotizarMaterial(array $data, bool $guardar = false): array {
+    $json = [];
+    $transaccion = false;
+
+    try {
+        if (!$this->conn) {
+            throw new RuntimeException('Conexión no disponible.');
+        }
+
+        if (!isset($data['datos']) || !is_string($data['datos'])) {
+            throw new InvalidArgumentException('Faltan los datos de la cotización.');
+        }
+
+        $d = json_decode($data['datos'], true, 32, JSON_THROW_ON_ERROR);
+
+        if (!is_array($d)) {
+            throw new InvalidArgumentException('Los datos deben ser un objeto JSON.');
+        }
+
+        // 1. VALIDAR IDENTIFICADORES
+        $ids = [];
+
+        foreach (['material_id','vehiculo_id','destino_id','lista_id'] as $clave) {
+            $id = filter_var(
+                $d[$clave] ?? null,
+                FILTER_VALIDATE_INT,
+                ['options' => ['min_range' => 1]]
+            );
+
+            if ($id === false || $id === null) {
+                throw new InvalidArgumentException(
+                    'Selecciona material, vehículo, destino y lista válidos.'
+                );
+            }
+
+            $ids[$clave] = (int)$id;
+        }
+
+        $cantidad = $this->enteroCosteo($d['cantidad'] ?? '', 2);
+
+        if ($cantidad < 1 || $cantidad > 10000000) {
+            throw new InvalidArgumentException(
+                'Cantidad permitida: 0.01 a 100,000.00.'
+            );
+        }
+
+        $cliente = $d['cliente'] ?? '';
+
+        if (!is_string($cliente)) {
+            throw new InvalidArgumentException('El nombre del cliente es inválido.');
+        }
+
+        $cliente = trim($cliente);
+
+        if (strlen($cliente) > 400 ||
+            preg_match_all('/./us', $cliente) > 100 ||
+            str_contains($cliente, "\0")) {
+            throw new InvalidArgumentException('Nombre de cliente inválido.');
+        }
+
+        $solicitud = $d['solicitud_id'] ?? '';
+
+        if (!is_string($solicitud)) {
+            throw new InvalidArgumentException('Identificador de solicitud inválido.');
+        }
+
+        if ($guardar && ($cliente === '' ||
+            !preg_match('/^[a-f0-9]{32}$/D', $solicitud))) {
+            throw new InvalidArgumentException(
+                'Para guardar, indica cliente y solicitud_id hexadecimal de 32 caracteres.'
+            );
+        }
+
+        // 2. VALIDAR GASTOS CAPTURADOS
+        $entradas = [];
+
+        foreach ([
+            'precio_diesel_litro',
+            'chofer_por_viaje',
+            'carga_por_viaje',
+            'descarga_por_viaje',
+            'flete_contratado_por_viaje',
+            'otros_gastos_total'
+        ] as $clave) {
+            $entradas[$clave] = $this->enteroCosteo($d[$clave] ?? '0', 2);
+
+            if ($entradas[$clave] > 100000000) {
+                throw new InvalidArgumentException(
+                    'Hay un gasto por encima del máximo permitido.'
+                );
+            }
+        }
+
+        $normalizado = array_merge(
+            $ids,
+            ['cantidad' => $cantidad, 'cliente' => $cliente],
+            $entradas
+        );
+
+        $huella = hash(
+            'sha256',
+            json_encode($normalizado, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE)
+        );
+
+        // 3. VALIDAR PERMISOS
+        $stmt = $this->ejecutarSqlVenta(
+            'SELECT role_id FROM users WHERE id=? AND is_active=1 LIMIT 1',
+            'i',
+            [$this->usuarioOperador]
+        );
+
+        $operador = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$operador || (int)$operador['role_id'] !== 1) {
+            throw new DomainException(
+                'Solo administración puede calcular y guardar costos.'
+            );
+        }
+
+        // 4. EVITAR SOLICITUDES DUPLICADAS
+        if ($guardar) {
+            $this->conn->begin_transaction();
+            $transaccion = true;
+
+            $stmt = $this->ejecutarSqlVenta(
+                'SELECT id,huella,precio_unitario,total_venta,utilidad
+                 FROM cotizaciones_costeo
+                 WHERE solicitud_id=? LIMIT 1 FOR UPDATE',
+                's',
+                [$solicitud]
+            );
+
+            $anterior = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+        } else {
+            $anterior = null;
+        }
+
+        if ($anterior) {
+            if (!hash_equals($anterior['huella'], $huella)) {
+                throw new InvalidArgumentException(
+                    'Este identificador ya se utilizó con datos distintos.'
+                );
+            }
+
+            $json = [
+                'status' => 'ok',
+                'answer' => 'La cotización ya estaba guardada.',
+                'results' => [
+                    'id' => (int)$anterior['id'],
+                    'precio_unitario' => $anterior['precio_unitario'],
+                    'total_venta' => $anterior['total_venta'],
+                    'utilidad' => $anterior['utilidad'],
+                    'duplicada' => true
+                ],
+                'code' => 200
+            ];
+        } else {
+            // 5. OBTENER DATOS REALES DESDE MYSQL
+            $stmt = $this->ejecutarSqlVenta(
+                'SELECT
+                    m.nombre AS material,m.unidad,m.costo_unitario,
+                    v.nombre AS vehiculo,v.tipo,v.unidad_capacidad,
+                    v.capacidad,v.rendimiento_km_litro,v.costo_fijo_viaje,
+                    z.nombre AS destino,z.distancia_ida_km,z.casetas_por_viaje,
+                    l.nombre AS lista,t.recargo_pct
+                 FROM materiales_costeo m
+                 JOIN tarifas_material_costeo t
+                    ON t.material_id=m.id AND t.lista_id=? AND t.activo=1
+                 JOIN listas_precios_costeo l
+                    ON l.id=t.lista_id AND l.activo=1
+                 JOIN vehiculos_costeo v
+                    ON v.id=? AND v.activo=1
+                 JOIN destinos_costeo z
+                    ON z.id=? AND z.activo=1
+                 WHERE m.id=? AND m.activo=1 LIMIT 1',
+                'iiii',
+                [
+                    $ids['lista_id'],
+                    $ids['vehiculo_id'],
+                    $ids['destino_id'],
+                    $ids['material_id']
+                ]
+            );
+
+            $cat = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if (!$cat) {
+                throw new InvalidArgumentException(
+                    'Material, lista, vehículo o destino no disponibles.'
+                );
+            }
+
+            if ($cat['unidad'] !== $cat['unidad_capacidad']) {
+                throw new InvalidArgumentException(
+                    'Material y vehículo deben usar la misma unidad de capacidad.'
+                );
+            }
+
+            // 6. CALCULAR CANTIDAD DE VIAJES
+            $cap = $this->enteroCosteo($cat['capacidad'], 2);
+            $costo4 = $this->enteroCosteo($cat['costo_unitario'], 4);
+            $recargo100 = $this->enteroCosteo($cat['recargo_pct'], 2);
+
+            if ($cap <= 0 || $costo4 > 1000000000 || $recargo100 > 20000) {
+                throw new InvalidArgumentException(
+                    'Revisa capacidad, costo del material o porcentaje de utilidad.'
+                );
+            }
+
+            $viajes = intdiv($cantidad + $cap - 1, $cap);
+
+            if ($viajes > 500) {
+                throw new InvalidArgumentException(
+                    'Se requieren más de 500 viajes; divide la operación.'
+                );
+            }
+
+            // Importe del material en centavos.
+            $costoMaterial = intdiv($costo4 * $cantidad + 5000, 10000);
+
+            // 7. CALCULAR GASTOS LOGÍSTICOS
+            $costoFijo = $this->enteroCosteo($cat['costo_fijo_viaje'], 2);
+            $casetas = $this->enteroCosteo($cat['casetas_por_viaje'], 2);
+            $distancia = $this->enteroCosteo($cat['distancia_ida_km'], 2);
+            $rendimiento = $this->enteroCosteo($cat['rendimiento_km_litro'], 2);
+
+            if ($distancia > 500000) {
+                throw new InvalidArgumentException(
+                    'Distancia superior a 5,000 km por trayecto.'
+                );
+            }
+
+            $costos = [
+                'COMBUSTIBLE' => 0,
+                'CASETAS' => 0,
+                'CHOFER' => 0,
+                'CARGA' => $entradas['carga_por_viaje'] * $viajes,
+                'DESCARGA' => $entradas['descarga_por_viaje'] * $viajes,
+                'VEHICULO' => 0,
+                'FLETE_CONTRATADO' => 0,
+                'OTROS' => $entradas['otros_gastos_total']
+            ];
+
+            if ($cat['tipo'] === 'PROPIO') {
+                if ($rendimiento <= 0 ||
+                    $entradas['precio_diesel_litro'] <= 0 ||
+                    $distancia <= 0) {
+                    throw new InvalidArgumentException(
+                        'Configura distancia, rendimiento y precio del combustible para vehículo propio.'
+                    );
+                }
+
+                if ($entradas['flete_contratado_por_viaje'] > 0) {
+                    throw new InvalidArgumentException(
+                        'No agregues flete contratado a un vehículo propio.'
+                    );
+                }
+
+                $numerador = $distancia * 2 * $viajes *
+                    $entradas['precio_diesel_litro'];
+
+                $costos['COMBUSTIBLE'] = intdiv(
+                    $numerador + intdiv($rendimiento, 2),
+                    $rendimiento
+                );
+
+                $costos['CASETAS'] = $casetas * $viajes;
+                $costos['CHOFER'] = $entradas['chofer_por_viaje'] * $viajes;
+                $costos['VEHICULO'] = $costoFijo * $viajes;
+            } else {
+                if ($entradas['flete_contratado_por_viaje'] <= 0) {
+                    throw new InvalidArgumentException(
+                        'Indica el costo del flete contratado.'
+                    );
+                }
+
+                if ($entradas['precio_diesel_litro'] ||
+                    $entradas['chofer_por_viaje']) {
+                    throw new InvalidArgumentException(
+                        'No dupliques chofer ni combustible incluidos en el flete contratado.'
+                    );
+                }
+
+                $costos['FLETE_CONTRATADO'] =
+                    $entradas['flete_contratado_por_viaje'] * $viajes;
+            }
+
+            // 8. COSTO TOTAL, PRECIO Y UTILIDAD
+            $costoEntrega = array_sum($costos);
+            $costoTotal = $costoMaterial + $costoEntrega;
+
+            if ($costoTotal <= 0 || $costoTotal > 9999999999) {
+                throw new InvalidArgumentException(
+                    'Costo total fuera del rango permitido.'
+                );
+            }
+
+            // Incremento sobre costo, no margen sobre venta.
+            $objetivo = intdiv(
+                $costoTotal * (10000 + $recargo100) + 5000,
+                10000
+            );
+
+            // Redondeo hacia arriba al centavo por unidad.
+            $precioUnitario = intdiv(
+                $objetivo * 100 + $cantidad - 1,
+                $cantidad
+            );
+
+            $ventaTotal = intdiv(
+                $precioUnitario * $cantidad + 50,
+                100
+            );
+
+            if ($ventaTotal > 9999999999 ||
+                $precioUnitario > 9999999999) {
+                throw new InvalidArgumentException(
+                    'Precio final fuera del rango permitido.'
+                );
+            }
+
+            $utilidad = $ventaTotal - $costoTotal;
+            $ajuste = $ventaTotal - $objetivo;
+
+            $mxn = static fn(int $centavos): string =>
+                number_format($centavos / 100, 2, '.', '');
+
+            $resultado = [
+                'material' => $cat['material'],
+                'vehiculo' => $cat['vehiculo'],
+                'destino' => $cat['destino'],
+                'lista' => $cat['lista'],
+                'unidad' => $cat['unidad'],
+                'cantidad' => number_format($cantidad / 100, 2, '.', ''),
+                'viajes' => $viajes,
+                'costo_unitario_material' => $cat['costo_unitario'],
+                'recargo_porcentaje' => $cat['recargo_pct'],
+                'costo_material' => $mxn($costoMaterial),
+                'costos_entrega' => $mxn($costoEntrega),
+                'costo_total' => $mxn($costoTotal),
+                'precio_unitario' => $mxn($precioUnitario),
+                'total_venta' => $mxn($ventaTotal),
+                'utilidad' => $mxn($utilidad),
+                'ajuste_redondeo' => $mxn($ajuste),
+                'costos' => array_map($mxn, $costos)
+            ];
+
+            // 9. GUARDAR SOLO CUANDO SE SOLICITE
+            if ($guardar) {
+                $valores = [
+                    $solicitud,
+                    $huella,
+                    $ids['material_id'],
+                    $ids['vehiculo_id'],
+                    $ids['destino_id'],
+                    $ids['lista_id'],
+                    $cliente,
+                    $cat['material'],
+                    $cat['vehiculo'],
+                    $cat['destino'],
+                    $cat['lista'],
+                    $cat['unidad'],
+                    $resultado['cantidad'],
+                    $viajes,
+                    $cat['costo_unitario'],
+                    $cat['recargo_pct'],
+                    $resultado['costo_material'],
+                    $resultado['costos_entrega'],
+                    $resultado['costo_total'],
+                    $resultado['precio_unitario'],
+                    $resultado['total_venta'],
+                    $resultado['utilidad'],
+                    $resultado['ajuste_redondeo']
+                ];
+
+                $columnas = [
+                    'solicitud_id','huella','material_id',
+                    'vehiculo_id','destino_id','lista_id','cliente',
+                    'nombre_material','nombre_vehiculo','nombre_destino',
+                    'nombre_lista','unidad','cantidad','viajes',
+                    'costo_unitario_material','recargo_porcentaje',
+                    'costo_material','costos_entrega','costo_total',
+                    'precio_unitario','total_venta','utilidad',
+                    'ajuste_redondeo'
+                ];
+
+                $sql = 'INSERT INTO cotizaciones_costeo (`' .
+                    implode('`,`', $columnas) . '`) VALUES (' .
+                    implode(',', array_fill(0, count($columnas), '?')) .
+                    ') ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)';
+
+                $stmt = $this->ejecutarSqlVenta(
+                    $sql,
+                    str_repeat('s', count($valores)),
+                    $valores
+                );
+
+                $nuevo = $stmt->affected_rows === 1;
+                $cotizacionId = (int)$this->conn->insert_id;
+                $stmt->close();
+
+                if (!$nuevo) {
+                    $stmt = $this->ejecutarSqlVenta(
+                        'SELECT id,huella,precio_unitario,total_venta,utilidad
+                         FROM cotizaciones_costeo WHERE id=? LIMIT 1',
+                        'i',
+                        [$cotizacionId]
+                    );
+
+                    $anterior = $stmt->get_result()->fetch_assoc();
+                    $stmt->close();
+
+                    if (!$anterior ||
+                        !hash_equals($anterior['huella'], $huella)) {
+                        throw new InvalidArgumentException(
+                            'Identificador reutilizado con datos distintos.'
+                        );
+                    }
+
+                    $resultado = [
+                        'id' => $cotizacionId,
+                        'precio_unitario' => $anterior['precio_unitario'],
+                        'total_venta' => $anterior['total_venta'],
+                        'utilidad' => $anterior['utilidad'],
+                        'duplicada' => true
+                    ];
+                } else {
+                    $stmt = $this->conn->prepare(
+                        'INSERT INTO cotizaciones_costos
+                         (cotizacion_id,concepto,importe)
+                         VALUES (?,?,?)'
+                    );
+
+                    if (!$stmt) {
+                        throw new RuntimeException($this->conn->error);
+                    }
+
+                    $concepto = '';
+                    $importe = '0.00';
+
+                    $stmt->bind_param(
+                        'iss',
+                        $cotizacionId,
+                        $concepto,
+                        $importe
+                    );
+
+                    foreach ($costos as $nombre => $valor) {
+                        if ($valor === 0) continue;
+
+                        $concepto = $nombre;
+                        $importe = $mxn($valor);
+                        $stmt->execute();
+                    }
+
+                    $stmt->close();
+
+                    $resultado['id'] = $cotizacionId;
+                    $resultado['duplicada'] = false;
+                }
+            }
+
+            $json = [
+                'status' => 'ok',
+                'answer' => $guardar
+                    ? 'Cotización guardada.'
+                    : 'Costeo calculado.',
+                'results' => $resultado,
+                'code' => 200
+            ];
+        }
+
+        if ($transaccion) {
+            $this->conn->commit();
+            $transaccion = false;
+        }
+
+    } catch (DomainException $e) {
+        if ($transaccion) $this->conn->rollback();
+
+        $json = [
+            'status' => 'warning',
+            'answer' => $e->getMessage(),
+            'code' => 403
+        ];
+
+    } catch (InvalidArgumentException | JsonException $e) {
+        if ($transaccion) $this->conn->rollback();
+
+        $json = [
+            'status' => 'warning',
+            'answer' => $e instanceof JsonException
+                ? 'JSON de cotización inválido.'
+                : $e->getMessage(),
+            'code' => 400
+        ];
+
+    } catch (Throwable $e) {
+        if ($transaccion) $this->conn->rollback();
+
+        error_log('cotizarMaterial: ' . $e->getMessage());
+
+        $json = [
+            'status' => 'error',
+            'answer' => 'No fue posible calcular o guardar la cotización.',
+            'code' => 500
+        ];
+    }
+
+    return $json;
+}
 }
 ?>

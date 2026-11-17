@@ -47,6 +47,18 @@ switch ($action) {
         $response = $consultas->guardarVentaRapida($_POST);
         break;
 
+    case "getCatalogosCosteo":
+        $response = $consultas->getCatalogosCosteo();
+        break;
+
+    case "calcularCosteoMaterial":
+        $response = $consultas->cotizarMaterial($_POST, false);
+        break;
+        
+    case "guardarCotizacionMaterial":
+        $response = $consultas->cotizarMaterial($_POST, true);
+        break;
+
     case "generarPdfNotaVenta":
         $idVenta = isset($_POST["id"]) ? (int)$_POST["id"] : 0;
         $response = $consultas->generarPdfNotaVenta($idVenta);

@@ -915,7 +915,12 @@ function guardarVentaRapida(fechaSeleccionada = "") {
         forma_pago:venta.forma_pago,
         referencia:venta.forma_pago === "TRANSFERENCIA" ? venta.referencia : "",
         observaciones:venta.observaciones,
-        fecha_operacion: fechaSeleccionada,
+        
+modo_fecha: window.CSM_ES_ADMIN && fechaSeleccionada
+    ? "MANUAL"
+    : "AUTOMATICA",
+fecha_operacion: fechaSeleccionada,
+
         items:venta.items.map(function(item){
             return {
                 origen:"MANUAL",
@@ -1073,7 +1078,12 @@ function guardarVentaNota(fechaSeleccionada = "") {
         metodo_abono:venta.metodo_abono,
         referencia_abono:venta.referencia_abono,
         caja_id:venta.caja_id,
-        fecha_operacion: fechaSeleccionada,
+        
+modo_fecha: window.CSM_ES_ADMIN && fechaSeleccionada
+    ? "MANUAL"
+    : "AUTOMATICA",
+fecha_operacion: fechaSeleccionada,
+
         items:venta.items.map(function(item){
             return {
                 origen:"MANUAL",
