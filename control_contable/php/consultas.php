@@ -3203,26 +3203,42 @@ public function getCatalogosCosteo(): array {
             );
         }
 
-        $sqls = [
-            'materiales' => 'SELECT id,codigo,nombre,unidad,costo_unitario
-                FROM materiales_costeo WHERE activo=1 ORDER BY nombre',
+        
+$sqls = [
+    'materiales' => "SELECT id,codigo,nombre,unidad,costo_unitario
+        FROM materiales_costeo
+        WHERE activo=1 AND eliminado=0
+        ORDER BY nombre",
 
-            'listas' => 'SELECT id,nombre
-                FROM listas_precios_costeo WHERE activo=1 ORDER BY nombre',
+    'listas' => "SELECT id,nombre
+        FROM listas_precios_costeo
+        WHERE activo=1 AND eliminado=0
+        ORDER BY nombre",
 
-            'tarifas' => 'SELECT t.material_id,t.lista_id,t.recargo_pct
-                FROM tarifas_material_costeo t
-                JOIN materiales_costeo m ON m.id=t.material_id AND m.activo=1
-                JOIN listas_precios_costeo l ON l.id=t.lista_id AND l.activo=1
-                WHERE t.activo=1',
+    'tarifas' => "SELECT t.material_id,t.lista_id,t.recargo_pct
+        FROM tarifas_material_costeo t
+        INNER JOIN materiales_costeo m
+            ON m.id=t.material_id
+            AND m.activo=1 AND m.eliminado=0
+        INNER JOIN listas_precios_costeo l
+            ON l.id=t.lista_id
+            AND l.activo=1 AND l.eliminado=0
+        WHERE t.activo=1 AND t.eliminado=0",
 
-            'vehiculos' => 'SELECT id,nombre,tipo,unidad_capacidad,capacidad,
-                rendimiento_km_litro,costo_fijo_viaje
-                FROM vehiculos_costeo WHERE activo=1 ORDER BY nombre',
+    'vehiculos' => "SELECT id,nombre,tipo,unidad_capacidad,
+        capacidad,rendimiento_km_litro,costo_fijo_viaje,
+        vin,tipo_transporte,configuracion_vehicular,
+        peso_bruto_kg,carga_util_kg,tanque_litros,combustible
+        FROM vehiculos_costeo
+        WHERE activo=1 AND eliminado=0
+        ORDER BY nombre",
 
-            'destinos' => 'SELECT id,nombre,distancia_ida_km,casetas_por_viaje
-                FROM destinos_costeo WHERE activo=1 ORDER BY nombre'
-        ];
+    'destinos' => "SELECT id,nombre,distancia_ida_km,casetas_por_viaje
+        FROM destinos_costeo
+        WHERE activo=1 AND eliminado=0
+        ORDER BY nombre"
+];
+
 
         $resultados = [];
 
@@ -3420,31 +3436,42 @@ public function cotizarMaterial(array $data, bool $guardar = false): array {
             ];
         } else {
             // 5. OBTENER DATOS REALES DESDE MYSQL
-            $stmt = $this->ejecutarSqlVenta(
-                'SELECT
-                    m.nombre AS material,m.unidad,m.costo_unitario,
-                    v.nombre AS vehiculo,v.tipo,v.unidad_capacidad,
-                    v.capacidad,v.rendimiento_km_litro,v.costo_fijo_viaje,
-                    z.nombre AS destino,z.distancia_ida_km,z.casetas_por_viaje,
-                    l.nombre AS lista,t.recargo_pct
-                 FROM materiales_costeo m
-                 JOIN tarifas_material_costeo t
-                    ON t.material_id=m.id AND t.lista_id=? AND t.activo=1
-                 JOIN listas_precios_costeo l
-                    ON l.id=t.lista_id AND l.activo=1
-                 JOIN vehiculos_costeo v
-                    ON v.id=? AND v.activo=1
-                 JOIN destinos_costeo z
-                    ON z.id=? AND z.activo=1
-                 WHERE m.id=? AND m.activo=1 LIMIT 1',
-                'iiii',
-                [
-                    $ids['lista_id'],
-                    $ids['vehiculo_id'],
-                    $ids['destino_id'],
-                    $ids['material_id']
-                ]
-            );
+            
+$stmt = $this->ejecutarSqlVenta(
+    "SELECT
+        m.nombre AS material,m.unidad,m.costo_unitario,
+        v.nombre AS vehiculo,v.tipo,v.tipo_transporte,
+        v.combustible,v.unidad_capacidad,v.capacidad,
+        v.rendimiento_km_litro,v.costo_fijo_viaje,
+        z.nombre AS destino,z.distancia_ida_km,
+        z.casetas_por_viaje,
+        l.nombre AS lista,t.recargo_pct
+    FROM materiales_costeo m
+    INNER JOIN tarifas_material_costeo t
+        ON t.material_id=m.id
+        AND t.lista_id=?
+        AND t.activo=1 AND t.eliminado=0
+    INNER JOIN listas_precios_costeo l
+        ON l.id=t.lista_id
+        AND l.activo=1 AND l.eliminado=0
+    INNER JOIN vehiculos_costeo v
+        ON v.id=?
+        AND v.activo=1 AND v.eliminado=0
+    INNER JOIN destinos_costeo z
+        ON z.id=?
+        AND z.activo=1 AND z.eliminado=0
+    WHERE m.id=?
+        AND m.activo=1 AND m.eliminado=0
+    LIMIT 1",
+    "iiii",
+    [
+        $ids['lista_id'],
+        $ids['vehiculo_id'],
+        $ids['destino_id'],
+        $ids['material_id']
+    ]
+);
+
 
             $cat = $stmt->get_result()->fetch_assoc();
             $stmt->close();
@@ -3454,6 +3481,22 @@ public function cotizarMaterial(array $data, bool $guardar = false): array {
                     'Material, lista, vehículo o destino no disponibles.'
                 );
             }
+
+
+if ($cat['tipo_transporte'] !== 'TERRESTRE') {
+    throw new InvalidArgumentException(
+        'El cálculo actual está disponible para transporte terrestre.'
+    );
+}
+
+if ($cat['tipo'] === 'PROPIO' &&
+    $cat['combustible'] !== null &&
+    $cat['combustible'] !== 'DIESEL') {
+    throw new InvalidArgumentException(
+        'Este combustible requiere configurar su método de costeo antes de cotizar.'
+    );
+}
+
 
             if ($cat['unidad'] !== $cat['unidad_capacidad']) {
                 throw new InvalidArgumentException(
@@ -3876,45 +3919,175 @@ public function guardarCatalogoCosteo(array $data): array {
                 ];
                 break;
 
-            case 'vehiculo':
-                $nombre = $leer('nombre');
-                $tipoVehiculo = strtoupper($leer('tipo_vehiculo', 15));
-                $unidad = strtoupper($leer('unidad_capacidad', 12));
+            
+case 'vehiculo':
+    $nombre = $leer('nombre');
+    $tipoVehiculo = strtoupper($leer('tipo_vehiculo', 15));
+    $unidad = strtoupper($leer('unidad_capacidad', 12));
 
-                if (!in_array($tipoVehiculo, ['PROPIO','CONTRATADO'], true) ||
-                    !preg_match('/^[A-Z0-9_]{1,12}$/D', $unidad)) {
-                    throw new InvalidArgumentException(
-                        'Tipo de transporte o unidad inválidos.'
-                    );
-                }
+    if (!in_array($tipoVehiculo, ['PROPIO', 'CONTRATADO'], true) ||
+        !in_array($unidad, ['PZA', 'BULTO', 'M3', 'TON', 'KG', 'VIAJE'], true)) {
+        throw new InvalidArgumentException(
+            'Tipo de vehículo o unidad de capacidad inválidos.'
+        );
+    }
 
-                $capacidad = $this->enteroCosteo($data['capacidad'] ?? '', 2);
-                $rendimiento = $this->enteroCosteo(
-                    $data['rendimiento_km_litro'] ?? '0', 2
+    $capacidad = $this->enteroCosteo($data['capacidad'] ?? '', 2);
+    $rendimiento = $this->enteroCosteo($data['rendimiento_km_litro'] ?? '0', 2);
+    $costoFijo = $this->enteroCosteo($data['costo_fijo_viaje'] ?? '0', 2);
+
+    if ($capacidad <= 0 ||
+        ($tipoVehiculo === 'PROPIO' && $rendimiento <= 0)) {
+        throw new InvalidArgumentException(
+            'Configura una capacidad válida y el rendimiento del vehículo propio.'
+        );
+    }
+
+    $campos = [
+        'nombre', 'tipo', 'unidad_capacidad', 'capacidad',
+        'rendimiento_km_litro', 'costo_fijo_viaje'
+    ];
+
+    $valores = [
+        $nombre, $tipoVehiculo, $unidad,
+        $decimal($capacidad, 2),
+        $decimal($rendimiento, 2),
+        $decimal($costoFijo, 2)
+    ];
+
+    $configuraciones = [
+        'Motocicleta', 'VL', 'C2', 'C3', 'C2R2', 'C3R2',
+        'C2R3', 'C3R3', 'T2S1', 'T2S2', 'T2S3',
+        'T3S1', 'T3S2', 'T3S3', 'T2S1R2', 'T2S2R2',
+        'T2S1R3', 'T3S1R2', 'T3S1R3', 'T3S2R2',
+        'T3S2R3', 'T3S2R4', 'T2S2S2', 'T3S2S2',
+        'T3S3S2', 'OTROEVGP', 'OTROSG', 'GPLUTA',
+        'GPLUTB', 'GPLUTC', 'GPLUTD', 'GPLATA',
+        'GPLATB', 'GPLATC', 'GPLATD'
+    ];
+
+    $adicionales = [
+        'vin', 'tipo_transporte', 'configuracion_vehicular',
+        'peso_bruto_kg', 'carga_util_kg',
+        'tanque_litros', 'combustible'
+    ];
+
+    $extras = [];
+
+    foreach ($adicionales as $campo) {
+        if (!array_key_exists($campo, $data)) continue;
+
+        if (!is_string($data[$campo]) && !is_int($data[$campo])) {
+            throw new InvalidArgumentException("Dato inválido: {$campo}.");
+        }
+
+        $valor = trim((string)$data[$campo]);
+        $valor = $valor === '' ? null : $valor;
+
+        if ($campo === 'vin' && $valor !== null) {
+            $valor = strtoupper($valor);
+
+            if (!preg_match('/^[A-HJ-NPR-Z0-9]{17}$/D', $valor)) {
+                throw new InvalidArgumentException(
+                    'El VIN debe tener 17 caracteres válidos, sin I, O ni Q.'
                 );
-                $costoFijo = $this->enteroCosteo(
-                    $data['costo_fijo_viaje'] ?? '0', 2
+            }
+        }
+
+        
+if ($campo === 'tipo_transporte') {
+    if ($valor === null && $id > 0) continue;
+
+    $valor = $valor === null ? 'TERRESTRE' : strtoupper($valor);
+
+    if (!in_array($valor, ['TERRESTRE', 'MARITIMO', 'AEREO'], true)) {
+        throw new InvalidArgumentException(
+            'Selecciona un tipo de transporte válido.'
+        );
+    }
+}
+
+
+        if ($campo === 'configuracion_vehicular' && $valor !== null) {
+            $valor = strtoupper($valor);
+            if ($valor === 'MOTOCICLETA') $valor = 'Motocicleta';
+
+            if (!in_array($valor, $configuraciones, true)) {
+                throw new InvalidArgumentException(
+                    'Configuración vehicular no permitida.'
                 );
+            }
+        }
 
-                if ($capacidad <= 0 ||
-                    ($tipoVehiculo === 'PROPIO' && $rendimiento <= 0)) {
-                    throw new InvalidArgumentException(
-                        'Configura capacidad y rendimiento del vehículo.'
-                    );
-                }
+        if ($campo === 'combustible' && $valor !== null) {
+            $valor = strtoupper($valor);
 
-                $campos = [
-                    'nombre','tipo','unidad_capacidad','capacidad',
-                    'rendimiento_km_litro','costo_fijo_viaje'
-                ];
+            if (!in_array($valor, [
+                'GASOLINA', 'DIESEL', 'GAS_LP', 'ELECTRICO', 'OTRO'
+            ], true)) {
+                throw new InvalidArgumentException(
+                    'Tipo de combustible inválido.'
+                );
+            }
+        }
 
-                $valores = [
-                    $nombre,$tipoVehiculo,$unidad,
-                    $decimal($capacidad, 2),
-                    $decimal($rendimiento, 2),
-                    $decimal($costoFijo, 2)
-                ];
-                break;
+        if (in_array($campo, [
+            'peso_bruto_kg', 'carga_util_kg', 'tanque_litros'
+        ], true) && $valor !== null) {
+            $numero = $this->enteroCosteo($valor, 2);
+
+            if ($numero <= 0) {
+                throw new InvalidArgumentException(
+                    "El campo {$campo} debe ser mayor que cero."
+                );
+            }
+
+            $valor = $decimal($numero, 2);
+        }
+
+        $campos[] = $campo;
+        $valores[] = $valor;
+        $extras[$campo] = $valor;
+    }
+
+    
+$anteriores = [];
+
+if ($id > 0 && (
+    array_key_exists('peso_bruto_kg', $extras) ||
+    array_key_exists('carga_util_kg', $extras)
+)) {
+    $stmt = $this->ejecutarSqlVenta(
+        "SELECT peso_bruto_kg,carga_util_kg
+         FROM vehiculos_costeo
+         WHERE id=? AND eliminado=0 LIMIT 1",
+        'i',
+        [$id]
+    );
+
+    $anteriores = $stmt->get_result()->fetch_assoc() ?: [];
+    $stmt->close();
+}
+
+$pesoBruto = array_key_exists('peso_bruto_kg', $extras)
+    ? $extras['peso_bruto_kg']
+    : ($anteriores['peso_bruto_kg'] ?? null);
+
+$cargaUtil = array_key_exists('carga_util_kg', $extras)
+    ? $extras['carga_util_kg']
+    : ($anteriores['carga_util_kg'] ?? null);
+
+if ($pesoBruto !== null && $cargaUtil !== null &&
+    $this->enteroCosteo($cargaUtil, 2) >
+    $this->enteroCosteo($pesoBruto, 2)) {
+    throw new InvalidArgumentException(
+        'La carga útil no puede superar el peso bruto del vehículo.'
+    );
+}
+
+
+    break;
+
 
             case 'destino':
                 $nombre = $leer('nombre');
@@ -3979,7 +4152,8 @@ public function guardarCatalogoCosteo(array $data): array {
                     'SELECT m.id
                      FROM materiales_costeo m
                      JOIN listas_precios_costeo l ON l.id=?
-                     WHERE m.id=? AND m.activo=1 AND l.activo=1 LIMIT 1',
+                     WHERE m.id=? AND m.activo=1 AND m.eliminado=0
+                     AND l.activo=1 AND l.eliminado=0 LIMIT 1',
                     'ii',
                     [$listaId, $materialId]
                 );
@@ -3992,6 +4166,24 @@ public function guardarCatalogoCosteo(array $data): array {
                         'Material o lista de precios no disponibles.'
                     );
                 }
+
+
+$stmt = $this->ejecutarSqlVenta(
+    "SELECT eliminado FROM tarifas_material_costeo
+     WHERE material_id=? AND lista_id=? LIMIT 1",
+    "ii",
+    [$materialId, $listaId]
+);
+
+$tarifaExistente = $stmt->get_result()->fetch_assoc();
+$stmt->close();
+
+if ($tarifaExistente && (int)$tarifaExistente['eliminado'] === 1) {
+    throw new InvalidArgumentException(
+        'Esta tarifa fue eliminada. Debes restaurarla antes de modificarla.'
+    );
+}
+
 
                 $sql = 'INSERT INTO tarifas_material_costeo
                     (material_id,lista_id,recargo_pct,activo)
@@ -4024,7 +4216,7 @@ public function guardarCatalogoCosteo(array $data): array {
 
             if ($id > 0) {
                 $stmt = $this->ejecutarSqlVenta(
-                    "SELECT id FROM {$tabla} WHERE id=? LIMIT 1",
+                    "SELECT id FROM {$tabla} WHERE id = ? AND eliminado = 0 LIMIT 1",
                     'i',
                     [$id]
                 );
@@ -4043,7 +4235,7 @@ public function guardarCatalogoCosteo(array $data): array {
                     $campos
                 ));
 
-                $sql = "UPDATE {$tabla} SET {$asignaciones} WHERE id=?";
+                $sql = "UPDATE {$tabla} SET {$asignaciones} WHERE id = ? AND eliminado = 0";
                 $valores[] = $id;
             } else {
                 $columnas = '`' . implode('`,`', $campos) . '`,`activo`';
@@ -4112,6 +4304,150 @@ public function guardarCatalogoCosteo(array $data): array {
 
     return $json;
 }
+
+public function cambiarEstadoCatalogoCosteo(array $data): array {
+    $json = [];
+    $transaccion = false;
+
+    try {
+        if (!$this->conn) {
+            throw new RuntimeException('Conexión no disponible.');
+        }
+
+        $stmt = $this->ejecutarSqlVenta(
+            "SELECT role_id FROM users
+             WHERE id=? AND is_active=1 LIMIT 1",
+            "i",
+            [$this->usuarioOperador]
+        );
+        $usuario = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$usuario || (int)$usuario['role_id'] !== 1) {
+            throw new DomainException('No tienes permisos para esta operación.');
+        }
+
+        $tablas = [
+            'material' => 'materiales_costeo',
+            'vehiculo' => 'vehiculos_costeo',
+            'destino' => 'destinos_costeo',
+            'lista' => 'listas_precios_costeo',
+            'tarifa' => 'tarifas_material_costeo'
+        ];
+
+        $tipo = $data['tipo'] ?? '';
+        $accion = $data['operacion'] ?? '';
+
+        if (!is_string($tipo) || !isset($tablas[$tipo])) {
+            throw new InvalidArgumentException('Catálogo inválido.');
+        }
+
+        if (!in_array($accion, ['eliminar', 'restaurar'], true)) {
+            throw new InvalidArgumentException('Operación no permitida.');
+        }
+
+        $tabla = $tablas[$tipo];
+        $eliminado = $accion === 'eliminar' ? 1 : 0;
+
+        if ($tipo === 'tarifa') {
+            $materialId = filter_var(
+                $data['material_id'] ?? null,
+                FILTER_VALIDATE_INT,
+                ['options' => ['min_range' => 1]]
+            );
+            $listaId = filter_var(
+                $data['lista_id'] ?? null,
+                FILTER_VALIDATE_INT,
+                ['options' => ['min_range' => 1]]
+            );
+
+            if (!$materialId || !$listaId) {
+                throw new InvalidArgumentException('Tarifa inválida.');
+            }
+
+            $condicion = 'material_id=? AND lista_id=?';
+            $tipos = 'ii';
+            $valores = [$materialId, $listaId];
+        } else {
+            $id = filter_var(
+                $data['id'] ?? null,
+                FILTER_VALIDATE_INT,
+                ['options' => ['min_range' => 1]]
+            );
+
+            if (!$id) {
+                throw new InvalidArgumentException('ID inválido.');
+            }
+
+            $condicion = 'id=?';
+            $tipos = 'i';
+            $valores = [$id];
+        }
+
+        $this->conn->begin_transaction();
+        $transaccion = true;
+
+        $stmt = $this->ejecutarSqlVenta(
+            "SELECT eliminado FROM {$tabla}
+             WHERE {$condicion} LIMIT 1 FOR UPDATE",
+            $tipos,
+            $valores
+        );
+
+        $registro = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$registro) {
+            throw new InvalidArgumentException('El registro no existe.');
+        }
+
+        $cambio = (int)$registro['eliminado'] !== $eliminado;
+
+        if ($cambio) {
+            $stmt = $this->ejecutarSqlVenta(
+                "UPDATE {$tabla} SET eliminado=?
+                 WHERE {$condicion}",
+                'i' . $tipos,
+                array_merge([$eliminado], $valores)
+            );
+            $stmt->close();
+        }
+
+        $this->conn->commit();
+        $transaccion = false;
+
+        $json['status'] = 'ok';
+        $json['answer'] = $eliminado
+            ? 'Registro eliminado correctamente.'
+            : 'Registro restaurado correctamente.';
+        $json['results'] = [
+            'tipo' => $tipo,
+            'eliminado' => $eliminado,
+            'actualizado' => $cambio
+        ];
+        $json['code'] = 200;
+
+    } catch (DomainException $e) {
+        if ($transaccion) $this->conn->rollback();
+        $json = ['status'=>'warning','answer'=>$e->getMessage(),'code'=>403];
+
+    } catch (InvalidArgumentException $e) {
+        if ($transaccion) $this->conn->rollback();
+        $json = ['status'=>'warning','answer'=>$e->getMessage(),'code'=>400];
+
+    } catch (Throwable $e) {
+        if ($transaccion) $this->conn->rollback();
+        error_log('cambiarEstadoCatalogoCosteo: ' . $e->getMessage());
+        $json = [
+            'status'=>'error',
+            'answer'=>'No fue posible actualizar el estado del registro.',
+            'code'=>500
+        ];
+    }
+
+    return $json;
+}
+
 
 
 }
