@@ -3774,5 +3774,345 @@ public function cotizarMaterial(array $data, bool $guardar = false): array {
 
     return $json;
 }
+
+
+public function guardarCatalogoCosteo(array $data): array {
+    $json = [];
+
+    try {
+        if (!$this->conn) {
+            throw new RuntimeException('Conexión no disponible.');
+        }
+
+        // PERMISOS DE ADMINISTRACIÓN
+        $stmt = $this->ejecutarSqlVenta(
+            'SELECT role_id FROM users WHERE id=? AND is_active=1 LIMIT 1',
+            'i',
+            [$this->usuarioOperador]
+        );
+
+        $usuario = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$usuario || (int)$usuario['role_id'] !== 1) {
+            throw new DomainException(
+                'No tienes permiso para modificar los catálogos.'
+            );
+        }
+
+        $tipo = $data['tipo'] ?? '';
+
+        $tablas = [
+            'material' => 'materiales_costeo',
+            'vehiculo' => 'vehiculos_costeo',
+            'destino' => 'destinos_costeo',
+            'lista' => 'listas_precios_costeo'
+        ];
+
+        if (!is_string($tipo) ||
+            (!isset($tablas[$tipo]) && $tipo !== 'tarifa')) {
+            throw new InvalidArgumentException('Tipo de catálogo inválido.');
+        }
+
+        $id = filter_var(
+            $data['id'] ?? 0,
+            FILTER_VALIDATE_INT,
+            ['options' => ['min_range' => 0]]
+        );
+
+        if ($id === false) {
+            throw new InvalidArgumentException('Identificador inválido.');
+        }
+
+        $leer = static function(string $campo, int $maximo = 150) use ($data): string {
+            $valor = $data[$campo] ?? '';
+
+            if (!is_string($valor) && !is_int($valor)) {
+                throw new InvalidArgumentException("Campo {$campo} inválido.");
+            }
+
+            $valor = trim((string)$valor);
+
+            if ($valor === '' || strlen($valor) > $maximo ||
+                preg_match('/[\x00-\x1F]/', $valor)) {
+                throw new InvalidArgumentException(
+                    "Revisa el campo {$campo}."
+                );
+            }
+
+            return $valor;
+        };
+
+        $decimal = static function(int $valor, int $decimales): string {
+            $escala = 10 ** $decimales;
+
+            return sprintf(
+                '%d.%0' . $decimales . 'd',
+                intdiv($valor, $escala),
+                $valor % $escala
+            );
+        };
+
+        $campos = [];
+        $valores = [];
+
+        switch ($tipo) {
+            case 'material':
+                $codigo = strtoupper($leer('codigo', 50));
+                $nombre = $leer('nombre');
+                $unidad = strtoupper($leer('unidad', 12));
+                $costo = $this->enteroCosteo($data['costo_unitario'] ?? '', 4);
+
+                if (!preg_match('/^[A-Z0-9_-]{2,50}$/D', $codigo) ||
+                    !preg_match('/^[A-Z0-9_]{1,12}$/D', $unidad)) {
+                    throw new InvalidArgumentException(
+                        'Código o unidad de medida inválidos.'
+                    );
+                }
+
+                $campos = ['codigo','nombre','unidad','costo_unitario'];
+                $valores = [
+                    $codigo,$nombre,$unidad,$decimal($costo, 4)
+                ];
+                break;
+
+            case 'vehiculo':
+                $nombre = $leer('nombre');
+                $tipoVehiculo = strtoupper($leer('tipo_vehiculo', 15));
+                $unidad = strtoupper($leer('unidad_capacidad', 12));
+
+                if (!in_array($tipoVehiculo, ['PROPIO','CONTRATADO'], true) ||
+                    !preg_match('/^[A-Z0-9_]{1,12}$/D', $unidad)) {
+                    throw new InvalidArgumentException(
+                        'Tipo de transporte o unidad inválidos.'
+                    );
+                }
+
+                $capacidad = $this->enteroCosteo($data['capacidad'] ?? '', 2);
+                $rendimiento = $this->enteroCosteo(
+                    $data['rendimiento_km_litro'] ?? '0', 2
+                );
+                $costoFijo = $this->enteroCosteo(
+                    $data['costo_fijo_viaje'] ?? '0', 2
+                );
+
+                if ($capacidad <= 0 ||
+                    ($tipoVehiculo === 'PROPIO' && $rendimiento <= 0)) {
+                    throw new InvalidArgumentException(
+                        'Configura capacidad y rendimiento del vehículo.'
+                    );
+                }
+
+                $campos = [
+                    'nombre','tipo','unidad_capacidad','capacidad',
+                    'rendimiento_km_litro','costo_fijo_viaje'
+                ];
+
+                $valores = [
+                    $nombre,$tipoVehiculo,$unidad,
+                    $decimal($capacidad, 2),
+                    $decimal($rendimiento, 2),
+                    $decimal($costoFijo, 2)
+                ];
+                break;
+
+            case 'destino':
+                $nombre = $leer('nombre');
+                $distancia = $this->enteroCosteo(
+                    $data['distancia_ida_km'] ?? '', 2
+                );
+                $casetas = $this->enteroCosteo(
+                    $data['casetas_por_viaje'] ?? '0', 2
+                );
+
+                if ($distancia > 500000) {
+                    throw new InvalidArgumentException(
+                        'La distancia no puede superar 5,000 km.'
+                    );
+                }
+
+                $campos = [
+                    'nombre','distancia_ida_km','casetas_por_viaje'
+                ];
+
+                $valores = [
+                    $nombre,
+                    $decimal($distancia, 2),
+                    $decimal($casetas, 2)
+                ];
+                break;
+
+            case 'lista':
+                $campos = ['nombre'];
+                $valores = [$leer('nombre', 100)];
+                break;
+
+            case 'tarifa':
+                $materialId = filter_var(
+                    $data['material_id'] ?? null,
+                    FILTER_VALIDATE_INT,
+                    ['options' => ['min_range' => 1]]
+                );
+                $listaId = filter_var(
+                    $data['lista_id'] ?? null,
+                    FILTER_VALIDATE_INT,
+                    ['options' => ['min_range' => 1]]
+                );
+
+                if (!$materialId || !$listaId) {
+                    throw new InvalidArgumentException(
+                        'Selecciona material y lista de precios.'
+                    );
+                }
+
+                $recargo = $this->enteroCosteo(
+                    $data['recargo_pct'] ?? '', 2
+                );
+
+                if ($recargo > 20000) {
+                    throw new InvalidArgumentException(
+                        'El incremento no puede superar el 200%.'
+                    );
+                }
+
+                $stmt = $this->ejecutarSqlVenta(
+                    'SELECT m.id
+                     FROM materiales_costeo m
+                     JOIN listas_precios_costeo l ON l.id=?
+                     WHERE m.id=? AND m.activo=1 AND l.activo=1 LIMIT 1',
+                    'ii',
+                    [$listaId, $materialId]
+                );
+
+                $existen = $stmt->get_result()->fetch_assoc();
+                $stmt->close();
+
+                if (!$existen) {
+                    throw new InvalidArgumentException(
+                        'Material o lista de precios no disponibles.'
+                    );
+                }
+
+                $sql = 'INSERT INTO tarifas_material_costeo
+                    (material_id,lista_id,recargo_pct,activo)
+                    VALUES (?,?,?,1)
+                    ON DUPLICATE KEY UPDATE
+                    recargo_pct=VALUES(recargo_pct),activo=1';
+
+                $stmt = $this->ejecutarSqlVenta(
+                    $sql,
+                    'iis',
+                    [$materialId, $listaId, $decimal($recargo, 2)]
+                );
+
+                $stmt->close();
+
+                $json = [
+                    'status' => 'ok',
+                    'answer' => 'Tarifa guardada correctamente.',
+                    'results' => [
+                        'material_id' => $materialId,
+                        'lista_id' => $listaId
+                    ],
+                    'code' => 200
+                ];
+                break;
+        }
+
+        if ($tipo !== 'tarifa') {
+            $tabla = $tablas[$tipo];
+
+            if ($id > 0) {
+                $stmt = $this->ejecutarSqlVenta(
+                    "SELECT id FROM {$tabla} WHERE id=? LIMIT 1",
+                    'i',
+                    [$id]
+                );
+
+                $existe = $stmt->get_result()->fetch_assoc();
+                $stmt->close();
+
+                if (!$existe) {
+                    throw new InvalidArgumentException(
+                        'El registro que intentas editar no existe.'
+                    );
+                }
+
+                $asignaciones = implode(',', array_map(
+                    static fn($col) => "`{$col}`=?",
+                    $campos
+                ));
+
+                $sql = "UPDATE {$tabla} SET {$asignaciones} WHERE id=?";
+                $valores[] = $id;
+            } else {
+                $columnas = '`' . implode('`,`', $campos) . '`,`activo`';
+
+                $sql = "INSERT INTO {$tabla} ({$columnas}) VALUES (" .
+                    implode(',', array_fill(0, count($campos), '?')) .
+                    ',1)';
+            }
+
+            $stmt = $this->ejecutarSqlVenta(
+                $sql,
+                str_repeat('s', count($valores)),
+                $valores
+            );
+
+            $registroId = $id > 0 ? $id : (int)$this->conn->insert_id;
+            $stmt->close();
+
+            $json = [
+                'status' => 'ok',
+                'answer' => $id > 0
+                    ? 'Registro actualizado correctamente.'
+                    : 'Registro creado correctamente.',
+                'results' => [
+                    'id' => $registroId,
+                    'tipo' => $tipo
+                ],
+                'code' => 200
+            ];
+        }
+
+    } catch (DomainException $e) {
+        $json = [
+            'status' => 'warning',
+            'answer' => $e->getMessage(),
+            'code' => 403
+        ];
+
+    } catch (InvalidArgumentException $e) {
+        $json = [
+            'status' => 'warning',
+            'answer' => $e->getMessage(),
+            'code' => 400
+        ];
+
+    } catch (mysqli_sql_exception $e) {
+        error_log('guardarCatalogoCosteo: ' . $e->getMessage());
+
+        $json = [
+            'status' => 'error',
+            'answer' => $e->getCode() == 1062
+                ? 'Ya existe un registro con esos datos.'
+                : 'No fue posible guardar el catálogo.',
+            'code' => $e->getCode() == 1062 ? 409 : 500
+        ];
+
+    } catch (Throwable $e) {
+        error_log('guardarCatalogoCosteo: ' . $e->getMessage());
+
+        $json = [
+            'status' => 'error',
+            'answer' => 'Ocurrió un error al guardar el catálogo.',
+            'code' => 500
+        ];
+    }
+
+    return $json;
+}
+
+
 }
 ?>
