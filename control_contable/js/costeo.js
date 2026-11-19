@@ -169,7 +169,7 @@ let tipoActual = "material";
 let cotizacionVigente = null;
 let consultaActual = 0;
 
-const CLAVE_CARTO = "TU_CLAVE_CARTO";
+const CLAVE_CARTO = "cb1_5cab_1_ef215a02384cb8ac2be62fe5";
 const CLAVE_LOCATIONIQ = "pk.131467ff150f4f89b6d436411a5f8052";
 const CENTRO_MAPA = [17.27, -97.68];
 
@@ -244,7 +244,7 @@ function crearMapaCosteo(elemento, centro, zoom = 14) {
         throw new Error("No se cargó Leaflet.");
     }
 
-    if (!CLAVE_CARTO.trim() || CLAVE_CARTO === "TU_CLAVE_CARTO") {
+    if (!CLAVE_CARTO.trim() || CLAVE_CARTO === "cb1_5cab_1_ef215a02384cb8ac2be62fe5") {
         throw new Error("Primero configura tu clave de CARTO.");
     }
 
