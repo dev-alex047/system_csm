@@ -167,3 +167,50 @@
         min-width: 620px;
     }
 }
+
+#ccTabla .cc-editar,
+#ccTabla .cc-estado {
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-radius: 9px;
+    font-size: 16px;
+    vertical-align: middle;
+}
+
+/* FORMULARIOS DE CATÁLOGOS */
+
+#ccModal .modal-dialog-scrollable .modal-content {
+    max-height: calc(100dvh - 2rem);
+    overflow: hidden;
+}
+
+#ccModal .cc-formulario-modal {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}
+
+#ccModal .cc-formulario-modal > .modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+#ccModal .modal-header,
+#ccModal .modal-footer {
+    flex-shrink: 0;
+}
+
+@media (max-width: 576px) {
+    #ccModal .modal-dialog-scrollable .modal-content {
+        max-height: calc(100dvh - 1rem);
+    }
+}

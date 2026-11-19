@@ -175,7 +175,7 @@ const activos = clave => (datos[clave] || []).filter(registro =>
 function consultarCatalogos(alTerminar) {
     const folioConsulta = ++consultaActual;
 
-    api({action: "getCatalogosCosteo", incluir_eliminados: "1"}).done(function(r) {
+   api({action: "getCatalogosCosteo"}).done(function(r) {
         if (folioConsulta !== consultaActual) return;
 
         if (r.status !== "ok") {
@@ -228,6 +228,14 @@ function renderAdminCosteo() {
         </div>
     `);
 
+    $("#ccModalCatalogos").on("hide.bs.modal", function() {
+    const enfocado = document.activeElement;
+
+    if (enfocado && this.contains(enfocado)) {
+        enfocado.blur();
+    }
+});
+
     $("#ccAdminContenido").html(`
         <section class="nota-bloque mb-3">
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3">
@@ -237,9 +245,6 @@ function renderAdminCosteo() {
                         Los cambios actualizan las opciones para nuevas cotizaciones.
                     </p>
                 </div>
-                <button type="button" class="btn btn-outline-success btn-sm" id="ccActualizar">
-                    <i class="bi bi-arrow-clockwise me-1"></i>Actualizar
-                </button>
             </div>
             <div class="d-flex flex-wrap gap-2" id="ccPestanas" aria-label="Catálogos"></div>
         </section>
@@ -259,21 +264,13 @@ function renderAdminCosteo() {
                     <input id="ccBuscar" class="form-control"
                            placeholder="Buscar por nombre, código o identificación..." autocomplete="off">
                 </div>
-                <div class="col-lg-4">
-                    <div class="form-check form-switch py-2">
-                        <input type="checkbox" class="form-check-input" id="ccEliminados">
-                        <label class="form-check-label" for="ccEliminados">Ver eliminados</label>
-                    </div>
-                </div>
+                
             </div>
             <div class="table-responsive cc-tabla-contenedor">
                 <table class="table table-hover align-middle mb-0" id="ccTabla">
                     <thead></thead><tbody></tbody>
                 </table>
             </div>
-            <p class="small text-secondary mt-3 mb-0">
-                La eliminación es lógica: conserva el historial y permite restaurar los registros.
-            </p>
         </section>
     `);
 
@@ -308,7 +305,6 @@ function elegirCatalogo(tipo) {
     }).addClass("active btn-success text-white").removeClass("btn-outline-success");
 
     $("#ccBuscar").val("");
-    $("#ccEliminados").prop("checked", false);
     mostrarTablaCosteo();
 }
 
@@ -316,19 +312,17 @@ function mostrarTablaCosteo() {
     if (!$("#ccTabla").length) return;
 
     const config = esquemas[tipoActual];
-    const borrados = $("#ccEliminados").is(":checked");
     const buscar = $("#ccBuscar").val().toLocaleLowerCase("es-MX").trim();
     const filas = datos[config.coleccion] || [];
 
     const visibles = filas.map((registro, indice) => ({registro, indice})).filter(function(item) {
-        return Number(item.registro.eliminado || 0) === Number(borrados) &&
-            (!buscar || Object.values(item.registro).some(valor =>
-                String(valor ?? "").toLocaleLowerCase("es-MX").includes(buscar)
-            ));
-    });
-
+    return Number(item.registro.eliminado || 0) === 0 &&
+        (!buscar || Object.values(item.registro).some(valor =>
+            String(valor ?? "").toLocaleLowerCase("es-MX").includes(buscar)
+        ));
+});
     $("#ccTitulo").text(config.titulo);
-    $("#ccConteo").text(`${visibles.length} registros ${borrados ? "eliminados" : "disponibles"}`);
+    $("#ccConteo").text(`${visibles.length} registros disponibles`);
 
     const $thead = $("#ccTabla thead").empty();
     const $trh = $("<tr>");
@@ -364,22 +358,24 @@ function mostrarTablaCosteo() {
 
         const $acciones = $("<td>", {class: "text-nowrap"});
 
-        if (!borrados) {
-            $("<button>", {
-                type: "button",
-                class: "btn btn-sm btn-outline-success me-2 cc-editar",
-                html: '<i class="bi bi-pencil-square me-1"></i>Editar'
-            }).attr("data-indice", indice).appendTo($acciones);
-        }
+$("<button>", {
+    type: "button",
+    class: "btn btn-sm btn-outline-success me-2 cc-editar",
+    html: '<i class="bi bi-pencil-square"></i>',
+    title: "Editar",
+    "aria-label": "Editar registro"
+}).attr("data-indice", indice).appendTo($acciones);
 
-        $("<button>", {
-            type: "button",
-            class: borrados ? "btn btn-sm btn-outline-success cc-estado" : "btn btn-sm btn-outline-danger cc-estado",
-            text: borrados ? "Restaurar" : "Eliminar"
-        }).attr({
-            "data-indice": indice,
-            "data-operacion": borrados ? "restaurar" : "eliminar"
-        }).appendTo($acciones);
+$("<button>", {
+    type: "button",
+    class: "btn btn-sm btn-outline-danger cc-estado",
+    html: '<i class="bi bi-trash"></i>',
+    title: "Eliminar",
+    "aria-label": "Eliminar registro"
+}).attr({
+    "data-indice": indice,
+    "data-operacion": "eliminar"
+}).appendTo($acciones);
 
         $tr.append($acciones).appendTo($body);
     });
@@ -388,7 +384,7 @@ function mostrarTablaCosteo() {
         $body.append($("<tr>").append($("<td>", {
             colspan: config.columnas.length + 1,
             class: "text-center text-secondary py-4",
-            text: borrados ? "No hay registros eliminados." : "No hay registros que coincidan."
+            text: "No hay registros que coincidan."
         })));
     }
 }
@@ -430,10 +426,7 @@ function abrirFormularioCosteo(indice = null) {
 
     const anterior = document.getElementById("ccModal");
 
-    if (anterior) {
-        bootstrap.Modal.getInstance(anterior)?.dispose();
-        anterior.remove();
-    }
+if (anterior) return;
 
     $("body").append(`
         <div class="modal fade" id="ccModal" tabindex="-1"
@@ -448,7 +441,7 @@ function abrirFormularioCosteo(indice = null) {
                         <button type="button" class="btn-close"
                                 data-bs-dismiss="modal" aria-label="Cerrar"></button>
                     </div>
-                    <form id="ccFormulario" novalidate>
+                    <form id="ccFormulario" class="cc-formulario-modal" novalidate>
                         <div class="modal-body">
                             <div class="row g-3" id="ccCampos"></div>
                             <p class="small text-secondary mt-3 mb-0" id="ccAyuda"></p>
@@ -467,8 +460,9 @@ function abrirFormularioCosteo(indice = null) {
     `);
 
     $("#ccModalTitulo").text(
-        (registro ? "Editar " : "Agregar ") + config.titulo.toLocaleLowerCase("es-MX")
-    );
+    (registro ? "Editar " : "Agregar ") +
+    (tipoActual === "vehiculo" ? "vehículo" : config.titulo.toLocaleLowerCase("es-MX"))
+);
 
     const $campos = $("#ccCampos");
 
@@ -530,6 +524,18 @@ function abrirFormularioCosteo(indice = null) {
     const modal = bootstrap.Modal.getOrCreateInstance(elemento, {backdrop: "static"});
     const catalogos = document.getElementById("ccModalCatalogos");
 
+    $(elemento).on("hide.bs.modal", function() {
+    const enfocado = document.activeElement;
+
+    if (enfocado && this.contains(enfocado)) {
+        enfocado.blur();
+    }
+});
+
+$(elemento).one("shown.bs.modal", function() {
+    $(this).find(".modal-body input:enabled:visible").first().trigger("focus");
+});
+
     $("#ccFormulario").data("indice", indice);
 
     $(elemento).one("hidden.bs.modal", function() {
@@ -543,13 +549,16 @@ function abrirFormularioCosteo(indice = null) {
     });
 
     if (catalogos && $(catalogos).hasClass("show")) {
-        $(catalogos).one("hidden.bs.modal", function() {
+    $(catalogos).one("hidden.bs.modal", function() {
+        if (elemento.isConnected) {
             modal.show();
-        });
-        bootstrap.Modal.getOrCreateInstance(catalogos).hide();
-    } else {
-        modal.show();
-    }
+        }
+    });
+
+    bootstrap.Modal.getOrCreateInstance(catalogos).hide();
+} else {
+    modal.show();
+}
 }
 
 function guardarFormularioCosteo(e) {
@@ -620,29 +629,27 @@ function guardarFormularioCosteo(e) {
     });
 }
 
-function cambiarEstadoCosteo(indice, operacion) {
+function cambiarEstadoCosteo(indice) {
     const config = esquemas[tipoActual];
     const registro = datos[config.coleccion]?.[indice];
 
-    if (!registro) return;
+    if (!registro || Number(registro.eliminado || 0) === 1) return;
 
     Swal.fire({
-        title: operacion === "eliminar" ? "¿Eliminar este registro?" : "¿Restaurar este registro?",
-        text: operacion === "eliminar"
-            ? "No se borrará de MySQL; dejará de estar disponible para nuevas cotizaciones."
-            : "Volverá a estar disponible cuando sus catálogos relacionados estén activos.",
-        icon: "question",
+        title: "¿Eliminar este registro?",
+        text: "El registro dejará de estar disponible para nuevas cotizaciones.",
+        icon: "warning",
         showCancelButton: true,
-        confirmButtonText: operacion === "eliminar" ? "Sí, eliminar" : "Sí, restaurar",
+        confirmButtonText: "Sí, eliminar",
         cancelButtonText: "Cancelar",
-        confirmButtonColor: operacion === "eliminar" ? "#b42318" : "#08744b"
+        confirmButtonColor: "#b42318"
     }).then(function(decision) {
         if (!decision.isConfirmed) return;
 
         const parametros = {
             action: "cambiarEstadoCatalogoCosteo",
             tipo: tipoActual,
-            operacion: operacion
+            operacion: "eliminar"
         };
 
         if (tipoActual === "tarifa") {
@@ -654,14 +661,14 @@ function cambiarEstadoCosteo(indice, operacion) {
 
         api(parametros).done(function(r) {
             if (r.status !== "ok") {
-                return Swal.fire("No disponible", r.answer || "No se pudo cambiar el estado.", "warning");
+                return Swal.fire("No disponible", r.answer || "No se pudo eliminar.", "warning");
             }
 
             consultarCatalogos(mostrarTablaCosteo);
 
             Swal.fire({
                 icon: "success",
-                title: r.answer || "Estado actualizado",
+                title: "Registro eliminado",
                 timer: 1700,
                 showConfirmButton: false
             });
@@ -1008,12 +1015,7 @@ function bindCosteo() {
         elegirCatalogo(this.dataset.tipo);
     });
 
-    $(document).on("click", "#ccActualizar", function() {
-        consultarCatalogos(mostrarTablaCosteo);
-    });
-
     $(document).on("input", "#ccBuscar", mostrarTablaCosteo);
-    $(document).on("change", "#ccEliminados", mostrarTablaCosteo);
 
     $(document).on("click", "#ccNuevo", function() {
         abrirFormularioCosteo();
@@ -1024,8 +1026,8 @@ function bindCosteo() {
     });
 
     $(document).on("click", ".cc-estado", function() {
-        cambiarEstadoCosteo(Number(this.dataset.indice), this.dataset.operacion);
-    });
+    cambiarEstadoCosteo(Number(this.dataset.indice));
+});
 
     $(document).on("submit", "#ccFormulario", guardarFormularioCosteo);
     $(document).on("change", "#ccVehiculo", actualizarCondiciones);
