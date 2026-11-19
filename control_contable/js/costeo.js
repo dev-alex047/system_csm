@@ -105,19 +105,36 @@ const esquemas = {
         ]
     },
     destino: {
-        titulo: "Destinos",
-        coleccion: "destinos",
-        columnas: [
-            ["nombre", "Destino"],
-            ["distancia_ida_km", "Distancia de ida (km)"],
-            ["casetas_por_viaje", "Casetas por viaje ($)"]
-        ],
-        campos: [
-            campo("nombre", "Destino o comunidad", "text", true, {max: 150, wide: true}),
-            numero("distancia_ida_km", "Distancia de ida (km)"),
-            numero("casetas_por_viaje", "Casetas por viaje ($)")
-        ]
-    },
+    titulo: "Destinos",
+    coleccion: "destinos",
+    columnas: [
+        ["nombre", "Destino"],
+        ["municipio", "Municipio"],
+        ["distancia_ida_km", "Distancia de ida (km)"],
+        ["casetas_por_viaje", "Casetas por viaje ($)"]
+    ],
+    campos: [
+        campo("nombre", "Destino o comunidad", "text", true, {max: 150, wide: true}),
+        numero("distancia_ida_km", "Distancia de ida (km)"),
+        numero("casetas_por_viaje", "Casetas por viaje ($)"),
+
+        campo("calle", "Calle o vialidad", "text", false, {max: 150, wide: true}),
+        campo("numero_exterior", "Número exterior", "text", false, {max: 20}),
+        campo("numero_interior", "Número interior", "text", false, {max: 20}),
+        campo("colonia", "Colonia o localidad", "text", false, {max: 120}),
+        campo("municipio", "Municipio", "text", false, {max: 120}),
+        campo("estado", "Estado", "text", false, {max: 100}),
+        campo("codigo_postal", "Código postal", "text", false, {max: 10}),
+        campo("referencias", "Referencias de entrega", "text", false, {max: 255, wide: true}),
+
+        campo("latitud", "Latitud", "number", false, {
+            step: "any", min: "-90", max: "90"
+        }),
+        campo("longitud", "Longitud", "number", false, {
+            step: "any", min: "-180", max: "180"
+        })
+    ]
+},
     lista: {
         titulo: "Listas de precios",
         coleccion: "listas",
@@ -151,6 +168,13 @@ const datos = {
 let tipoActual = "material";
 let cotizacionVigente = null;
 let consultaActual = 0;
+
+const CLAVE_CARTO = "";
+const CENTRO_MAPA = [17.27, -97.68];
+
+let mapaDestinoFormulario = null;
+let marcadorDestinoFormulario = null;
+let mapaDestinoLectura = null;
 
 const mxn = valor => new Intl.NumberFormat("es-MX", {
     style: "currency",
@@ -192,6 +216,112 @@ function consultarCatalogos(alTerminar) {
             Swal.fire("Error", errorApi(xhr), "error");
         }
     });
+}
+
+function coordenadasDestino(registro) {
+    const latitud = String(registro?.latitud ?? "").trim();
+    const longitud = String(registro?.longitud ?? "").trim();
+
+    if (!latitud || !longitud) return null;
+
+    const lat = Number(latitud);
+    const lng = Number(longitud);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) ||
+        lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+        return null;
+    }
+
+    return [lat, lng];
+}
+
+function crearMapaCosteo(elemento, centro, zoom = 14) {
+    if (!window.L) {
+        throw new Error("No se cargó Leaflet. Revisa la conexión a Internet.");
+    }
+
+    const mapa = L.map(elemento, {
+        scrollWheelZoom: false,
+        zoomControl: true
+    }).setView(centro, zoom);
+
+    const usarCarto = CLAVE_CARTO.trim() !== "";
+
+    const url = usarCarto
+        ? "https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?key=" +
+            encodeURIComponent(CLAVE_CARTO.trim())
+        : "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+
+    const atribucion = usarCarto
+        ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ' +
+            '&copy; <a href="https://carto.com/attribution/">CARTO</a>'
+        : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+
+    L.tileLayer(url, {
+        attribution: atribucion,
+        maxNativeZoom: usarCarto ? 18 : 19,
+        maxZoom: 20
+    }).addTo(mapa);
+
+    requestAnimationFrame(function() {
+        mapa.invalidateSize();
+    });
+
+    return mapa;
+}
+
+function colocarPinDestino(lat, lng, centrar = true) {
+    if (!mapaDestinoFormulario || !Number.isFinite(lat) || !Number.isFinite(lng) ||
+        lat < -90 || lat > 90 || lng < -180 || lng > 180) return;
+
+    $("#ccf_latitud").val(lat.toFixed(7));
+    $("#ccf_longitud").val(lng.toFixed(7));
+
+    if (!marcadorDestinoFormulario) {
+        marcadorDestinoFormulario = L.marker([lat, lng], {
+            draggable: true,
+            autoPan: true
+        }).addTo(mapaDestinoFormulario);
+
+        marcadorDestinoFormulario.on("dragend", function() {
+            const posicion = this.getLatLng();
+            colocarPinDestino(posicion.lat, posicion.lng, false);
+        });
+    } else {
+        marcadorDestinoFormulario.setLatLng([lat, lng]);
+    }
+
+    if (centrar) {
+        mapaDestinoFormulario.setView(
+            [lat, lng],
+            Math.max(mapaDestinoFormulario.getZoom(), 14)
+        );
+    }
+}
+
+function iniciarMapaDestino() {
+    const actual = coordenadasDestino({
+        latitud: $("#ccf_latitud").val(),
+        longitud: $("#ccf_longitud").val()
+    });
+
+    try {
+        mapaDestinoFormulario = crearMapaCosteo(
+            "ccMapaDestino",
+            actual || CENTRO_MAPA,
+            actual ? 15 : 10
+        );
+
+        mapaDestinoFormulario.on("click", function(evento) {
+            colocarPinDestino(evento.latlng.lat, evento.latlng.lng, false);
+        });
+
+        if (actual) {
+            colocarPinDestino(actual[0], actual[1], false);
+        }
+    } catch (error) {
+        Swal.fire("No se pudo abrir el mapa", error.message, "error");
+    }
 }
 
 function renderAdminCosteo() {
@@ -366,6 +496,16 @@ $("<button>", {
     "aria-label": "Editar registro"
 }).attr("data-indice", indice).appendTo($acciones);
 
+if (tipoActual === "destino") {
+    $("<button>", {
+        type: "button",
+        class: "btn btn-sm btn-outline-primary me-2 cc-ver-mapa",
+        html: '<i class="bi bi-geo-alt"></i>',
+        title: "Ver ubicación",
+        "aria-label": "Ver ubicación en el mapa"
+    }).attr("data-indice", indice).appendTo($acciones);
+}
+
 $("<button>", {
     type: "button",
     class: "btn btn-sm btn-outline-danger cc-estado",
@@ -512,12 +652,50 @@ if (anterior) return;
         $grupo.append($label, $control).appendTo($campos);
     });
 
+    if (tipoActual === "destino") {
+    $("#ccCampos").append(`
+        <div class="col-12">
+            <div class="cc-mapa-seccion">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                    <div>
+                        <h3 class="h6 fw-bold mb-1">
+                            <i class="bi bi-geo-alt text-success me-2"></i>Ubicación en el mapa
+                        </h3>
+                        <p class="small text-secondary mb-0">
+                            Pulsa el mapa o arrastra el marcador hasta el punto de entrega.
+                        </p>
+                    </div>
+                    <button type="button" class="btn btn-outline-success btn-sm"
+                            id="ccUsarGPS">
+                        <i class="bi bi-crosshair me-1"></i>Usar mi ubicación
+                    </button>
+                </div>
+
+                <div id="ccMapaDestino" class="cc-mapa"></div>
+
+                <div class="d-flex justify-content-between align-items-center gap-2 mt-3">
+                    <small class="text-secondary">
+                        Las coordenadas se actualizan al mover el marcador.
+                    </small>
+                    <button type="button" class="btn btn-outline-secondary btn-sm"
+                            id="ccQuitarPinDestino">
+                        <i class="bi bi-x-circle me-1"></i>Quitar ubicación
+                    </button>
+                </div>
+            </div>
+        </div>
+    `);
+
+    
+    //$("#ccAyuda").text("La dirección es opcional. La distancia de ida debe corresponder a la ruta real de entrega.");
+}
+
     if (tipoActual === "vehiculo") {
-        $("#ccAyuda").text("El VIN es opcional. Actualmente, el cálculo automático de combustible corresponde a vehículos propios terrestres con diésel.");
+        //$("#ccAyuda").text("El VIN es opcional. Actualmente, el cálculo automático de combustible corresponde a vehículos propios terrestres con diésel.");
     }
 
     if (tipoActual === "tarifa") {
-        $("#ccAyuda").text("Un incremento de 20% se aplica sobre el costo total calculado, no es margen sobre precio de venta.");
+        //$("#ccAyuda").text("Un incremento de 20% se aplica sobre el costo total calculado, no es margen sobre precio de venta.");
     }
 
     const elemento = document.getElementById("ccModal");
@@ -538,7 +716,16 @@ $(elemento).one("shown.bs.modal", function() {
 
     $("#ccFormulario").data("indice", indice);
 
+    if (tipoActual === "destino") {
+        $(elemento).one("shown.bs.modal", iniciarMapaDestino);
+    }
+
     $(elemento).one("hidden.bs.modal", function() {
+        if (mapaDestinoFormulario) {
+    mapaDestinoFormulario.remove();
+    mapaDestinoFormulario = null;
+    marcadorDestinoFormulario = null;
+}
         modal.dispose();
         $(this).remove();
 
@@ -1010,6 +1197,129 @@ function guardarCotizacionCosteo() {
     });
 }
 
+function verMapaDestino(indice) {
+    const registro = datos.destinos[indice];
+    if (!registro) return;
+
+    const posicion = coordenadasDestino(registro);
+
+    if (!posicion) {
+        Swal.fire({
+            icon: "info",
+            title: "Ubicación pendiente",
+            text: "Este destino todavía no tiene coordenadas. Edita el registro para seleccionar su ubicación."
+        });
+        return;
+    }
+
+    if (document.getElementById("ccModalMapa")) return;
+
+    $("body").append(`
+        <div class="modal fade" id="ccModalMapa" tabindex="-1"
+             aria-labelledby="ccTituloMapaDestino" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <div>
+                            <h2 class="modal-title h5 fw-bold mb-1" id="ccTituloMapaDestino">
+                                Ubicación del destino
+                            </h2>
+                            <p class="text-secondary small mb-0" id="ccNombreMapaDestino"></p>
+                        </div>
+                        <button type="button" class="btn-close"
+                                data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="ccMapaLectura" class="cc-mapa cc-mapa-consulta"></div>
+                        <div class="cc-mapa-datos mt-3">
+                            <strong>Dirección registrada</strong>
+                            <p class="mb-2" id="ccDireccionMapaDestino"></p>
+                            <strong>Coordenadas</strong>
+                            <p class="mb-0" id="ccCoordenadasMapaDestino"></p>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary"
+                                data-bs-dismiss="modal">Cerrar</button>
+                        <a id="ccAbrirGoogleMaps" class="btn btn-success"
+                           href="#" target="_blank" rel="noopener noreferrer">
+                            <i class="bi bi-box-arrow-up-right me-2"></i>Ver en Google Maps
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `);
+
+    const direccion = [
+        registro.calle,
+        registro.numero_exterior,
+        registro.numero_interior ? "Int. " + registro.numero_interior : "",
+        registro.colonia,
+        registro.municipio,
+        registro.estado,
+        registro.codigo_postal
+    ].filter(Boolean).join(", ");
+
+    $("#ccNombreMapaDestino").text(registro.nombre);
+    $("#ccDireccionMapaDestino").text(direccion || "Sin dirección detallada.");
+    $("#ccCoordenadasMapaDestino").text(
+        posicion[0].toFixed(7) + ", " + posicion[1].toFixed(7)
+    );
+
+    $("#ccAbrirGoogleMaps").attr(
+        "href",
+        "https://www.google.com/maps/search/?api=1&query=" +
+        encodeURIComponent(posicion[0] + "," + posicion[1])
+    );
+
+    const elemento = document.getElementById("ccModalMapa");
+    const catalogos = document.getElementById("ccModalCatalogos");
+    const modal = bootstrap.Modal.getOrCreateInstance(elemento);
+
+    $(elemento).one("shown.bs.modal", function() {
+        try {
+            mapaDestinoLectura = crearMapaCosteo(
+                "ccMapaLectura", posicion, 16
+            );
+
+            L.marker(posicion).addTo(mapaDestinoLectura);
+        } catch (error) {
+            Swal.fire("Error de mapa", error.message, "error");
+        }
+    });
+
+    $(elemento).on("hide.bs.modal", function() {
+        if (this.contains(document.activeElement)) {
+            document.activeElement.blur();
+        }
+    });
+
+    $(elemento).one("hidden.bs.modal", function() {
+        if (mapaDestinoLectura) {
+            mapaDestinoLectura.remove();
+            mapaDestinoLectura = null;
+        }
+
+        modal.dispose();
+        elemento.remove();
+
+        if (catalogos && document.body.contains(catalogos)) {
+            bootstrap.Modal.getOrCreateInstance(catalogos).show();
+        }
+    });
+
+    if (catalogos && catalogos.classList.contains("show")) {
+        $(catalogos).one("hidden.bs.modal", function() {
+            if (elemento.isConnected) modal.show();
+        });
+
+        bootstrap.Modal.getOrCreateInstance(catalogos).hide();
+    } else {
+        modal.show();
+    }
+}
+
 function bindCosteo() {
     $(document).on("click", ".cc-tab", function() {
         elegirCatalogo(this.dataset.tipo);
@@ -1042,4 +1352,72 @@ function bindCosteo() {
 
     $(document).on("submit", "#ccCotizador", calcularCotizacionCosteo);
     $(document).on("click", "#ccGuardarCotizacion", guardarCotizacionCosteo);
+
+        $(document).on("click", ".cc-ver-mapa", function() {
+        verMapaDestino(Number(this.dataset.indice));
+    });
+
+    $(document).on("change", "#ccf_latitud, #ccf_longitud", function() {
+        const posicion = coordenadasDestino({
+            latitud: $("#ccf_latitud").val(),
+            longitud: $("#ccf_longitud").val()
+        });
+
+        if (posicion && mapaDestinoFormulario) {
+            colocarPinDestino(posicion[0], posicion[1]);
+        }
+    });
+
+    $(document).on("click", "#ccQuitarPinDestino", function() {
+        $("#ccf_latitud, #ccf_longitud").val("");
+
+        if (marcadorDestinoFormulario && mapaDestinoFormulario) {
+            mapaDestinoFormulario.removeLayer(marcadorDestinoFormulario);
+            marcadorDestinoFormulario = null;
+        }
+    });
+
+    $(document).on("click", "#ccUsarGPS", function() {
+        if (!window.isSecureContext || !navigator.geolocation) {
+            Swal.fire(
+                "Ubicación no disponible",
+                "Esta función requiere HTTPS, un navegador compatible y permiso de ubicación.",
+                "warning"
+            );
+            return;
+        }
+
+        const $boton = $(this).prop("disabled", true);
+
+        navigator.geolocation.getCurrentPosition(
+            function(posicion) {
+                const lat = posicion.coords.latitude;
+                const lng = posicion.coords.longitude;
+
+                colocarPinDestino(lat, lng);
+
+                if (mapaDestinoFormulario) {
+                    mapaDestinoFormulario.setView([lat, lng], 17);
+                }
+
+                $boton.prop("disabled", false);
+            },
+            function(error) {
+                $boton.prop("disabled", false);
+
+                Swal.fire(
+                    "No se pudo obtener la ubicación",
+                    error.code === 1
+                        ? "No se concedió permiso para acceder a la ubicación."
+                        : "Verifica la ubicación del dispositivo e inténtalo nuevamente.",
+                    "warning"
+                );
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 15000,
+                maximumAge: 0
+            }
+        );
+    });
 }

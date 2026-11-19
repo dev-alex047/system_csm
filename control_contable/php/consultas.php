@@ -3222,8 +3222,14 @@ $sqls = [
         tanque_litros,combustible,activo,eliminado
         FROM vehiculos_costeo WHERE activo=1 {$filtro} ORDER BY nombre",
 
-    'destinos' => "SELECT id,nombre,distancia_ida_km,casetas_por_viaje,activo,eliminado
-        FROM destinos_costeo WHERE activo=1 {$filtro} ORDER BY nombre",
+    'destinos' => "SELECT
+    id, nombre, distancia_ida_km, casetas_por_viaje,
+    calle, numero_exterior, numero_interior, colonia,
+    municipio, estado, codigo_postal, referencias,
+    latitud, longitud, activo, eliminado
+    FROM destinos_costeo
+    WHERE activo=1 {$filtro}
+    ORDER BY nombre",
 
     'tarifas' => "SELECT t.material_id,t.lista_id,t.recargo_pct,t.activo,t.eliminado,
         COALESCE(m.nombre,'Material no disponible') AS material_nombre,
@@ -4085,30 +4091,72 @@ if ($pesoBruto !== null && $cargaUtil !== null &&
     break;
 
 
-            case 'destino':
+                        case 'destino':
                 $nombre = $leer('nombre');
-                $distancia = $this->enteroCosteo(
-                    $data['distancia_ida_km'] ?? '', 2
-                );
-                $casetas = $this->enteroCosteo(
-                    $data['casetas_por_viaje'] ?? '0', 2
-                );
+                $distancia = $this->enteroCosteo($data['distancia_ida_km'] ?? '', 2);
+                $casetas = $this->enteroCosteo($data['casetas_por_viaje'] ?? '0', 2);
 
                 if ($distancia > 500000) {
+                    throw new InvalidArgumentException('La distancia no puede superar 5,000 km.');
+                }
+
+                $campos = ['nombre', 'distancia_ida_km', 'casetas_por_viaje'];
+                $valores = [$nombre, $decimal($distancia, 2), $decimal($casetas, 2)];
+
+                $opcionales = [
+                    'calle' => 150,
+                    'numero_exterior' => 20,
+                    'numero_interior' => 20,
+                    'colonia' => 120,
+                    'municipio' => 120,
+                    'estado' => 100,
+                    'codigo_postal' => 10,
+                    'referencias' => 255
+                ];
+
+                foreach ($opcionales as $campo => $maximo) {
+                    $valor = $data[$campo] ?? '';
+
+                    if (!is_string($valor) && !is_numeric($valor)) {
+                        throw new InvalidArgumentException("Dato inválido: {$campo}.");
+                    }
+
+                    $valor = trim((string)$valor);
+
+                    if (strlen($valor) > $maximo || preg_match('/[\x00-\x1F\x7F]/', $valor)) {
+                        throw new InvalidArgumentException("Revisa el campo {$campo}.");
+                    }
+
+                    $campos[] = $campo;
+                    $valores[] = $valor === '' ? null : $valor;
+                }
+
+                $latitud = trim((string)($data['latitud'] ?? ''));
+                $longitud = trim((string)($data['longitud'] ?? ''));
+
+                if (($latitud === '') !== ($longitud === '')) {
                     throw new InvalidArgumentException(
-                        'La distancia no puede superar 5,000 km.'
+                        'Captura ambas coordenadas o deja las dos vacías.'
                     );
                 }
 
-                $campos = [
-                    'nombre','distancia_ida_km','casetas_por_viaje'
-                ];
+                if ($latitud !== '') {
+                    $patron = '/^-?\d{1,3}(?:\.\d{1,7})?$/D';
 
-                $valores = [
-                    $nombre,
-                    $decimal($distancia, 2),
-                    $decimal($casetas, 2)
-                ];
+                    if (!preg_match($patron, $latitud) ||
+                        !preg_match($patron, $longitud) ||
+                        (float)$latitud < -90 || (float)$latitud > 90 ||
+                        (float)$longitud < -180 || (float)$longitud > 180) {
+                        throw new InvalidArgumentException(
+                            'Las coordenadas geográficas no son válidas.'
+                        );
+                    }
+                }
+
+                $campos[] = 'latitud';
+                $campos[] = 'longitud';
+                $valores[] = $latitud === '' ? null : $latitud;
+                $valores[] = $longitud === '' ? null : $longitud;
                 break;
 
             case 'lista':
