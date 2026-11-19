@@ -169,9 +169,13 @@ let tipoActual = "material";
 let cotizacionVigente = null;
 let consultaActual = 0;
 
-const CLAVE_CARTO = "";
+const CLAVE_CARTO = "TU_CLAVE_CARTO";
+const CLAVE_LOCATIONIQ = "pk.131467ff150f4f89b6d436411a5f8052";
 const CENTRO_MAPA = [17.27, -97.68];
 
+let temporizadorLugar = null;
+let solicitudLugar = null;
+let folioLugar = 0;
 let mapaDestinoFormulario = null;
 let marcadorDestinoFormulario = null;
 let mapaDestinoLectura = null;
@@ -237,30 +241,32 @@ function coordenadasDestino(registro) {
 
 function crearMapaCosteo(elemento, centro, zoom = 14) {
     if (!window.L) {
-        throw new Error("No se cargó Leaflet. Revisa la conexión a Internet.");
+        throw new Error("No se cargó Leaflet.");
+    }
+
+    if (!CLAVE_CARTO.trim() || CLAVE_CARTO === "TU_CLAVE_CARTO") {
+        throw new Error("Primero configura tu clave de CARTO.");
     }
 
     const mapa = L.map(elemento, {
+        zoomControl: false,
         scrollWheelZoom: false,
-        zoomControl: true
+        preferCanvas: true
     }).setView(centro, zoom);
 
-    const usarCarto = CLAVE_CARTO.trim() !== "";
-
-    const url = usarCarto
-        ? "https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?key=" +
-            encodeURIComponent(CLAVE_CARTO.trim())
-        : "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
-
-    const atribucion = usarCarto
-        ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ' +
-            '&copy; <a href="https://carto.com/attribution/">CARTO</a>'
-        : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+    const url = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=" +
+        encodeURIComponent(CLAVE_CARTO.trim());
 
     L.tileLayer(url, {
-        attribution: atribucion,
-        maxNativeZoom: usarCarto ? 18 : 19,
-        maxZoom: 20
+        subdomains: "abcd",
+        minZoom: 3,
+        maxZoom: 20,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors, ' +
+            '&copy; <a href="https://carto.com/attribution/" target="_blank">CARTO</a>'
+    }).addTo(mapa);
+
+    L.control.zoom({
+        position: "bottomright"
     }).addTo(mapa);
 
     requestAnimationFrame(function() {
@@ -268,6 +274,16 @@ function crearMapaCosteo(elemento, centro, zoom = 14) {
     });
 
     return mapa;
+}
+
+function iconoDestinoCosteo() {
+    return L.divIcon({
+        className: "cc-icono-destino",
+        html: '<div class="cc-pin-destino"><i class="bi bi-geo-alt-fill"></i></div>',
+        iconSize: [42, 48],
+        iconAnchor: [21, 47],
+        popupAnchor: [0, -43]
+    });
 }
 
 function colocarPinDestino(lat, lng, centrar = true) {
@@ -280,7 +296,8 @@ function colocarPinDestino(lat, lng, centrar = true) {
     if (!marcadorDestinoFormulario) {
         marcadorDestinoFormulario = L.marker([lat, lng], {
             draggable: true,
-            autoPan: true
+            autoPan: true,
+            icon: iconoDestinoCosteo()
         }).addTo(mapaDestinoFormulario);
 
         marcadorDestinoFormulario.on("dragend", function() {
@@ -671,7 +688,46 @@ if (anterior) return;
                     </button>
                 </div>
 
-                <div id="ccMapaDestino" class="cc-mapa"></div>
+                <div class="cc-zona-mapa">
+    <div class="cc-buscador-flotante" id="ccBuscadorLugar">
+        <div class="cc-buscador-control">
+            <i class="bi bi-search" aria-hidden="true"></i>
+            <input type="text"
+                   id="ccBuscarLugar"
+                   class="cc-buscador-input"
+                   placeholder="Buscar negocio, comunidad o dirección..."
+                   aria-label="Buscar un lugar"
+                   aria-autocomplete="list"
+                   aria-controls="ccSugerenciasLugar"
+                   aria-expanded="false"
+                   autocomplete="off"
+                   spellcheck="false">
+        </div>
+
+        <div id="ccSugerenciasLugar"
+             class="cc-sugerencias-lugar d-none"
+             role="listbox"
+             aria-label="Lugares sugeridos"></div>
+    </div>
+
+    <div id="ccMapaDestino" class="cc-mapa"></div>
+</div>
+
+<div class="d-flex flex-wrap justify-content-between gap-2 mt-2">
+    <small class="text-secondary">
+        <i class="bi bi-hand-index me-1"></i>
+        También puedes seleccionar un punto directamente en el mapa.
+    </small>
+
+    <small>
+        <a href="https://locationiq.com"
+           target="_blank"
+           rel="noopener noreferrer"
+           class="cc-credito-busqueda">
+            Search by LocationIQ.com
+        </a>
+    </small>
+</div>
 
                 <div class="d-flex justify-content-between align-items-center gap-2 mt-3">
                     <small class="text-secondary">
@@ -722,6 +778,13 @@ $(elemento).one("shown.bs.modal", function() {
 
     $(elemento).one("hidden.bs.modal", function() {
         if (mapaDestinoFormulario) {
+                folioLugar++;
+    clearTimeout(temporizadorLugar);
+
+    if (solicitudLugar) {
+        solicitudLugar.abort();
+        solicitudLugar = null;
+    }
     mapaDestinoFormulario.remove();
     mapaDestinoFormulario = null;
     marcadorDestinoFormulario = null;
@@ -1283,7 +1346,9 @@ function verMapaDestino(indice) {
                 "ccMapaLectura", posicion, 16
             );
 
-            L.marker(posicion).addTo(mapaDestinoLectura);
+            L.marker(posicion, {
+                icon: iconoDestinoCosteo()
+            }).addTo(mapaDestinoLectura);
         } catch (error) {
             Swal.fire("Error de mapa", error.message, "error");
         }
@@ -1419,5 +1484,233 @@ function bindCosteo() {
                 maximumAge: 0
             }
         );
+    });
+
+        $(document).on("input", "#ccBuscarLugar", function() {
+        const texto = this.value.trim();
+        const folio = ++folioLugar;
+
+        clearTimeout(temporizadorLugar);
+
+        if (solicitudLugar) {
+            solicitudLugar.abort();
+            solicitudLugar = null;
+        }
+
+        $("#ccSugerenciasLugar").empty().addClass("d-none");
+        $(this).attr("aria-expanded", "false");
+
+        if (texto.length < 3) return;
+
+        temporizadorLugar = setTimeout(function() {
+            if (folio !== folioLugar) return;
+            buscarLugaresCosteo(texto, folio);
+        }, 550);
+    });
+
+    $(document).on("click", ".cc-sugerencia-lugar", function() {
+        const lugar = $(this).data("lugar");
+        if (!lugar) return;
+
+        const lat = Number(lugar.lat);
+        const lng = Number(lugar.lon);
+
+        if (!Number.isFinite(lat) || !Number.isFinite(lng) ||
+            lat < -90 || lat > 90 || lng < -180 || lng > 180) return;
+
+        const direccion = lugar.address || {};
+        const nombre = lugar.display_place || lugar.display_name || "";
+
+        //$("#ccf_nombre").val(nombre);
+        $("#ccf_nombre").val(nombre.slice(0, 150));
+
+        const camposDireccion = {
+            calle: direccion.road || direccion.pedestrian || "",
+            numero_exterior: direccion.house_number || "",
+            numero_interior: "",
+            colonia: direccion.suburb || direccion.neighbourhood ||
+                direccion.quarter || "",
+            municipio: direccion.city || direccion.town ||
+                direccion.village || direccion.municipality ||
+                direccion.county || "",
+            estado: direccion.state || "",
+            codigo_postal: direccion.postcode || ""
+        };
+
+        Object.entries(camposDireccion).forEach(function([campo, valor]) {
+            $("#ccf_" + campo).val(valor);
+        });
+
+        $("#ccBuscarLugar").val(nombre);
+        $("#ccSugerenciasLugar").empty().addClass("d-none");
+        $("#ccBuscarLugar").attr("aria-expanded", "false");
+
+        folioLugar++;
+        clearTimeout(temporizadorLugar);
+
+        colocarPinDestino(lat, lng);
+
+        if (mapaDestinoFormulario) {
+            mapaDestinoFormulario.setView([lat, lng], 17);
+        }
+    });
+
+    $(document).on("click", ".cc-sugerencia-libre", function() {
+        const nombre = $("#ccBuscarLugar").val().trim();
+
+        if (!nombre) return;
+
+        //$("#ccf_nombre").val(nombre);
+        $("#ccf_nombre").val(nombre.slice(0, 150));
+        $("#ccSugerenciasLugar").empty().addClass("d-none");
+        $("#ccBuscarLugar").attr("aria-expanded", "false");
+
+        folioLugar++;
+        clearTimeout(temporizadorLugar);
+    });
+
+    $(document).on("keydown", "#ccBuscarLugar", function(e) {
+        const $opciones = $("#ccSugerenciasLugar button:visible");
+
+        if (e.key === "Escape") {
+            $("#ccSugerenciasLugar").addClass("d-none");
+            $(this).attr("aria-expanded", "false");
+        }
+
+        if (e.key === "ArrowDown" && $opciones.length) {
+            e.preventDefault();
+            $opciones.first().trigger("focus");
+        }
+
+        if (e.key === "Enter") {
+            e.preventDefault();
+
+            if ($("#ccSugerenciasLugar").hasClass("d-none")) {
+                $("#ccf_nombre").val(this.value.trim());
+            } else if ($opciones.length) {
+                $opciones.first().trigger("click");
+            }
+        }
+    });
+
+    $(document).on("keydown", ".cc-sugerencias-lugar button", function(e) {
+        const $opciones = $("#ccSugerenciasLugar button:visible");
+        const indice = $opciones.index(this);
+
+        if (e.key === "ArrowDown") {
+            e.preventDefault();
+            $opciones.eq(Math.min(indice + 1, $opciones.length - 1)).trigger("focus");
+        } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+
+            if (indice === 0) {
+                $("#ccBuscarLugar").trigger("focus");
+            } else {
+                $opciones.eq(indice - 1).trigger("focus");
+            }
+        } else if (e.key === "Escape") {
+            e.preventDefault();
+            $("#ccSugerenciasLugar").addClass("d-none");
+            $("#ccBuscarLugar").attr("aria-expanded", "false").trigger("focus");
+        }
+    });
+
+    $(document).on("click", function(e) {
+        if (!$(e.target).closest("#ccBuscadorLugar").length) {
+            $("#ccSugerenciasLugar").addClass("d-none");
+            $("#ccBuscarLugar").attr("aria-expanded", "false");
+        }
+    });
+}
+
+function buscarLugaresCosteo(texto, folio) {
+    const $lista = $("#ccSugerenciasLugar").empty().removeClass("d-none");
+    $("#ccBuscarLugar").attr("aria-expanded", "true");
+
+    if (!CLAVE_LOCATIONIQ.trim() || CLAVE_LOCATIONIQ === "pk.131467ff150f4f89b6d436411a5f8052") {
+        $lista.append($("<div>", {
+            class: "cc-sugerencia-aviso",
+            text: "Configura la clave de LocationIQ para activar las sugerencias."
+        }));
+        return;
+    }
+
+    $lista.append($("<div>", {
+        class: "cc-sugerencia-aviso",
+        text: "Buscando lugares..."
+    }));
+
+    solicitudLugar = $.ajax({
+        url: "https://api.locationiq.com/v1/autocomplete",
+        method: "GET",
+        dataType: "json",
+        timeout: 10000,
+        data: {
+            key: CLAVE_LOCATIONIQ.trim(),
+            q: texto,
+            countrycodes: "mx",
+            "accept-language": "es",
+            limit: 6
+        }
+    }).done(function(resultados) {
+        if (folio !== folioLugar || !$("#ccBuscarLugar").length) return;
+
+        $lista.empty();
+
+        if (!Array.isArray(resultados) || !resultados.length) {
+            $lista.append($("<div>", {
+                class: "cc-sugerencia-aviso",
+                text: "No se encontraron coincidencias."
+            }));
+        } else {
+            resultados.forEach(function(lugar) {
+                const nombre = lugar.display_place || lugar.display_name || "Lugar";
+                const direccion = lugar.display_address || lugar.display_name || "";
+
+                const $opcion = $("<button>", {
+                    type: "button",
+                    class: "cc-sugerencia-lugar",
+                    role: "option"
+                });
+
+                $opcion.append(
+                    $("<span>", {class: "cc-sugerencia-icono"}).append(
+                        $("<i>", {class: "bi bi-geo-alt"})
+                    ),
+                    $("<span>", {class: "cc-sugerencia-info"}).append(
+                        $("<strong>", {text: nombre}),
+                        $("<small>", {text: direccion})
+                    ),
+                    $("<i>", {
+                        class: "bi bi-arrow-up-left cc-sugerencia-flecha",
+                        "aria-hidden": "true"
+                    })
+                );
+
+                $opcion.data("lugar", lugar).appendTo($lista);
+            });
+        }
+
+        $("<button>", {
+            type: "button",
+            class: "cc-sugerencia-libre",
+            text: 'Usar "' + texto + '" como nombre manual'
+        }).appendTo($lista);
+
+    }).fail(function(xhr, estado) {
+        if (estado === "abort" || folio !== folioLugar) return;
+
+        $lista.empty().append($("<div>", {
+            class: "cc-sugerencia-aviso",
+            text: xhr.status === 429
+                ? "Se alcanzó el límite de búsquedas. Inténtalo después."
+                : "No se pudieron consultar lugares. Puedes capturarlo manualmente."
+        }));
+
+        $("<button>", {
+            type: "button",
+            class: "cc-sugerencia-libre",
+            text: 'Usar "' + texto + '" como nombre manual'
+        }).appendTo($lista);
     });
 }
