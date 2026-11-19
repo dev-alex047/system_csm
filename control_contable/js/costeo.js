@@ -244,7 +244,7 @@ function crearMapaCosteo(elemento, centro, zoom = 14) {
         throw new Error("No se cargó Leaflet.");
     }
 
-    if (!CLAVE_CARTO.trim() || CLAVE_CARTO === "cb1_5cab_1_ef215a02384cb8ac2be62fe5") {
+    if (!CLAVE_CARTO.trim() || CLAVE_CARTO === "") {
         throw new Error("Primero configura tu clave de CARTO.");
     }
 
@@ -1627,7 +1627,7 @@ function buscarLugaresCosteo(texto, folio) {
     const $lista = $("#ccSugerenciasLugar").empty().removeClass("d-none");
     $("#ccBuscarLugar").attr("aria-expanded", "true");
 
-    if (!CLAVE_LOCATIONIQ.trim() || CLAVE_LOCATIONIQ === "pk.131467ff150f4f89b6d436411a5f8052") {
+    if (!CLAVE_LOCATIONIQ.trim() || CLAVE_LOCATIONIQ === "") {
         $lista.append($("<div>", {
             class: "cc-sugerencia-aviso",
             text: "Configura la clave de LocationIQ para activar las sugerencias."
