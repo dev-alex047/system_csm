@@ -3181,7 +3181,7 @@ private function enteroCosteo($valor, int $decimales): int {
         (int)str_pad($partes[1] ?? '', $decimales, '0');
 }
 
-public function getCatalogosCosteo(): array {
+public function getCatalogosCosteo(array $data = []): array {
     $json = [];
 
     try {
@@ -3204,39 +3204,35 @@ public function getCatalogosCosteo(): array {
         }
 
         
+$incluirEliminados = ($data['incluir_eliminados'] ?? '0') === '1';
+$filtro = $incluirEliminados ? '' : ' AND eliminado=0';
+$filtroTarifa = $incluirEliminados ? '' :
+    ' AND t.eliminado=0 AND m.activo=1 AND m.eliminado=0 AND l.activo=1 AND l.eliminado=0';
+
 $sqls = [
-    'materiales' => "SELECT id,codigo,nombre,unidad,costo_unitario
-        FROM materiales_costeo
-        WHERE activo=1 AND eliminado=0
-        ORDER BY nombre",
+    'materiales' => "SELECT id,codigo,nombre,unidad,costo_unitario,activo,eliminado
+        FROM materiales_costeo WHERE activo=1 {$filtro} ORDER BY nombre",
 
-    'listas' => "SELECT id,nombre
-        FROM listas_precios_costeo
-        WHERE activo=1 AND eliminado=0
-        ORDER BY nombre",
+    'listas' => "SELECT id,nombre,activo,eliminado
+        FROM listas_precios_costeo WHERE activo=1 {$filtro} ORDER BY nombre",
 
-    'tarifas' => "SELECT t.material_id,t.lista_id,t.recargo_pct
+    'vehiculos' => "SELECT id,nombre,tipo,unidad_capacidad,capacidad,
+        rendimiento_km_litro,costo_fijo_viaje,vin,tipo_transporte,
+        configuracion_vehicular,peso_bruto_kg,carga_util_kg,
+        tanque_litros,combustible,activo,eliminado
+        FROM vehiculos_costeo WHERE activo=1 {$filtro} ORDER BY nombre",
+
+    'destinos' => "SELECT id,nombre,distancia_ida_km,casetas_por_viaje,activo,eliminado
+        FROM destinos_costeo WHERE activo=1 {$filtro} ORDER BY nombre",
+
+    'tarifas' => "SELECT t.material_id,t.lista_id,t.recargo_pct,t.activo,t.eliminado,
+        COALESCE(m.nombre,'Material no disponible') AS material_nombre,
+        COALESCE(l.nombre,'Lista no disponible') AS lista_nombre
         FROM tarifas_material_costeo t
-        INNER JOIN materiales_costeo m
-            ON m.id=t.material_id
-            AND m.activo=1 AND m.eliminado=0
-        INNER JOIN listas_precios_costeo l
-            ON l.id=t.lista_id
-            AND l.activo=1 AND l.eliminado=0
-        WHERE t.activo=1 AND t.eliminado=0",
-
-    'vehiculos' => "SELECT id,nombre,tipo,unidad_capacidad,
-        capacidad,rendimiento_km_litro,costo_fijo_viaje,
-        vin,tipo_transporte,configuracion_vehicular,
-        peso_bruto_kg,carga_util_kg,tanque_litros,combustible
-        FROM vehiculos_costeo
-        WHERE activo=1 AND eliminado=0
-        ORDER BY nombre",
-
-    'destinos' => "SELECT id,nombre,distancia_ida_km,casetas_por_viaje
-        FROM destinos_costeo
-        WHERE activo=1 AND eliminado=0
-        ORDER BY nombre"
+        LEFT JOIN materiales_costeo m ON m.id=t.material_id
+        LEFT JOIN listas_precios_costeo l ON l.id=t.lista_id
+        WHERE t.activo=1 {$filtroTarifa}
+        ORDER BY material_nombre,lista_nombre"
 ];
 
 

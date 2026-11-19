@@ -8,7 +8,8 @@ ventas: {
     items: [
         {id:"listado",nombre:"Listado",icono:"list-ul",descripcion:"Consulta tus ventas registradas, notas y comprobantes."},
         {id:"nota",nombre:"Ventas con nota",icono:"receipt",descripcion:"Registra notas foleadas, clientes, artículos y formas de pago."},
-        {id:"rapida",nombre:"Venta rápida",icono:"cart3",descripcion:"Registra ventas de mostrador sin datos de cliente."}
+        {id:"rapida",nombre:"Venta rápida",icono:"cart3",descripcion:"Registra ventas de mostrador sin datos de cliente."},
+        {id:"cotizador",nombre:"Cotizador",icono:"calculator",descripcion:"Calcula precios de materiales con transporte y gastos incluidos."}
     ]
 },
 
@@ -32,7 +33,8 @@ ventas: {
             {id:"resumen",nombre:"Resumen general",icono:"grid-1x2",descripcion:"Indicadores de ingresos, egresos y movimientos recientes."},
             {id:"reportes",nombre:"Reportes",icono:"bar-chart",descripcion:"Reportes de ventas, egresos, clientes y caja."}
         ]
-    }
+    },
+
 };
 
 const state = {
@@ -63,6 +65,9 @@ $(document).ready(function() {
         window.CSM_CSRF = data.results.csrf;
 
 window.CSM_ES_ADMIN = Number(data.results.role_id) === 1;
+$("#btnCatalogosCosteo").toggleClass("d-none", !window.CSM_ES_ADMIN);
+
+
 window.CSM_NOMBRE_OPERADOR = data.results.nombre || data.results.username || "Usuario";
 
 
@@ -98,6 +103,7 @@ $("#menuUsuarioActual").text(nombreUsuario + " · " + nombreRol);
         bindUnidadesVenta();
         bindCajaEgresos();
         bindCuentas();
+        bindCosteo();
         mostrarInicio();
 
         $("body").removeClass("csm-verificando");
@@ -122,6 +128,11 @@ function bindNavigation() {
     //$("#btnConfiguracion").on("click", mostrarConfiguracion);
 
     $("#btnInicio").on("click", mostrarInicio);
+
+    $(document).on("click", "#btnCatalogosCosteo, #btnCatalogosDesdeCotizador", function() {
+    if (!window.CSM_ES_ADMIN) return;
+    renderAdminCosteo();
+});
 
 
 $(document).on("submit", "#formFiltroResumen", function(e) {
@@ -205,12 +216,17 @@ function abrirModulo(id) {
 
     const $nav = $("#navSubmodulos").empty().removeClass("d-none");
 
-    modulos[id].items.forEach(function(item) {
-        $("<button>", {type:"button",class:"tab-modulo",text:item.nombre})
-            .attr("data-submodulo", item.id).appendTo($nav);
-    });
+   const itemsVisibles = modulos[id].items.filter(function(item) {
+    return item.id !== "cotizador" || window.CSM_ES_ADMIN;
+});
 
-    mostrarSubmodulo(modulos[id].items[0].id);
+itemsVisibles.forEach(function(item) {
+    $("<button>", {type:"button",class:"tab-modulo",text:item.nombre})
+        .attr("data-submodulo", item.id).appendTo($nav);
+});
+
+mostrarSubmodulo(itemsVisibles[0].id);
+
     window.scrollTo(0, 0);
 }
 
@@ -221,6 +237,8 @@ function mostrarSubmodulo(id) {
         return x.id === id;
     });
     if (!item) return;
+
+    if (state.moduloActual === "ventas" && id === "cotizador" && !window.CSM_ES_ADMIN) return;
 
     state.submoduloActual = id;
     state.versionVista++;
@@ -263,6 +281,13 @@ if (modulo === "caja" && submodulo === "egresos") { renderEgresos(); return; }
 
 if (modulo === "cuentas" && submodulo === "cobrar") { renderCuentas("COBRAR"); return; }
 if (modulo === "cuentas" && submodulo === "pagar") { renderCuentas("PAGAR"); return; }
+
+
+if (modulo === "ventas" && submodulo === "cotizador") {
+    renderCotizadorCosteo();
+    return;
+}
+
 
 
     mostrarContenidoPendiente(item.nombre);

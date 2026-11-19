@@ -1,0 +1,1043 @@
+
+/* COSTEOS Y COTIZACIONES · Bootstrap 5.3.3 + jQuery */
+
+const vehiculares = [
+    ["Motocicleta", "Motocicleta"],
+    ["VL", "VL · Vehículo ligero (2×2)"],
+    ["C2", "C2 · Camión unitario (2×4)"],
+    ["C3", "C3 · Camión unitario (2×6/8)"],
+    ["C2R2", "C2R2 · Camión-remolque (6+8)"],
+    ["C3R2", "C3R2 · Camión-remolque (10+8)"],
+    ["C2R3", "C2R3 · Camión-remolque (6+12)"],
+    ["C3R3", "C3R3 · Camión-remolque (10+12)"],
+    ["T2S1", "T2S1 · Tractocamión (6+4)"],
+    ["T2S2", "T2S2 · Tractocamión (6+8)"],
+    ["T2S3", "T2S3 · Tractocamión (6+12)"],
+    ["T3S1", "T3S1 · Tractocamión (10+4)"],
+    ["T3S2", "T3S2 · Tractocamión (10+8)"],
+    ["T3S3", "T3S3 · Tractocamión (10+12)"],
+    ["T2S1R2", "T2S1R2 (6+4+8)"],
+    ["T2S2R2", "T2S2R2 (6+8+8)"],
+    ["T2S1R3", "T2S1R3 (6+4+12)"],
+    ["T3S1R2", "T3S1R2 (10+4+8)"],
+    ["T3S1R3", "T3S1R3 (10+4+12)"],
+    ["T3S2R2", "T3S2R2 (10+8+8)"],
+    ["T3S2R3", "T3S2R3 (10+8+12)"],
+    ["T3S2R4", "T3S2R4 (10+8+16)"],
+    ["T2S2S2", "T2S2S2 (6+8+8)"],
+    ["T3S2S2", "T3S2S2 (10+8+8)"],
+    ["T3S3S2", "T3S3S2 (10+12+8)"],
+    ["OTROEVGP", "Especial: carga voluminosa / gran peso"],
+    ["OTROSG", "Servicio de grúas"],
+    ["GPLUTA", "Grúa pluma tipo A"],
+    ["GPLUTB", "Grúa pluma tipo B"],
+    ["GPLUTC", "Grúa pluma tipo C"],
+    ["GPLUTD", "Grúa pluma tipo D"],
+    ["GPLATA", "Grúa plataforma tipo A"],
+    ["GPLATB", "Grúa plataforma tipo B"],
+    ["GPLATC", "Grúa plataforma tipo C"],
+    ["GPLATD", "Grúa plataforma tipo D"]
+];
+
+const opcionesUnidad = ["M3", "TON", "KG", "PZA", "BULTO", "VIAJE"];
+
+const campo = (name, label, type = "text", required = true, extra = {}) => ({name, label, type, required, ...extra});
+const select = (name, label, options, required = true, extra = {}) => campo(name, label, "select", required, {options, ...extra});
+const numero = (name, label, step = "0.01", required = true, extra = {}) => campo(name, label, "number", required, {step, min: "0", ...extra});
+
+const esquemas = {
+    material: {
+        titulo: "Materiales",
+        coleccion: "materiales",
+        columnas: [
+            ["codigo", "Código"],
+            ["nombre", "Material"],
+            ["unidad", "Unidad"],
+            ["costo_unitario", "Costo unitario"]
+        ],
+        campos: [
+            campo("codigo", "Código", "text", true, {max: 50}),
+            campo("nombre", "Nombre del material", "text", true, {max: 150}),
+            select("unidad", "Unidad", opcionesUnidad),
+            numero("costo_unitario", "Costo de adquisición por unidad ($)", "0.0001")
+        ]
+    },
+    vehiculo: {
+        titulo: "Vehículos",
+        coleccion: "vehiculos",
+        columnas: [
+            ["nombre", "Vehículo"],
+            ["tipo", "Propiedad"],
+            ["capacidad", "Capacidad"],
+            ["unidad_capacidad", "Unidad"],
+            ["vin", "VIN"],
+            ["configuracion_vehicular", "Configuración"],
+            ["combustible", "Combustible"]
+        ],
+        campos: [
+            campo("nombre", "Nombre identificador", "text", true, {max: 120}),
+            select("tipo_vehiculo", "Modalidad", [["PROPIO", "Propio"], ["CONTRATADO", "Contratado"]]),
+            select("unidad_capacidad", "Unidad de capacidad", opcionesUnidad),
+            numero("capacidad", "Capacidad por viaje", "0.01", true, {min: "0.01"}),
+            numero("rendimiento_km_litro", "Rendimiento (km/L)", "0.01"),
+            numero("costo_fijo_viaje", "Costo fijo por viaje ($)"),
+            campo("vin", "VIN (opcional, 17 caracteres)", "text", false, {
+                max: 17,
+                pattern: "[A-HJ-NPR-Za-hj-npr-z0-9]{17}",
+                wide: true
+            }),
+            select("tipo_transporte", "Tipo de transporte", [
+                ["TERRESTRE", "Terrestre"],
+                ["MARITIMO", "Marítimo"],
+                ["AEREO", "Aéreo"]
+            ]),
+            select("configuracion_vehicular", "Configuración vehicular", vehiculares, false, {wide: true}),
+            numero("peso_bruto_kg", "Peso bruto (kg)", "0.01", false, {min: "0.01"}),
+            numero("carga_util_kg", "Carga útil (kg)", "0.01", false, {min: "0.01"}),
+            numero("tanque_litros", "Capacidad del tanque (L)", "0.01", false, {min: "0.01"}),
+            select("combustible", "Combustible", [
+                ["DIESEL", "Diésel"],
+                ["GASOLINA", "Gasolina"],
+                ["GAS_LP", "Gas LP"],
+                ["ELECTRICO", "Eléctrico"],
+                ["OTRO", "Otro"]
+            ], false)
+        ]
+    },
+    destino: {
+        titulo: "Destinos",
+        coleccion: "destinos",
+        columnas: [
+            ["nombre", "Destino"],
+            ["distancia_ida_km", "Distancia de ida (km)"],
+            ["casetas_por_viaje", "Casetas por viaje ($)"]
+        ],
+        campos: [
+            campo("nombre", "Destino o comunidad", "text", true, {max: 150, wide: true}),
+            numero("distancia_ida_km", "Distancia de ida (km)"),
+            numero("casetas_por_viaje", "Casetas por viaje ($)")
+        ]
+    },
+    lista: {
+        titulo: "Listas de precios",
+        coleccion: "listas",
+        columnas: [["nombre", "Nombre de la lista"]],
+        campos: [campo("nombre", "Nombre de lista", "text", true, {max: 100, wide: true})]
+    },
+    tarifa: {
+        titulo: "Tarifas por material",
+        coleccion: "tarifas",
+        columnas: [
+            ["material_nombre", "Material"],
+            ["lista_nombre", "Lista"],
+            ["recargo_pct", "Incremento sobre costo (%)"]
+        ],
+        campos: [
+            select("material_id", "Material", []),
+            select("lista_id", "Lista de precios", []),
+            numero("recargo_pct", "Incremento (%)", "0.01", true, {max: "200"})
+        ]
+    }
+};
+
+const datos = {
+    materiales: [],
+    vehiculos: [],
+    destinos: [],
+    listas: [],
+    tarifas: []
+};
+
+let tipoActual = "material";
+let cotizacionVigente = null;
+let consultaActual = 0;
+
+const mxn = valor => new Intl.NumberFormat("es-MX", {
+    style: "currency",
+    currency: "MXN"
+}).format(Number(valor) || 0);
+
+const api = parametros => $.ajax({
+    url: "php/index.php",
+    method: "POST",
+    dataType: "json",
+    data: parametros,
+    cache: false
+});
+
+const errorApi = xhr => xhr.responseJSON?.answer ||
+    "No fue posible completar la operación. Verifica la conexión.";
+
+const activos = clave => (datos[clave] || []).filter(registro =>
+    Number(registro.eliminado || 0) === 0 && Number(registro.activo) === 1
+);
+
+function consultarCatalogos(alTerminar) {
+    const folioConsulta = ++consultaActual;
+
+    api({action: "getCatalogosCosteo", incluir_eliminados: "1"}).done(function(r) {
+        if (folioConsulta !== consultaActual) return;
+
+        if (r.status !== "ok") {
+            return Swal.fire("No disponible", r.answer || "No se pudieron consultar los catálogos.", "warning");
+        }
+
+        Object.keys(datos).forEach(function(clave) {
+            datos[clave] = Array.isArray(r.results?.[clave]) ? r.results[clave] : [];
+        });
+
+        if (typeof alTerminar === "function") alTerminar();
+    }).fail(function(xhr) {
+        if (folioConsulta === consultaActual) {
+            Swal.fire("Error", errorApi(xhr), "error");
+        }
+    });
+}
+
+function renderAdminCosteo() {
+    if (!window.CSM_ES_ADMIN) return;
+
+    const existente = document.getElementById("ccModalCatalogos");
+
+    if (existente) {
+        bootstrap.Modal.getOrCreateInstance(existente).show();
+        consultarCatalogos(mostrarTablaCosteo);
+        return;
+    }
+
+    $("body").append(`
+        <div class="modal fade" id="ccModalCatalogos" tabindex="-1"
+             aria-labelledby="ccTituloModalCatalogos" aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <div>
+                            <h2 class="modal-title h5 fw-bold mb-1" id="ccTituloModalCatalogos">
+                                Administración de catálogos
+                            </h2>
+                            <p class="small text-secondary mb-0">
+                                Configura materiales, vehículos, destinos y tarifas de venta.
+                            </p>
+                        </div>
+                        <button type="button" class="btn-close"
+                                data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+                    <div class="modal-body" id="ccAdminContenido"></div>
+                </div>
+            </div>
+        </div>
+    `);
+
+    $("#ccAdminContenido").html(`
+        <section class="nota-bloque mb-3">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3">
+                <div>
+                    <h3 class="h6 fw-bold mb-1">Catálogos de costeo</h3>
+                    <p class="small text-secondary mb-0">
+                        Los cambios actualizan las opciones para nuevas cotizaciones.
+                    </p>
+                </div>
+                <button type="button" class="btn btn-outline-success btn-sm" id="ccActualizar">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Actualizar
+                </button>
+            </div>
+            <div class="d-flex flex-wrap gap-2" id="ccPestanas" aria-label="Catálogos"></div>
+        </section>
+        <section class="nota-bloque mb-0">
+            <div class="d-flex flex-wrap gap-3 align-items-center justify-content-between mb-3">
+                <div>
+                    <h3 class="h6 fw-bold mb-1" id="ccTitulo"></h3>
+                    <p class="small text-secondary mb-0" id="ccConteo"></p>
+                </div>
+                <button type="button" class="btn btn-success" id="ccNuevo">
+                    <i class="bi bi-plus-lg me-1"></i>Agregar registro
+                </button>
+            </div>
+            <div class="row g-2 align-items-center mb-3">
+                <div class="col-lg-8">
+                    <label for="ccBuscar" class="visually-hidden">Buscar registros</label>
+                    <input id="ccBuscar" class="form-control"
+                           placeholder="Buscar por nombre, código o identificación..." autocomplete="off">
+                </div>
+                <div class="col-lg-4">
+                    <div class="form-check form-switch py-2">
+                        <input type="checkbox" class="form-check-input" id="ccEliminados">
+                        <label class="form-check-label" for="ccEliminados">Ver eliminados</label>
+                    </div>
+                </div>
+            </div>
+            <div class="table-responsive cc-tabla-contenedor">
+                <table class="table table-hover align-middle mb-0" id="ccTabla">
+                    <thead></thead><tbody></tbody>
+                </table>
+            </div>
+            <p class="small text-secondary mt-3 mb-0">
+                La eliminación es lógica: conserva el historial y permite restaurar los registros.
+            </p>
+        </section>
+    `);
+
+    Object.keys(esquemas).forEach(function(tipo) {
+        $("<button>", {
+            type: "button",
+            class: "btn btn-sm btn-outline-success cc-tab",
+            text: esquemas[tipo].titulo
+        }).attr("data-tipo", tipo).appendTo("#ccPestanas");
+    });
+
+    elegirCatalogo(tipoActual);
+    consultarCatalogos(mostrarTablaCosteo);
+
+    $("#ccModalCatalogos").on("hidden.bs.modal", function() {
+        if ($("#ccCotizador").length) actualizarOpcionesCotizador();
+    });
+
+    bootstrap.Modal.getOrCreateInstance(
+        document.getElementById("ccModalCatalogos")
+    ).show();
+}
+
+function elegirCatalogo(tipo) {
+    if (!esquemas[tipo]) return;
+
+    tipoActual = tipo;
+
+    $(".cc-tab").removeClass("active btn-success text-white").addClass("btn-outline-success");
+    $(".cc-tab").filter(function(_, boton) {
+        return boton.dataset.tipo === tipo;
+    }).addClass("active btn-success text-white").removeClass("btn-outline-success");
+
+    $("#ccBuscar").val("");
+    $("#ccEliminados").prop("checked", false);
+    mostrarTablaCosteo();
+}
+
+function mostrarTablaCosteo() {
+    if (!$("#ccTabla").length) return;
+
+    const config = esquemas[tipoActual];
+    const borrados = $("#ccEliminados").is(":checked");
+    const buscar = $("#ccBuscar").val().toLocaleLowerCase("es-MX").trim();
+    const filas = datos[config.coleccion] || [];
+
+    const visibles = filas.map((registro, indice) => ({registro, indice})).filter(function(item) {
+        return Number(item.registro.eliminado || 0) === Number(borrados) &&
+            (!buscar || Object.values(item.registro).some(valor =>
+                String(valor ?? "").toLocaleLowerCase("es-MX").includes(buscar)
+            ));
+    });
+
+    $("#ccTitulo").text(config.titulo);
+    $("#ccConteo").text(`${visibles.length} registros ${borrados ? "eliminados" : "disponibles"}`);
+
+    const $thead = $("#ccTabla thead").empty();
+    const $trh = $("<tr>");
+
+    config.columnas.forEach(function(columna) {
+        $("<th>").text(columna[1]).appendTo($trh);
+    });
+
+    $("<th>", {text: "Acciones"}).appendTo($trh);
+    $thead.append($trh);
+
+    const $body = $("#ccTabla tbody").empty();
+
+    visibles.forEach(function(item) {
+        const registro = item.registro;
+        const indice = item.indice;
+        const $tr = $("<tr>");
+
+        config.columnas.forEach(function(columna) {
+            const clave = columna[0];
+            let valor = registro[clave] ?? "—";
+
+            if (["costo_unitario", "casetas_por_viaje"].includes(clave) && valor !== "—") {
+                valor = mxn(valor);
+            }
+
+            if (clave === "capacidad") {
+                valor = `${registro.capacidad} ${registro.unidad_capacidad}`;
+            }
+
+            $("<td>", {text: String(valor)}).appendTo($tr);
+        });
+
+        const $acciones = $("<td>", {class: "text-nowrap"});
+
+        if (!borrados) {
+            $("<button>", {
+                type: "button",
+                class: "btn btn-sm btn-outline-success me-2 cc-editar",
+                html: '<i class="bi bi-pencil-square me-1"></i>Editar'
+            }).attr("data-indice", indice).appendTo($acciones);
+        }
+
+        $("<button>", {
+            type: "button",
+            class: borrados ? "btn btn-sm btn-outline-success cc-estado" : "btn btn-sm btn-outline-danger cc-estado",
+            text: borrados ? "Restaurar" : "Eliminar"
+        }).attr({
+            "data-indice": indice,
+            "data-operacion": borrados ? "restaurar" : "eliminar"
+        }).appendTo($acciones);
+
+        $tr.append($acciones).appendTo($body);
+    });
+
+    if (!visibles.length) {
+        $body.append($("<tr>").append($("<td>", {
+            colspan: config.columnas.length + 1,
+            class: "text-center text-secondary py-4",
+            text: borrados ? "No hay registros eliminados." : "No hay registros que coincidan."
+        })));
+    }
+}
+
+function opcionesCampo(field, $control, actual) {
+    let opciones = field.options || [];
+
+    if (field.name === "material_id") {
+        opciones = activos("materiales").map(r => [String(r.id), `${r.codigo} · ${r.nombre}`]);
+    }
+
+    if (field.name === "lista_id") {
+        opciones = activos("listas").map(r => [String(r.id), r.nombre]);
+    }
+
+    $control.append(new Option(field.required ? "Selecciona una opción" : "Sin especificar", ""));
+
+    opciones.forEach(function(opcion) {
+        $control.append(new Option(
+            Array.isArray(opcion) ? opcion[1] : opcion,
+            Array.isArray(opcion) ? opcion[0] : opcion
+        ));
+    });
+
+    if (actual !== undefined && actual !== null && actual !== "") {
+        if (!$control.find("option").filter((_, opcion) => opcion.value === String(actual)).length) {
+            $control.append(new Option(String(actual) + " (no disponible)", String(actual)));
+        }
+
+        $control.val(String(actual));
+    }
+}
+
+function abrirFormularioCosteo(indice = null) {
+    const config = esquemas[tipoActual];
+    const registro = indice === null ? null : datos[config.coleccion]?.[indice];
+
+    if (indice !== null && !registro) return;
+
+    const anterior = document.getElementById("ccModal");
+
+    if (anterior) {
+        bootstrap.Modal.getInstance(anterior)?.dispose();
+        anterior.remove();
+    }
+
+    $("body").append(`
+        <div class="modal fade" id="ccModal" tabindex="-1"
+             aria-labelledby="ccModalTitulo" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <div>
+                            <h2 class="modal-title h5 fw-bold mb-1" id="ccModalTitulo"></h2>
+                            <p class="small text-secondary mb-0">Los campos marcados con * son obligatorios.</p>
+                        </div>
+                        <button type="button" class="btn-close"
+                                data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+                    <form id="ccFormulario" novalidate>
+                        <div class="modal-body">
+                            <div class="row g-3" id="ccCampos"></div>
+                            <p class="small text-secondary mt-3 mb-0" id="ccAyuda"></p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary"
+                                    data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-success" id="ccGuardar">
+                                <i class="bi bi-check2 me-2"></i>Guardar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    `);
+
+    $("#ccModalTitulo").text(
+        (registro ? "Editar " : "Agregar ") + config.titulo.toLocaleLowerCase("es-MX")
+    );
+
+    const $campos = $("#ccCampos");
+
+    config.campos.forEach(function(field) {
+        const $grupo = $("<div>", {
+            class: field.wide ? "col-12" : "col-md-6"
+        });
+
+        const $label = $("<label>", {
+            class: "form-label fw-semibold",
+            for: "ccf_" + field.name,
+            text: field.label + (field.required ? " *" : "")
+        });
+
+        const $control = field.type === "select"
+            ? $("<select>", {class: "form-select"})
+            : $("<input>", {class: "form-control", type: field.type});
+
+        $control.attr({
+            id: "ccf_" + field.name,
+            name: field.name
+        });
+
+        if (field.required) $control.prop("required", true);
+        if (field.max) $control.attr(field.type === "text" ? "maxlength" : "max", field.max);
+        if (field.min) $control.attr("min", field.min);
+        if (field.step) $control.attr("step", field.step);
+        if (field.pattern) $control.attr("pattern", field.pattern);
+
+        let actual = registro?.[field.name] ?? "";
+
+        if (field.name === "tipo_vehiculo") actual = registro?.tipo ?? "PROPIO";
+        if (field.name === "tipo_transporte" && !actual) actual = "TERRESTRE";
+        if (field.name === "combustible" && !actual && !registro) actual = "DIESEL";
+        if (field.name === "recargo_pct") actual = registro?.recargo_pct ?? "0.00";
+
+        if (field.type === "select") {
+            opcionesCampo(field, $control, actual);
+        } else {
+            $control.val(actual);
+        }
+
+        if (registro && tipoActual === "tarifa" && ["material_id", "lista_id"].includes(field.name)) {
+            $control.prop("disabled", true);
+        }
+
+        $grupo.append($label, $control).appendTo($campos);
+    });
+
+    if (tipoActual === "vehiculo") {
+        $("#ccAyuda").text("El VIN es opcional. Actualmente, el cálculo automático de combustible corresponde a vehículos propios terrestres con diésel.");
+    }
+
+    if (tipoActual === "tarifa") {
+        $("#ccAyuda").text("Un incremento de 20% se aplica sobre el costo total calculado, no es margen sobre precio de venta.");
+    }
+
+    const elemento = document.getElementById("ccModal");
+    const modal = bootstrap.Modal.getOrCreateInstance(elemento, {backdrop: "static"});
+    const catalogos = document.getElementById("ccModalCatalogos");
+
+    $("#ccFormulario").data("indice", indice);
+
+    $(elemento).one("hidden.bs.modal", function() {
+        modal.dispose();
+        $(this).remove();
+
+        if (catalogos && document.body.contains(catalogos)) {
+            bootstrap.Modal.getOrCreateInstance(catalogos).show();
+            consultarCatalogos(mostrarTablaCosteo);
+        }
+    });
+
+    if (catalogos && $(catalogos).hasClass("show")) {
+        $(catalogos).one("hidden.bs.modal", function() {
+            modal.show();
+        });
+        bootstrap.Modal.getOrCreateInstance(catalogos).hide();
+    } else {
+        modal.show();
+    }
+}
+
+function guardarFormularioCosteo(e) {
+    e.preventDefault();
+
+    const form = e.currentTarget;
+    if (!form.checkValidity()) return form.reportValidity();
+
+    const tipo = tipoActual;
+    const config = esquemas[tipo];
+    const indice = $(form).data("indice");
+    const original = indice === null ? null : datos[config.coleccion][indice];
+
+    const parametros = {
+        action: "guardarCatalogoCosteo",
+        tipo: tipo,
+        id: original?.id ?? "0"
+    };
+
+    config.campos.forEach(function(field) {
+        parametros[field.name] = String(
+            $(form).find(`[name="${field.name}"]`).val() ?? ""
+        ).trim();
+    });
+
+    if (tipo === "vehiculo") {
+        parametros.vin = parametros.vin.toUpperCase();
+
+        if (parametros.peso_bruto_kg && parametros.carga_util_kg &&
+            Number(parametros.carga_util_kg) > Number(parametros.peso_bruto_kg)) {
+            return Swal.fire(
+                "Revisa las capacidades",
+                "La carga útil no puede superar el peso bruto.",
+                "warning"
+            );
+        }
+
+        if (parametros.tipo_vehiculo === "PROPIO" &&
+            Number(parametros.rendimiento_km_litro) <= 0) {
+            return Swal.fire("Falta rendimiento", "Indica el rendimiento del vehículo propio.", "warning");
+        }
+    }
+
+    if (tipo === "tarifa") delete parametros.id;
+
+    const $boton = $("#ccGuardar").prop("disabled", true).text("Guardando...");
+
+    api(parametros).done(function(r) {
+        if (r.status !== "ok") {
+            return Swal.fire("Revisa el registro", r.answer || "No se pudo guardar.", "warning");
+        }
+
+        bootstrap.Modal.getInstance(document.getElementById("ccModal"))?.hide();
+        consultarCatalogos(mostrarTablaCosteo);
+
+        Swal.fire({
+            toast: true,
+            position: "top-end",
+            icon: "success",
+            title: r.answer || "Guardado",
+            showConfirmButton: false,
+            timer: 2200
+        });
+    }).fail(function(xhr) {
+        Swal.fire("No se pudo guardar", errorApi(xhr), "error");
+    }).always(function() {
+        $boton.prop("disabled", false).html('<i class="bi bi-check2 me-2"></i>Guardar');
+    });
+}
+
+function cambiarEstadoCosteo(indice, operacion) {
+    const config = esquemas[tipoActual];
+    const registro = datos[config.coleccion]?.[indice];
+
+    if (!registro) return;
+
+    Swal.fire({
+        title: operacion === "eliminar" ? "¿Eliminar este registro?" : "¿Restaurar este registro?",
+        text: operacion === "eliminar"
+            ? "No se borrará de MySQL; dejará de estar disponible para nuevas cotizaciones."
+            : "Volverá a estar disponible cuando sus catálogos relacionados estén activos.",
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: operacion === "eliminar" ? "Sí, eliminar" : "Sí, restaurar",
+        cancelButtonText: "Cancelar",
+        confirmButtonColor: operacion === "eliminar" ? "#b42318" : "#08744b"
+    }).then(function(decision) {
+        if (!decision.isConfirmed) return;
+
+        const parametros = {
+            action: "cambiarEstadoCatalogoCosteo",
+            tipo: tipoActual,
+            operacion: operacion
+        };
+
+        if (tipoActual === "tarifa") {
+            parametros.material_id = registro.material_id;
+            parametros.lista_id = registro.lista_id;
+        } else {
+            parametros.id = registro.id;
+        }
+
+        api(parametros).done(function(r) {
+            if (r.status !== "ok") {
+                return Swal.fire("No disponible", r.answer || "No se pudo cambiar el estado.", "warning");
+            }
+
+            consultarCatalogos(mostrarTablaCosteo);
+
+            Swal.fire({
+                icon: "success",
+                title: r.answer || "Estado actualizado",
+                timer: 1700,
+                showConfirmButton: false
+            });
+        }).fail(function(xhr) {
+            Swal.fire("Error", errorApi(xhr), "error");
+        });
+    });
+}
+
+function renderCotizadorCosteo() {
+    if (!window.CSM_ES_ADMIN) {
+        return $("#contenidoModulo").html(
+            '<div class="alert alert-warning">Esta sección es exclusiva de administración.</div>'
+        );
+    }
+
+    cotizacionVigente = null;
+
+    $("#contenidoModulo").html(`
+        <div class="d-flex justify-content-end mb-3">
+            <button type="button" class="btn btn-outline-success" id="btnCatalogosDesdeCotizador">
+                <i class="bi bi-sliders2 me-2"></i>Configurar materiales y transporte
+            </button>
+        </div>
+
+        <form id="ccCotizador" class="row g-3" novalidate>
+            <div class="col-xl-8">
+                <section class="nota-bloque mb-3">
+                    <div class="nota-seccion-titulo">
+                        <i class="bi bi-truck"></i>
+                        <div>
+                            <h2>Datos de la entrega</h2>
+                            <small>Selecciona material, destino, vehículo y lista de precios.</small>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label" for="ccCliente">Cliente</label>
+                            <input class="form-control" name="cliente" id="ccCliente"
+                                   maxlength="100" placeholder="Nombre para guardar la cotización">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="ccCantidad">Cantidad *</label>
+                            <input class="form-control" type="number" name="cantidad"
+                                   id="ccCantidad" min="0.01" max="100000"
+                                   step="0.01" value="1" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="ccMaterial">Material *</label>
+                            <select name="material_id" id="ccMaterial" class="form-select" required></select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="ccLista">Lista de precios *</label>
+                            <select name="lista_id" id="ccLista" class="form-select" required></select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="ccVehiculo">Vehículo *</label>
+                            <select name="vehiculo_id" id="ccVehiculo" class="form-select" required></select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="ccDestino">Destino *</label>
+                            <select name="destino_id" id="ccDestino" class="form-select" required></select>
+                        </div>
+                    </div>
+                    <p class="small text-secondary mt-3 mb-0" id="ccCondiciones">
+                        El precio final incluye el material y la logística.
+                        No se desglosa un flete adicional al cliente.
+                    </p>
+                </section>
+
+                <section class="nota-bloque">
+                    <div class="nota-seccion-titulo">
+                        <i class="bi bi-calculator"></i>
+                        <div>
+                            <h2>Gastos de transporte</h2>
+                            <small>Captura importes reales; los gastos por viaje se multiplican por los viajes necesarios.</small>
+                        </div>
+                    </div>
+                    <div class="row g-3" id="ccGastos"></div>
+                </section>
+            </div>
+
+            <div class="col-xl-4">
+                <aside class="nota-bloque cc-resumen sticky-xl-top">
+                    <h2 class="h5 fw-bold">Resultado de cotización</h2>
+                    <p class="small text-secondary">Calculado en el servidor para evitar diferencias.</p>
+                    <div id="ccResultado">
+                        <p class="text-secondary">
+                            Completa los datos y presiona <strong>Calcular precio</strong>.
+                        </p>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100 mb-2" id="ccCalcular">
+                        <i class="bi bi-calculator me-2"></i>Calcular precio
+                    </button>
+                    <button type="button" class="btn btn-outline-success w-100"
+                            id="ccGuardarCotizacion" disabled>
+                        <i class="bi bi-floppy me-2"></i>Guardar cotización
+                    </button>
+                    <p class="small text-secondary mb-0 mt-3">
+                        Una cotización guardada no registra una venta ni mueve caja o inventario.
+                    </p>
+                </aside>
+            </div>
+        </form>
+    `);
+
+    const gastos = [
+        ["precio_diesel_litro", "Precio del diésel ($/L)", "27.00"],
+        ["chofer_por_viaje", "Chofer por viaje ($)", "0.00"],
+        ["carga_por_viaje", "Carga por viaje ($)", "0.00"],
+        ["descarga_por_viaje", "Descarga por viaje ($)", "0.00"],
+        ["flete_contratado_por_viaje", "Flete contratado por viaje ($)", "0.00"],
+        ["otros_gastos_total", "Otros gastos de toda la entrega ($)", "0.00"]
+    ];
+
+    gastos.forEach(function(gasto) {
+        const clave = gasto[0];
+        const etiqueta = gasto[1];
+        const valor = gasto[2];
+        const $box = $("<div>", {class: "col-md-6"});
+
+        $box.append($("<label>", {
+            class: "form-label",
+            for: "cc_" + clave,
+            text: etiqueta
+        }));
+
+        $box.append($("<input>", {
+            id: "cc_" + clave,
+            name: clave,
+            type: "number",
+            step: "0.01",
+            min: "0",
+            max: "1000000",
+            value: valor,
+            class: "form-control"
+        }));
+
+        $("#ccGastos").append($box);
+    });
+
+    consultarCatalogos(actualizarOpcionesCotizador);
+}
+
+function actualizarOpcionesCotizador() {
+    if (!$("#ccCotizador").length) return;
+
+    [
+        ["ccMaterial", "materiales"],
+        ["ccLista", "listas"],
+        ["ccVehiculo", "vehiculos"],
+        ["ccDestino", "destinos"]
+    ].forEach(function(item) {
+        const id = item[0];
+        const clave = item[1];
+        const $select = $("#" + id);
+        const anterior = $select.val();
+
+        $select.empty().append(new Option("Selecciona una opción", ""));
+
+        activos(clave).forEach(function(registro) {
+            $select.append(new Option(
+                (registro.codigo ? registro.codigo + " · " : "") + registro.nombre,
+                String(registro.id)
+            ));
+        });
+
+        const disponible = anterior && $select.find("option").filter(function(_, opcion) {
+            return opcion.value === anterior;
+        }).length;
+
+        $select.val(disponible ? anterior : "");
+    });
+
+    actualizarCondiciones();
+}
+
+function actualizarCondiciones() {
+    if (!$("#ccCotizador").length) return;
+
+    const vehiculo = activos("vehiculos").find(function(registro) {
+        return String(registro.id) === $("#ccVehiculo").val();
+    });
+
+    if (!vehiculo) {
+        $("#ccCondiciones").text(
+            "El precio final incluye material y logística; no se muestra un flete adicional al cliente."
+        );
+        return;
+    }
+
+    const propio = vehiculo.tipo === "PROPIO";
+
+    $("#cc_precio_diesel_litro, #cc_chofer_por_viaje")
+        .prop("disabled", !propio)
+        .val((_, valor) => propio ? valor : "0.00");
+
+    $("#cc_flete_contratado_por_viaje")
+        .prop("disabled", propio)
+        .val((_, valor) => propio ? "0.00" : valor);
+
+    $("#ccCondiciones").text(propio
+        ? "Vehículo propio: se calcula combustible, casetas, chofer y costo fijo por viaje."
+        : "Vehículo contratado: registra el flete por viaje sin duplicar combustible ni chofer incluidos."
+    );
+}
+
+function calcularCotizacionCosteo(e) {
+    e.preventDefault();
+
+    const form = e.currentTarget;
+    if (!form.checkValidity()) return form.reportValidity();
+
+    const d = Object.fromEntries(new FormData(form).entries());
+
+    ["precio_diesel_litro", "chofer_por_viaje", "flete_contratado_por_viaje"].forEach(function(clave) {
+        if (!(clave in d)) d[clave] = "0.00";
+    });
+
+    const $btn = $("#ccCalcular").prop("disabled", true).text("Calculando...");
+
+    cotizacionVigente = null;
+    $("#ccGuardarCotizacion").prop("disabled", true);
+
+    api({action: "cotizarMaterial", datos: JSON.stringify(d)}).done(function(r) {
+        if (r.status !== "ok") {
+            return Swal.fire("Revisa el cálculo", r.answer || "No fue posible cotizar.", "warning");
+        }
+
+        let solicitudId = "";
+
+        try {
+            solicitudId = crearSolicitudCosteo();
+        } catch (error) {
+            return Swal.fire("Error", "No fue posible generar el identificador seguro de la cotización.", "error");
+        }
+
+        cotizacionVigente = {
+            datos: d,
+            resultado: r.results,
+            solicitud_id: solicitudId
+        };
+
+        const v = r.results;
+        const $resultado = $("#ccResultado").empty();
+
+        [
+            ["Cantidad", `${v.cantidad} ${v.unidad}`],
+            ["Viajes necesarios", v.viajes],
+            ["Costo de material", mxn(v.costo_material)],
+            ["Costos de entrega", mxn(v.costos_entrega)],
+            ["Costo total", mxn(v.costo_total)],
+            ["Precio por unidad", mxn(v.precio_unitario)],
+            ["Utilidad estimada", mxn(v.utilidad)]
+        ].forEach(function(item) {
+            $resultado.append(
+                $("<div>", {class: "d-flex justify-content-between gap-3 border-bottom py-2 small"})
+                    .append(
+                        $("<span>", {text: item[0]}),
+                        $("<strong>", {text: String(item[1])})
+                    )
+            );
+        });
+
+        $resultado.append(
+            $("<div>", {class: "cc-total mt-3 mb-3"}).append(
+                $("<small>", {text: "TOTAL DE VENTA (INCLUYE ENTREGA)"}),
+                $("<strong>", {text: mxn(v.total_venta)})
+            )
+        );
+
+        $("#ccGuardarCotizacion").prop("disabled", !d.cliente.trim());
+
+        if (!d.cliente.trim()) {
+            $resultado.append($("<p>", {
+                class: "small text-secondary",
+                text: "Indica un cliente para habilitar Guardar cotización."
+            }));
+        }
+    }).fail(function(xhr) {
+        Swal.fire("Error", errorApi(xhr), "error");
+    }).always(function() {
+        $btn.prop("disabled", false).html('<i class="bi bi-calculator me-2"></i>Calcular precio');
+    });
+}
+
+function crearSolicitudCosteo() {
+    if (!window.crypto?.getRandomValues) {
+        throw new Error("Generador criptográfico no disponible.");
+    }
+
+    const bytes = new Uint8Array(16);
+    window.crypto.getRandomValues(bytes);
+
+    return Array.from(bytes, numero =>
+        numero.toString(16).padStart(2, "0")
+    ).join("");
+}
+
+function guardarCotizacionCosteo() {
+    if (!cotizacionVigente || !cotizacionVigente.datos.cliente.trim()) return;
+
+    const registro = {
+        ...cotizacionVigente.datos,
+        solicitud_id: cotizacionVigente.solicitud_id
+    };
+
+    Swal.fire({
+        title: "¿Guardar cotización?",
+        text: "Se conservará el desglose de costos. No se registrará una venta.",
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: "Guardar",
+        cancelButtonText: "Cancelar",
+        confirmButtonColor: "#086b47"
+    }).then(function(r) {
+        if (!r.isConfirmed) return;
+
+        const $btn = $("#ccGuardarCotizacion").prop("disabled", true).text("Guardando...");
+
+        api({
+            action: "guardarCotizacionCosteo",
+            datos: JSON.stringify(registro)
+        }).done(function(res) {
+            if (res.status !== "ok") {
+                return Swal.fire("Aviso", res.answer || "No fue posible guardar.", "warning");
+            }
+
+            Swal.fire(
+                "Cotización guardada",
+                `Folio interno: ${res.results?.id}. ${res.answer}`,
+                "success"
+            );
+        }).fail(function(xhr) {
+            Swal.fire("Error", errorApi(xhr), "error");
+        }).always(function() {
+            $btn.prop("disabled", false).html('<i class="bi bi-floppy me-2"></i>Guardar cotización');
+        });
+    });
+}
+
+function bindCosteo() {
+    $(document).on("click", ".cc-tab", function() {
+        elegirCatalogo(this.dataset.tipo);
+    });
+
+    $(document).on("click", "#ccActualizar", function() {
+        consultarCatalogos(mostrarTablaCosteo);
+    });
+
+    $(document).on("input", "#ccBuscar", mostrarTablaCosteo);
+    $(document).on("change", "#ccEliminados", mostrarTablaCosteo);
+
+    $(document).on("click", "#ccNuevo", function() {
+        abrirFormularioCosteo();
+    });
+
+    $(document).on("click", ".cc-editar", function() {
+        abrirFormularioCosteo(Number(this.dataset.indice));
+    });
+
+    $(document).on("click", ".cc-estado", function() {
+        cambiarEstadoCosteo(Number(this.dataset.indice), this.dataset.operacion);
+    });
+
+    $(document).on("submit", "#ccFormulario", guardarFormularioCosteo);
+    $(document).on("change", "#ccVehiculo", actualizarCondiciones);
+
+    $(document).on("input change", "#ccCotizador :input", function() {
+        cotizacionVigente = null;
+        $("#ccGuardarCotizacion").prop("disabled", true);
+        $("#ccResultado").html(
+            '<p class="text-secondary">Los datos cambiaron. Calcula nuevamente para actualizar el precio.</p>'
+        );
+    });
+
+    $(document).on("submit", "#ccCotizador", calcularCotizacionCosteo);
+    $(document).on("click", "#ccGuardarCotizacion", guardarCotizacionCosteo);
+}

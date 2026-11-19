@@ -52,7 +52,7 @@ switch ($action) {
         break;
 
     case "getCatalogosCosteo":
-        $response = $consultas->getCatalogosCosteo();
+        $response = $consultas->getCatalogosCosteo($_POST);
         break;
 
     case "guardarCatalogoCosteo":
@@ -63,8 +63,12 @@ switch ($action) {
         $response = $consultas->cambiarEstadoCatalogoCosteo($_POST);
         break;
 
-    case "calcularCosteoMaterial":
+    case "cotizarMaterial":
         $response = $consultas->cotizarMaterial($_POST, false);
+        break;
+
+    case "guardarCotizacionCosteo":
+        $response = $consultas->cotizarMaterial($_POST, true);
         break;
         
     case "guardarCotizacionMaterial":

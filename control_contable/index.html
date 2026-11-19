@@ -18,6 +18,7 @@
 
     <!-- Estilos propios -->
     <link href="css/app.css" rel="stylesheet">
+    <link href="css/costeos.css" rel="stylesheet">
 </head>
 <body>
 
@@ -65,6 +66,14 @@
             <i class="bi bi-sliders2"></i>
             <span>Configuración</span>
         </button>
+
+        <button type="button"
+        class="dropdown-item menu-config-item d-none"
+        id="btnCatalogosCosteo">
+    <i class="bi bi-database-gear"></i>
+    <span>Materiales, vehículos y tarifas</span>
+</button>
+
 
         <button type="button" class="dropdown-item menu-config-item" disabled>
             <i class="bi bi-people"></i>
@@ -914,6 +923,7 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
 
 <!-- JavaScript propio -->
+<script src="js/costeos.js"></script>
 <script src="js/app.js"></script>
 
 </body>

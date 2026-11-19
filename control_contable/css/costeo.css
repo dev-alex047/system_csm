@@ -1,0 +1,169 @@
+
+/* COSTEOS Y COTIZACIONES */
+#ccPestanas .btn {
+    border-radius: 999px;
+    padding: .52rem 1rem;
+    font-weight: 600;
+    transition: .2s ease;
+}
+
+#ccPestanas .btn.active {
+    background: #08704c;
+    border-color: #08704c;
+    color: #fff;
+}
+
+#ccTabla {
+    font-size: .91rem;
+    min-width: 720px;
+}
+
+#ccTabla thead th {
+    background: #edf5ef;
+    color: #274238;
+    font-size: .81rem;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+#ccTabla td {
+    vertical-align: middle;
+}
+
+#ccTabla td:first-child {
+    font-weight: 600;
+}
+
+#ccTabla td:last-child {
+    min-width: 185px;
+}
+
+#ccModal .modal-content {
+    border: 0;
+    border-radius: 1.2rem;
+    overflow: hidden;
+}
+
+#ccModal .modal-header,
+#ccModal .modal-footer {
+    background: #f8faf9;
+}
+
+#ccModal .modal-body {
+    padding: 1.6rem;
+}
+
+#ccModal .form-label {
+    font-size: .88rem;
+    color: #284136;
+}
+
+#ccModal .form-control,
+#ccModal .form-select {
+    min-height: 45px;
+}
+
+.cc-total {
+    background: #e8f4ec;
+    border: 1px solid #c2dfcd;
+    border-radius: 1rem;
+    padding: 1.2rem;
+    color: #075f3e;
+}
+
+.cc-total small {
+    display: block;
+    font-size: .75rem;
+    font-weight: 700;
+}
+
+.cc-total strong {
+    display: block;
+    font-size: clamp(1.5rem, 2.8vw, 2.1rem);
+    line-height: 1.3;
+}
+
+#ccCotizador .cc-resumen {
+    top: 1rem;
+}
+
+#ccCotizador .form-control,
+#ccCotizador .form-select {
+    min-height: 44px;
+}
+
+/* MODAL DE ADMINISTRACIÓN */
+#ccModalCatalogos .modal-content {
+    border: 0;
+    border-radius: 1.25rem;
+    overflow: hidden;
+}
+
+#ccModalCatalogos .modal-header {
+    background: #f8fbf9;
+    padding: 1.3rem 1.6rem;
+}
+
+#ccModalCatalogos .modal-body {
+    background: #f7faf8;
+    padding: 1.4rem;
+}
+
+#ccModalCatalogos .nota-bloque {
+    margin-bottom: .75rem;
+}
+
+#ccModalCatalogos .cc-tabla-contenedor {
+    max-height: 53vh;
+    overflow: auto;
+}
+
+#ccModalCatalogos .modal-dialog {
+    --bs-modal-width: min(1100px, calc(100vw - 24px));
+}
+
+#ccModalCatalogos #ccTabla thead {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+#ccModalCatalogos #ccTabla td {
+    overflow-wrap: anywhere;
+}
+
+#ccModalCatalogos .btn-close {
+    flex-shrink: 0;
+}
+
+@media (max-width: 767.98px) {
+    #ccModalCatalogos .modal-header {
+        padding: 1rem;
+    }
+
+    #ccModalCatalogos .modal-body {
+        padding: .8rem;
+    }
+
+    #ccModalCatalogos .cc-tabla-contenedor {
+        max-height: 48vh;
+    }
+}
+
+@media (max-width: 575.98px) {
+    #ccModal .modal-body {
+        padding: 1rem;
+    }
+
+    #ccPestanas {
+        gap: .4rem !important;
+    }
+
+    #ccPestanas .btn {
+        flex: 1 1 auto;
+    }
+
+    #ccTabla {
+        min-width: 620px;
+    }
+}
