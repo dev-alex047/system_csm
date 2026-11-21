@@ -19,7 +19,7 @@ class utils{
                 );
             }
 
-            $archivo = __DIR__ . '/recursos/paises_estados.json';
+            $archivo = __DIR__ . '/../recursos/paises_estados.json';
 
             if (!is_readable($archivo)) {
                 throw new RuntimeException(
