@@ -181,7 +181,8 @@ class utils{
                 'status' => 'error',
                 'code' => 503,
                 'answer' => 'No se pudo consultar el catálogo geográfico.'
-            ];
+                'razon' => 'razo ' . $e->getMessage()
+            ]; 
         }
     }
 

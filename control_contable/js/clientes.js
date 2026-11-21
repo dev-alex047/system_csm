@@ -237,6 +237,15 @@ function liberarMapaClientes() {
     clientesUI.mapaFicha = null;
 }
 
+if (clientesUI.mapa) {
+        clientesUI.mapa.remove();
+    }
+
+    if (clientesUI.mapaFicha) {
+        clientesUI.mapaFicha.remove();
+        clientesUI.mapaFicha = null;
+    }
+
     clientesUI.mapa = null;
     clientesUI.pin = null;
 }
@@ -382,6 +391,28 @@ $(document).on("submit", "#clFormulario", function(e) {
     e.preventDefault();
 
     if (!this.checkValidity()) return this.reportValidity();
+
+
+    const geoErrorVisible = !$("#clGeoError").hasClass("d-none");
+
+    const cargandoEstados = $("#cl_estado option:selected")
+        .text() === "Cargando estados...";
+
+    if (
+        $("#cl_pais").prop("disabled") ||
+        geoErrorVisible ||
+        cargandoEstados
+    ) {
+        Swal.fire({
+            icon: "warning",
+            title: "Verifica el domicilio",
+            text: "No se han cargado correctamente los países o estados. Reintenta la consulta antes de guardar.",
+            confirmButtonText: "Entendido"
+        });
+
+        return;
+    }
+
 
     const $boton = $("#clGuardar").prop("disabled", true);
     const datos = {action: "guardarCliente"};
@@ -1035,11 +1066,6 @@ $(document).on("click", "#clGeoReintentar", function() {
         $("#cl_pais").val() || "Mexico",
         $("#cl_estado").val() || ""
     );
-});
-
-
-$(document).on("change", "#cl_pais", function() {
-    cargarEstadosCliente(this.value);
 });
 
 
