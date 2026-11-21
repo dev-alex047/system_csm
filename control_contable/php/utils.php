@@ -6,7 +6,116 @@ class utils{
 
     
     
+    
     public function getPaisesEstados(array $data = []): array {
+        try {
+            $nivel = isset($data['nivel']) && is_scalar($data['nivel'])
+                ? trim((string)$data['nivel'])
+                : '';
+
+            if (!in_array($nivel, ['paises', 'estados'], true)) {
+                throw new InvalidArgumentException(
+                    'Selecciona una consulta válida.'
+                );
+            }
+
+            $archivo = __DIR__ . '/recursos/paises_estados.json';
+
+            if (!is_readable($archivo)) {
+                throw new RuntimeException(
+                    'No se encuentra el archivo paises_estados.json.'
+                );
+            }
+
+            $contenido = file_get_contents($archivo);
+            $catalogo = json_decode($contenido, true);
+
+            if (
+                json_last_error() !== JSON_ERROR_NONE ||
+                !is_array($catalogo) ||
+                !isset($catalogo['countries']) ||
+                !isset($catalogo['states'])
+            ) {
+                throw new RuntimeException(
+                    'El archivo de países y estados no es válido.'
+                );
+            }
+
+            if ($nivel === 'paises') {
+                $resultados = $catalogo['countries'];
+
+            } else {
+                $pais = isset($data['pais']) && is_scalar($data['pais'])
+                    ? trim((string)$data['pais'])
+                    : '';
+
+                if ($pais === '' || strlen($pais) > 100) {
+                    throw new InvalidArgumentException(
+                        'Selecciona un país válido.'
+                    );
+                }
+
+                $pais = str_replace(
+                    ['México', 'méxico'],
+                    'Mexico',
+                    $pais
+                );
+
+                $codigo = '';
+
+                foreach ($catalogo['countries'] as $item) {
+                    if (
+                        strcasecmp(
+                            (string)$item['name'],
+                            $pais
+                        ) === 0 ||
+                        strcasecmp(
+                            (string)$item['iso2'],
+                            $pais
+                        ) === 0
+                    ) {
+                        $codigo = (string)$item['iso2'];
+                        break;
+                    }
+                }
+
+                if ($codigo === '') {
+                    throw new InvalidArgumentException(
+                        'El país seleccionado no existe.'
+                    );
+                }
+
+                $resultados = $catalogo['states'][$codigo] ?? [];
+            }
+
+            return [
+                'status' => 'ok',
+                'code' => 200,
+                'answer' => 'Catálogo geográfico consultado.',
+                'results' => array_values($resultados)
+            ];
+
+        } catch (InvalidArgumentException $e) {
+            return [
+                'status' => 'warning',
+                'code' => 400,
+                'answer' => $e->getMessage()
+            ];
+
+        } catch (Throwable $e) {
+            error_log(
+                'getPaisesEstados: ' . $e->getMessage()
+            );
+
+            return [
+                'status' => 'error',
+                'code' => 500,
+                'answer' => 'No se pudo leer el catálogo geográfico.'
+            ];
+        }
+    }
+
+    public function getPaisesEstados_old(array $data = []): array {
         try {
             $nivel = trim((string)($data['nivel'] ?? ''));
             $pais = trim((string)($data['pais'] ?? ''));
@@ -248,6 +357,7 @@ class utils{
             ];
         }
     }
+
 
 
 
