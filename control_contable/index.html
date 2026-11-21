@@ -75,6 +75,13 @@
     <span>Materiales, vehículos y tarifas</span>
 </button>
 
+<button type="button"
+        class="dropdown-item menu-config-item d-none"
+        id="btnClientes">
+    <i class="bi bi-people-fill"></i>
+    <span>Clientes y prospectos</span>
+</button>
+
 
         <button type="button" class="dropdown-item menu-config-item" disabled>
             <i class="bi bi-people"></i>
@@ -907,7 +914,261 @@
 </div>
 </template>
 
+<!-- ADMINISTRACIÓN DE CLIENTES -->
+<div class="modal fade" id="clModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title h5 fw-bold mb-1">
+                        <i class="bi bi-people-fill text-success me-2"></i>
+                        Clientes y prospectos
+                    </h2>
+                    <small class="text-secondary">
+                        Administra tus clientes y sus direcciones de entrega.
+                    </small>
+                </div>
+                <button type="button" class="btn-close"
+                        data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
 
+            <div class="modal-body">
+                <!-- LISTADO -->
+                <div id="clListadoPanel">
+                    <div class="d-flex justify-content-between align-items-center
+                                flex-wrap gap-3 mb-3">
+                        <div>
+                            <h3 class="h6 fw-bold mb-1">Directorio de clientes</h3>
+                            <small id="clConteo" class="text-secondary"></small>
+                        </div>
+                        <button type="button" id="clNuevo" class="btn btn-success">
+                            <i class="bi bi-person-plus me-1"></i>Nuevo cliente
+                        </button>
+                    </div>
+
+                    <div class="input-group mb-3">
+                        <span class="input-group-text bg-white">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input id="clBuscar" class="form-control"
+                               placeholder="Buscar por nombre, alias, teléfono o domicilio">
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th>Alias</th>
+                                    <th>Teléfono</th>
+                                    <th>Domicilio</th>
+                                    <th>Tipo</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="clTabla"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- FORMULARIO -->
+                <form id="clFormulario" class="d-none">
+                    <input type="hidden" name="id" id="cl_id" value="0">
+
+                    <div class="d-flex align-items-center justify-content-between mb-4">
+                        <div>
+                            <h3 id="clTituloFormulario" class="h5 fw-bold mb-1">
+                                Nuevo cliente
+                            </h3>
+                            <small class="text-secondary">
+                                Los campos con * son obligatorios.
+                            </small>
+                        </div>
+                        <button type="button" id="clVolver"
+                                class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-arrow-left me-1"></i>Volver
+                        </button>
+                    </div>
+
+                    <h4 class="h6 fw-bold mb-3">
+                        <i class="bi bi-person-vcard text-success me-2"></i>
+                        Información general
+                    </h4>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label for="cl_nombre" class="form-label">Nombre *</label>
+                            <input id="cl_nombre" name="nombre" class="form-control"
+                                   maxlength="100" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="cl_apellido" class="form-label">Apellidos</label>
+                            <input id="cl_apellido" name="apellido"
+                                   class="form-control" maxlength="150">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="cl_alias" class="form-label">Alias o nombre conocido</label>
+                            <input id="cl_alias" name="alias"
+                                   class="form-control" maxlength="150">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="cl_tipo" class="form-label">Clasificación</label>
+                            <select id="cl_tipo" name="tipo" class="form-select">
+                                <option value="1">Cliente</option>
+                                <option value="0">Prospecto</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="cl_numero" class="form-label">Teléfono</label>
+                            <input id="cl_numero" name="numero" class="form-control"
+                                   maxlength="30" type="tel">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="cl_correo" class="form-label">Correo electrónico</label>
+                            <input id="cl_correo" name="correo" type="email"
+                                   class="form-control" maxlength="190">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="cl_usuario" class="form-label">Usuario (opcional)</label>
+                            <input id="cl_usuario" name="usuario"
+                                   class="form-control" maxlength="100">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="cl_compania" class="form-label">Compañía</label>
+                            <input id="cl_compania" name="compania"
+                                   class="form-control" maxlength="150">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="cl_limite_credito" class="form-label">
+                                Límite de crédito
+                            </label>
+                            <input id="cl_limite_credito" name="limite_credito"
+                                   type="number" min="0" step="0.01"
+                                   class="form-control" value="0.00">
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <h4 class="h6 fw-bold mb-3">
+                        <i class="bi bi-geo-alt text-success me-2"></i>
+                        Domicilio del cliente
+                    </h4>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-12">
+                            <label for="cl_domicilio" class="form-label">
+                                Domicilio completo o referencias
+                            </label>
+                            <textarea id="cl_domicilio" name="domicilio"
+                                      class="form-control" maxlength="255"
+                                      rows="2"></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="cl_calle" class="form-label">Calle</label>
+                            <input id="cl_calle" name="calle"
+                                   class="form-control" maxlength="150">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="cl_numext" class="form-label">Núm. exterior</label>
+                            <input id="cl_numext" name="numext"
+                                   class="form-control" maxlength="20">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="cl_numint" class="form-label">Núm. interior</label>
+                            <input id="cl_numint" name="numint"
+                                   class="form-control" maxlength="20">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="cl_colonia" class="form-label">Colonia o localidad</label>
+                            <input id="cl_colonia" name="colonia"
+                                   class="form-control" maxlength="150">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="cl_cp" class="form-label">Código postal</label>
+                            <input id="cl_cp" name="cp"
+                                   class="form-control" maxlength="10">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="cl_estado" class="form-label">Estado</label>
+                            <input id="cl_estado" name="estado"
+                                   class="form-control" maxlength="100">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="cl_pais" class="form-label">País</label>
+                            <input id="cl_pais" name="pais"
+                                   class="form-control" maxlength="100">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="cl_latitud" class="form-label">Latitud</label>
+                            <input id="cl_latitud" name="latitud" type="number"
+                                   min="-90" max="90" step="any" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="cl_longitud" class="form-label">Longitud</label>
+                            <input id="cl_longitud" name="longitud" type="number"
+                                   min="-180" max="180" step="any" class="form-control">
+                        </div>
+                    </div>
+
+                    <div class="border rounded-4 p-3 mb-4">
+                        <div class="d-flex justify-content-between align-items-center
+                                    flex-wrap gap-2 mb-3">
+                            <div>
+                                <h4 class="h6 fw-bold mb-1">Ubicación en el mapa</h4>
+                                <small class="text-secondary">
+                                    Busca un lugar, toca el mapa o arrastra el marcador.
+                                </small>
+                            </div>
+                            <button type="button" id="clUsarGPS"
+                                    class="btn btn-outline-success btn-sm">
+                                <i class="bi bi-crosshair me-1"></i>Usar mi ubicación
+                            </button>
+                        </div>
+
+                        <div class="position-relative mb-2">
+                            <input id="clBuscarLugar" class="form-control"
+                                   placeholder="Buscar calle, comunidad o dirección..."
+                                   autocomplete="off">
+                            <div id="clLugares"
+                                 class="list-group position-absolute w-100 shadow d-none"
+                                 style="z-index:1100;max-height:220px;overflow-y:auto">
+                            </div>
+                        </div>
+
+                        <div id="clMapa" class="cc-mapa rounded-4"
+                             style="height:330px;min-height:330px"></div>
+
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <small class="text-secondary">
+                                Ubicación opcional para entregas y rutas.
+                            </small>
+                            <button type="button" id="clQuitarPin"
+                                    class="btn btn-outline-secondary btn-sm">
+                                Quitar marcador
+                            </button>
+                        </div>
+                        <small class="text-secondary">
+                            <a href="https://locationiq.com" target="_blank"
+                               rel="noopener noreferrer">Search by LocationIQ.com</a>
+                        </small>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" id="clVolverAbajo"
+                                class="btn btn-outline-secondary"
+                                onclick="document.getElementById('clVolver').click()">
+                            Cancelar
+                        </button>
+                        <button type="submit" id="clGuardar" class="btn btn-success px-4">
+                            <i class="bi bi-check2-circle me-1"></i>Guardar cliente
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- ========== LIBRERÍAS JAVASCRIPT ========== -->
 
@@ -926,6 +1187,7 @@
 <!-- JavaScript propio -->
 <script src="js/costeo.js"></script>
 <script src="js/app.js"></script>
+<script src="js/clientes.js"></script>
 
 </body>
 </html>

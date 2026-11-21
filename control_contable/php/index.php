@@ -136,6 +136,18 @@ switch ($action) {
         $response = $consultas->generarConcentradoCxc($_POST);
         break;
 
+    case "getClientes":
+        $response = $consultas->getClientes($_POST);
+        break;
+
+    case "guardarCliente":
+        $response = $consultas->guardarCliente($_POST);
+        break;
+
+    case "eliminarCliente":
+        $response = $consultas->eliminarCliente($_POST);
+        break;
+
     default:
         $response["status"] = "warning";
         $response["answer"] = "La acción solicitada no es válida.";

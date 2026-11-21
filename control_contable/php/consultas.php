@@ -650,6 +650,55 @@ if ($modoFecha === "AUTOMATICA" && $fechaSolicitada !== "") {
             $cajaId = isset($venta['caja_id']) ? (int)$venta['caja_id'] : 0;
 
             if ($cliente === '' || $vendedor === '') throw new InvalidArgumentException('Completa el cliente y el vendedor.');
+            
+            
+$clienteId = filter_var(
+    $venta['cliente_id'] ?? 0,
+    FILTER_VALIDATE_INT,
+    ['options'=>['min_range'=>0]]
+);
+
+if ($clienteId === false) {
+    throw new InvalidArgumentException(
+        'El identificador del cliente no es válido.'
+    );
+}
+
+$corpId = $this->corpClientes();
+
+if ($clienteId > 0) {
+
+    $stmt = $this->ejecutarSqlVenta(
+        "SELECT nombre, apellido
+         FROM clientes
+         WHERE corp_id=? AND id=? AND eliminado=0
+         LIMIT 1",
+        "si", [$corpId, $clienteId]
+    );
+
+    $registroCliente = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$registroCliente) {
+        throw new InvalidArgumentException(
+            'El cliente seleccionado ya no está disponible.'
+        );
+    }
+
+    $cliente = trim(
+        $registroCliente['nombre'] . ' ' .
+        ($registroCliente['apellido'] ?? '')
+    );
+
+    if (strlen($cliente) > 100) {
+        throw new InvalidArgumentException(
+            'El nombre del cliente supera el límite de la nota.'
+        );
+    }
+} else {
+    $clienteId = null;
+}
+
             if ($folioManual !== '' && !preg_match('~^[A-Za-z0-9][A-Za-z0-9._/-]{0,49}$~D', $folioManual)) throw new InvalidArgumentException('El folio solamente permite letras, números, puntos, guiones y diagonales.');
             if (!in_array($forma, ['EFECTIVO','TRANSFERENCIA','CREDITO','PARCIALIDADES'], true)) throw new InvalidArgumentException('Modalidad de pago inválida.');
             if (!isset($venta['items']) || !is_array($venta['items']) || count($venta['items']) < 1 || count($venta['items']) > 100) throw new InvalidArgumentException('Agrega entre 1 y 100 artículos.');
@@ -775,11 +824,43 @@ if (!$turnoAbierto) throw new InvalidArgumentException("Debes abrir un turno de 
                 }
 
                 $etapa = "insertar_venta";
-                $stmt = $this->ejecutarSqlVenta(
-                    'INSERT INTO sales (user_id,client_name,client_address,client_phone,payment_method,bank_reference,cash_register_id,pending_amount,total_amount,ticket_barcode,notes,created_at,updated_at,sale_kind,note_folio,seller_name,initial_paid,request_token) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-                    'isssssisssssssssss',
-                    [$this->usuarioOperador,$cliente,$direccion,$telefono,$forma,$referenciaCobro,$idCajaVenta,$saldo,$total,$ticketInicial,$observaciones,$fechaOperacion,$fecha,'NOTA',$folioInicial,$vendedor,$pagado,$token]
-                );
+                
+
+$stmt = $this->ejecutarSqlVenta(
+    "INSERT INTO sales (
+        user_id, corp_id, client_name, cliente_id,
+        client_address, client_phone, payment_method,
+        bank_reference, cash_register_id, pending_amount,
+        total_amount, ticket_barcode, notes, created_at,
+        updated_at, sale_kind, note_folio, seller_name,
+        initial_paid, request_token
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+    "ississssisssssssssss",
+    [
+        $this->usuarioOperador,
+        $corpId,
+        $cliente,
+        $clienteId,
+        $direccion,
+        $telefono,
+        $forma,
+        $referenciaCobro,
+        $idCajaVenta,
+        $saldo,
+        $total,
+        $ticketInicial,
+        $observaciones,
+        $fechaOperacion,
+        $fecha,
+        'NOTA',
+        $folioInicial,
+        $vendedor,
+        $pagado,
+        $token
+    ]
+);
+
+
                 $stmt->close();
 
                 $idVenta = (int)$this->conn->insert_id;
@@ -873,26 +954,36 @@ $etapa = "registrar_cuenta_cobrar";
 if ($saldoCentavos > 0) {
     $descripcionCuenta = "Venta con nota " . $folio;
 
-    $stmt = $this->ejecutarSqlVenta(
-        "INSERT INTO receivables
-        (sale_id, client_id, client_name, user_id, total_amount,
-        paid_amount, status, due_date, created_at, updated_at,
-        description, document_reference, request_token)
-        VALUES (?, NULL, ?, ?, ?, ?, 'PENDIENTE', NULL, ?, ?, ?, ?, ?)",
-        "isisssssss",
-        [
-            $idVenta,
-            $cliente,
-            $this->usuarioOperador,
-            $total,
-            $pagado,
-            $fechaOperacion,
-            $fecha,
-            $descripcionCuenta,
-            $folio,
-            $token
-        ]
-    );
+    
+
+$stmt = $this->ejecutarSqlVenta(
+    "INSERT INTO receivables (
+        sale_id, client_id, client_name, user_id,
+        total_amount, paid_amount, pending_amount,
+        status, due_date, created_at, updated_at,
+        description, document_reference, request_token
+    ) VALUES (
+        ?,?,?,?,?,?,?,
+        'PENDIENTE',NULL,?,?,?,?,?
+    )",
+    "iisissssssss",
+    [
+        $idVenta,
+        $clienteId,
+        $cliente,
+        $this->usuarioOperador,
+        $total,
+        $pagado,
+        $saldo,
+        $fechaOperacion,
+        $fecha,
+        $descripcionCuenta,
+        $folio,
+        $token
+    ]
+);
+
+
 
     $stmt->close();
 }
@@ -1342,11 +1433,40 @@ if ($modoFecha === "MANUAL") {
                 if (!$turno) throw new InvalidArgumentException("Abre un turno de caja antes de cobrar en efectivo.");
             }
 
-            $stmt = $this->ejecutarSqlVenta(
-                "INSERT INTO sales (user_id,client_name,client_address,client_phone,payment_method,bank_reference,cash_register_id,pending_amount,total_amount,ticket_barcode,notes,created_at,updated_at,sale_kind,note_folio,seller_name,initial_paid,request_token) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                "isssssisssssssssss",
-                [$usuario, "Mostrador", "", "", $forma, $referencia, $idCajaVenta, "0.00", $total, null, $observaciones, $fechaOperacion, $fecha, "RAPIDA", null, "Mostrador", $total, $token]
-            );
+            
+$stmt = $this->ejecutarSqlVenta(
+    "INSERT INTO sales (
+        user_id, corp_id, client_name, client_address,
+        client_phone, payment_method, bank_reference,
+        cash_register_id, pending_amount, total_amount,
+        ticket_barcode, notes, created_at, updated_at,
+        sale_kind, note_folio, seller_name, initial_paid,
+        request_token
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+    "issssssisssssssssss",
+    [
+        $usuario,
+        $this->corpClientes(),
+        "Mostrador",
+        "",
+        "",
+        $forma,
+        $referencia,
+        $idCajaVenta,
+        "0.00",
+        $total,
+        null,
+        $observaciones,
+        $fechaOperacion,
+        $fecha,
+        "RAPIDA",
+        null,
+        "Mostrador",
+        $total,
+        $token
+    ]
+);
+
             $stmt->close();
 
             $idVenta = (int)$this->conn->insert_id;
@@ -4554,6 +4674,352 @@ public function cambiarEstadoCatalogoCosteo(array $data): array {
 
     return $json;
 }
+
+    private function corpClientes(): string {
+        $corp = isset($_SESSION['csm_corp_id'])
+            ? trim((string)$_SESSION['csm_corp_id']) : '1';
+
+        if ($corp === '' || strlen($corp) > 150) {
+            throw new RuntimeException('Corporativo no válido.');
+        }
+
+        return $corp;
+    }
+
+    private function exigirAdminClientes(): void {
+        $stmt = $this->ejecutarSqlVenta(
+            'SELECT role_id FROM users WHERE id=? AND is_active=1 LIMIT 1',
+            'i', [$this->usuarioOperador]
+        );
+
+        $usuario = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$usuario || (int)$usuario['role_id'] !== 1) {
+            throw new DomainException(
+                'Solo administración puede modificar clientes.'
+            );
+        }
+    }
+
+    public function getClientes(array $data = []): array {
+        try {
+            if (!$this->conn) throw new RuntimeException('Sin conexión.');
+
+            $stmt = $this->ejecutarSqlVenta(
+                'SELECT corp_id, id, nombre, apellido, correo, usuario,
+                        alias, numero, domicilio, calle, numext, numint,
+                        colonia, cp, estado, pais, latitud, longitud,
+                        tipo, compania, limite_credito, formAlta,
+                        fechaAlta, fechaEditado
+                 FROM clientes
+                 WHERE corp_id=? AND eliminado=0
+                 ORDER BY nombre, apellido, id',
+                's', [$this->corpClientes()]
+            );
+
+            $clientes = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            $stmt->close();
+
+            return [
+                'status'=>'ok',
+                'code'=>200,
+                'answer'=>'Clientes consultados.',
+                'results'=>$clientes
+            ];
+        } catch (Throwable $e) {
+            error_log('getClientes: ' . $e->getMessage());
+            return [
+                'status'=>'error',
+                'code'=>500,
+                'answer'=>'No fue posible consultar clientes.'
+            ];
+        }
+    }
+
+    public function guardarCliente(array $data = []): array {
+        try {
+            if (!$this->conn) throw new RuntimeException('Sin conexión.');
+
+            $this->exigirAdminClientes();
+            $corp = $this->corpClientes();
+
+            $id = filter_var(
+                $data['id'] ?? 0,
+                FILTER_VALIDATE_INT,
+                ['options'=>['min_range'=>0]]
+            );
+
+            if ($id === false) {
+                throw new InvalidArgumentException('ID inválido.');
+            }
+
+            $longitudes = [
+                'nombre'=>100,
+                'apellido'=>150,
+                'alias'=>150,
+                'correo'=>190,
+                'usuario'=>100,
+                'numero'=>30,
+                'domicilio'=>255,
+                'calle'=>150,
+                'numext'=>20,
+                'numint'=>20,
+                'colonia'=>150,
+                'cp'=>10,
+                'estado'=>100,
+                'pais'=>100,
+                'compania'=>150
+            ];
+
+            $valores = [];
+
+            foreach ($longitudes as $campo=>$maximo) {
+                $texto = $this->textoVenta($data, $campo, $maximo);
+                $valores[$campo] = $texto === '' ? null : $texto;
+            }
+
+            if ($valores['nombre'] === null) {
+                throw new InvalidArgumentException(
+                    'Escribe el nombre del cliente.'
+                );
+            }
+
+            if ($valores['correo'] !== null &&
+                !filter_var($valores['correo'], FILTER_VALIDATE_EMAIL)) {
+                throw new InvalidArgumentException('El correo no es válido.');
+            }
+
+            $tipo = (string)($data['tipo'] ?? '1');
+
+            if (!in_array($tipo, ['0','1'], true)) {
+                throw new InvalidArgumentException(
+                    'Tipo de cliente inválido.'
+                );
+            }
+
+            $valores['tipo'] = $tipo;
+
+            $credito = trim((string)($data['limite_credito'] ?? '0'));
+
+            if ($credito === '') $credito = '0';
+
+            if (!preg_match(
+                '/^\d{1,13}(?:\.\d{1,2})?$/D',
+                $credito
+            )) {
+                throw new InvalidArgumentException(
+                    'Límite de crédito inválido.'
+                );
+            }
+
+            $valores['limite_credito'] = $credito;
+
+            $coordenadas = [];
+
+            foreach (['latitud'=>90, 'longitud'=>180] as $campo=>$limite) {
+                $valor = trim((string)($data[$campo] ?? ''));
+
+                if ($valor === '') {
+                    $coordenadas[$campo] = null;
+                } elseif (
+                    !is_numeric($valor) ||
+                    !is_finite((float)$valor) ||
+                    abs((float)$valor) > $limite
+                ) {
+                    throw new InvalidArgumentException(
+                        'Coordenadas inválidas.'
+                    );
+                } else {
+                    $coordenadas[$campo] = number_format(
+                        (float)$valor, 8, '.', ''
+                    );
+                }
+            }
+
+            if (
+                ($coordenadas['latitud'] === null) !==
+                ($coordenadas['longitud'] === null)
+            ) {
+                throw new InvalidArgumentException(
+                    'Indica ambas coordenadas o ninguna.'
+                );
+            }
+
+            $valores = array_merge($valores, $coordenadas);
+
+            $nombreCompleto = trim(
+                $valores['nombre'] . ' ' . ($valores['apellido'] ?? '')
+            );
+
+            $stmt = $this->ejecutarSqlVenta(
+                "SELECT id FROM clientes
+                 WHERE corp_id=? AND eliminado=0 AND id<>?
+                   AND TRIM(CONCAT_WS(' ',nombre,apellido))
+                       COLLATE utf8mb4_general_ci
+                       = ? COLLATE utf8mb4_general_ci
+                 LIMIT 1",
+                'sis', [$corp, $id, $nombreCompleto]
+            );
+
+            $duplicado = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if ($duplicado) {
+                return [
+                    'status'=>'warning',
+                    'code'=>409,
+                    'answer'=>'Ya existe un cliente activo con ese nombre completo.'
+                ];
+            }
+
+            $columnas = array_keys($valores);
+            $parametros = array_values($valores);
+
+            if ($id === 0) {
+                $sql = 'INSERT INTO clientes (`corp_id`,`formAlta`,`' .
+                    implode('`,`', $columnas) .
+                    '`) VALUES (?,\'ORGANICO\',' .
+                    implode(',', array_fill(0, count($columnas), '?')) .
+                    ')';
+
+                $stmt = $this->ejecutarSqlVenta(
+                    $sql,
+                    str_repeat('s', count($columnas) + 1),
+                    array_merge([$corp], $parametros)
+                );
+
+                $stmt->close();
+                $id = (int)$this->conn->insert_id;
+            } else {
+                $stmt = $this->ejecutarSqlVenta(
+                    'SELECT id FROM clientes
+                     WHERE corp_id=? AND id=? AND eliminado=0 LIMIT 1',
+                    'si', [$corp, $id]
+                );
+
+                $existe = $stmt->get_result()->fetch_assoc();
+                $stmt->close();
+
+                if (!$existe) {
+                    return [
+                        'status'=>'warning',
+                        'code'=>404,
+                        'answer'=>'El cliente ya no está disponible.'
+                    ];
+                }
+
+                $asignaciones = [];
+
+                foreach ($columnas as $columna) {
+                    $asignaciones[] = '`' . $columna . '`=?';
+                }
+
+                $sql = 'UPDATE clientes
+ SET eliminado=1,
+     fechaEliminado=NOW(),
+     fechaEditado=NOW()
+ WHERE corp_id=? AND id=? AND eliminado=0';
+
+                $stmt = $this->ejecutarSqlVenta(
+                    $sql,
+                    str_repeat('s', count($columnas)) . 'si',
+                    array_merge($parametros, [$corp, $id])
+                );
+
+                $stmt->close();
+            }
+
+            return [
+                'status'=>'ok',
+                'code'=>200,
+                'answer'=>'Cliente guardado correctamente.',
+                'results'=>['id'=>$id]
+            ];
+        } catch (DomainException $e) {
+            return [
+                'status'=>'warning',
+                'code'=>403,
+                'answer'=>$e->getMessage()
+            ];
+        } catch (InvalidArgumentException $e) {
+            return [
+                'status'=>'warning',
+                'code'=>400,
+                'answer'=>$e->getMessage()
+            ];
+        } catch (Throwable $e) {
+            error_log('guardarCliente: ' . $e->getMessage());
+            return [
+                'status'=>'error',
+                'code'=>500,
+                'answer'=>'No fue posible guardar el cliente.'
+            ];
+        }
+    }
+
+    public function eliminarCliente(array $data = []): array {
+        try {
+            if (!$this->conn) throw new RuntimeException('Sin conexión.');
+
+            $this->exigirAdminClientes();
+
+            $id = filter_var(
+                $data['id'] ?? 0,
+                FILTER_VALIDATE_INT,
+                ['options'=>['min_range'=>1]]
+            );
+
+            if ($id === false) {
+                throw new InvalidArgumentException('ID inválido.');
+            }
+
+            $stmt = $this->ejecutarSqlVenta(
+                'UPDATE clientes
+                 SET eliminado=1,
+                     fechaEliminado=NOW(),
+                     fechaEditado=NOW(),
+                 WHERE corp_id=? AND id=? AND eliminado=0',
+                'si', [$this->corpClientes(), $id]
+            );
+
+            $cambiados = $stmt->affected_rows;
+            $stmt->close();
+
+            if ($cambiados === 0) {
+                return [
+                    'status'=>'warning',
+                    'code'=>404,
+                    'answer'=>'El cliente ya no está disponible.'
+                ];
+            }
+
+            return [
+                'status'=>'ok',
+                'code'=>200,
+                'answer'=>'Cliente eliminado del catálogo.'
+            ];
+        } catch (DomainException $e) {
+            return [
+                'status'=>'warning',
+                'code'=>403,
+                'answer'=>$e->getMessage()
+            ];
+        } catch (InvalidArgumentException $e) {
+            return [
+                'status'=>'warning',
+                'code'=>400,
+                'answer'=>$e->getMessage()
+            ];
+        } catch (Throwable $e) {
+            error_log('eliminarCliente: ' . $e->getMessage());
+            return [
+                'status'=>'error',
+                'code'=>500,
+                'answer'=>'No fue posible eliminar el cliente.'
+            ];
+        }
+    }
 
 
 

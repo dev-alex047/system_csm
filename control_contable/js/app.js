@@ -66,6 +66,7 @@ $(document).ready(function() {
 
 window.CSM_ES_ADMIN = Number(data.results.role_id) === 1;
 $("#btnCatalogosCosteo").toggleClass("d-none", !window.CSM_ES_ADMIN);
+$("#btnClientes").toggleClass("d-none", !window.CSM_ES_ADMIN);
 
 
 window.CSM_NOMBRE_OPERADOR = data.results.nombre || data.results.username || "Usuario";
@@ -304,7 +305,7 @@ function crearBorradorVentaNota() {
     
     return {solicitud_id: generarIdSolicitudVenta(),
 caja_id: "",
-        folio:"",cliente:"",direccion:"",telefono:"",vendedor:"",observaciones:"",forma_pago:"EFECTIVO",referencia:"",abono:"",metodo_abono:"EFECTIVO",referencia_abono:"",items:[],siguienteId:1};
+        folio:"",cliente:"",cliente_id: null,direccion:"",telefono:"",vendedor:"",observaciones:"",forma_pago:"EFECTIVO",referencia:"",abono:"",metodo_abono:"EFECTIVO",referencia_abono:"",items:[],siguienteId:1};
 }
 
 function bindVentaNota() {
@@ -366,6 +367,7 @@ function renderVentaConNota() {
     alternarCamposPagoNota();
     actualizarTotalesVentaNota();
     getCajasVenta();
+    iniciarSelectorNotaClientes();
 }
 
 function agregarItemVentaNota() {
@@ -939,6 +941,7 @@ function guardarVentaRapida(fechaSeleccionada = "") {
 
     const venta = state.ventaRapida;
     const datos = {
+        cliente_id: venta.cliente_id || null,
         solicitud_id:venta.solicitud_id,
         caja_id:venta.caja_id,
         forma_pago:venta.forma_pago,
