@@ -605,6 +605,16 @@ if (paisSeleccionado && paisSeleccionado.iso2) {
 });
 
 $(document).on("click", ".js-cl-lugar", function() {
+
+
+    const lugar = $(this).data("lugar");
+
+    if (!lugar) {
+        return;
+    }
+
+    const direccion = lugar.address || {};
+
     
     const valores = {
         domicilio: lugar.display_name || lugar.display_address || "",
