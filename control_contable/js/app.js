@@ -1794,7 +1794,7 @@ $("#cuentasEstado").val(filtroInicial);
     $(".js-filtro-cuentas").removeClass("active").attr("aria-pressed","false");
     //$(".js-filtro-cuentas[data-filtro='PENDIENTE']").addClass("active").attr("aria-pressed","true");
     $(".js-filtro-cuentas").filter(function(){return $(this).attr("data-filtro")===filtroInicial;}).addClass("active").attr("aria-pressed","true");
-    const columnas = vista==="PERSONAS" ? [cobrar?"Deudor":"Proveedor","Cuentas","Total","Abonado","Deuda actual","Vencidas","Próximo pago","Acciones"] : vista==="CREDITOS" ? ["No.",cobrar?"Cliente":"Proveedor","Documento","Vencimiento","Total","Abonado","Saldo","Estado","Acciones"] : ["No.",cobrar?"Cliente":"Proveedor","Cuenta","Fecha","Origen","Método","Referencia","Importe","Acciones"];
+    const columnas = vista==="PERSONAS" ? [cobrar?"Deudor":"Proveedor","Cuentas","Total","Abonado","Deuda actual","Vencidas","Próximo pago","Acciones"] : vista==="CREDITOS" ? ["No.",cobrar?"Cliente":"Proveedor","Documento","Fechas","Total","Abonado","Saldo","Estado","Acciones"] : ["No.",cobrar?"Cliente":"Proveedor","Cuenta","Fecha","Origen","Método","Referencia","Importe","Acciones"];
     const $fila = $("<tr>");
     columnas.forEach(function(c){$fila.append($("<th>").text(c));});
     $("#cabeceraCuentas").empty().append($fila);
@@ -1867,7 +1867,46 @@ function consultarCuentas() {
             const estadoTexto = vencida ? "Vencida" : c.status==="PENDIENTE" ? "Pendiente" : c.status==="PAGADO" ? "Pagada" : "Cancelada";
             const clase = vencida ? "text-bg-danger" : c.status==="PAGADO" ? "text-bg-success" : c.status==="CANCELADO" ? "text-bg-secondary" : "text-bg-warning";
             const $tr = $("<tr>");
-            [c.id,c.nombre,c.document_reference||"—",c.due_date||"Sin fecha",monedaMXN(c.total_amount),monedaMXN(c.paid_amount),monedaMXN(c.pending_amount)].forEach(function(v){$tr.append($("<td>").text(v));});
+            
+[
+    c.id,
+    c.nombre,
+    c.document_reference || "—"
+].forEach(function(valor) {
+    $tr.append($("<td>").text(valor));
+});
+
+const fechaOrigen = c.fecha_venta || c.created_at;
+
+const $fechas = $('<td class="small"></td>');
+
+$fechas.append(
+    $('<div class="fw-semibold text-success"></div>')
+        .text("Origen: " + (fechaOrigen || "No disponible"))
+);
+
+if (c.fecha_registro) {
+    $fechas.append(
+        $('<div class="text-secondary mt-1"></div>')
+            .text("Registro: " + c.fecha_registro)
+    );
+}
+
+$fechas.append(
+    $('<div class="text-secondary mt-1"></div>')
+        .text("Vence: " + (c.due_date || "No establecido"))
+);
+
+$tr.append($fechas);
+
+[
+    monedaMXN(c.total_amount),
+    monedaMXN(c.paid_amount),
+    monedaMXN(c.pending_amount)
+].forEach(function(valor) {
+    $tr.append($("<td>").text(valor));
+});
+
             $tr.append($("<td>").append($('<span class="badge"></span>').addClass(clase).text(estadoTexto)));
             //const $acciones = $('<td class="text-nowrap"></td>');
             //$acciones.append($('<button type="button" class="btn btn-outline-secondary btn-sm btnCuentaHistorial me-1"><i class="bi bi-clock-history"></i> Historial</button>').attr("data-id",c.id));
@@ -1959,6 +1998,26 @@ function verDetalleCuenta(id) {
         const $contenido = $('<div class="text-start"></div>');
         $contenido.append($('<h5 class="fw-bold mb-2"></h5>').text(c.nombre));
         $contenido.append($('<p class="text-secondary small"></p>').text("Documento: "+(c.document_reference||"Sin referencia")+" · Vencimiento: "+(c.due_date||"No establecido")));
+        
+const $infoFechas = $('<div class="border rounded-3 p-3 mb-3 bg-light small"></div>');
+
+$infoFechas.append(
+    $('<div class="mb-1"></div>').text(
+        "Fecha de origen: " + (c.fecha_venta || c.created_at || "No disponible")
+    )
+);
+
+if (c.fecha_registro) {
+    $infoFechas.append(
+        $('<div></div>').text(
+            "Fecha de registro: " + c.fecha_registro
+        )
+    );
+}
+
+$contenido.append($infoFechas);
+
+        
         $contenido.append($('<p class="small mb-3"></p>').text(c.description||""));
         const $saldos = $('<div class="row g-2 mb-3"></div>');
         [["Total",c.total_amount],["Pagado",c.paid_amount],["Pendiente",c.pending_amount]].forEach(function(a){

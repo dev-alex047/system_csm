@@ -2313,9 +2313,55 @@ public function getCuentas($data = []) {
             if ($estado === "HOY") $where .= " AND status='PENDIENTE' AND pending_amount>0 AND due_date=CURDATE()";
             if ($estado === "CANCELADO") $where .= " AND status='CANCELADO'";
 
-            $sql = "SELECT id, `$nombre` AS nombre, total_amount, paid_amount, pending_amount, status, due_date, document_reference, description, created_at FROM `$tabla`".$where." ORDER BY CASE WHEN status='PENDIENTE' THEN 0 ELSE 1 END, due_date IS NULL, due_date ASC, id DESC LIMIT 200";
+            
+$camposFechas = $tipo === "COBRAR"
+    ? ", (SELECT s.created_at
+           FROM sales s
+           WHERE s.id = `$tabla`.sale_id
+           LIMIT 1) AS fecha_venta,
+         (SELECT s.registered_at
+           FROM sales s
+           WHERE s.id = `$tabla`.sale_id
+           LIMIT 1) AS fecha_registro_utc"
+    : ", NULL AS fecha_venta,
+         NULL AS fecha_registro_utc";
+
+$sql = "SELECT id, `$nombre` AS nombre,
+               total_amount, paid_amount, pending_amount,
+               status, due_date, document_reference,
+               description, created_at
+               $camposFechas
+        FROM `$tabla`" . $where . "
+        ORDER BY CASE WHEN status='PENDIENTE' THEN 0 ELSE 1 END,
+                 due_date IS NULL,
+                 due_date ASC,
+                 id DESC
+        LIMIT 200";
+
+
             $stmt = $this->ejecutarSqlVenta($sql,$tipos,$params);
             $cuentas = $stmt->get_result()->fetch_all(MYSQLI_ASSOC); $stmt->close();
+
+
+foreach ($cuentas as &$cuenta) {
+    $cuenta["fecha_registro"] = null;
+
+    if (!empty($cuenta["fecha_registro_utc"])) {
+        $fechaUtc = new DateTimeImmutable(
+            $cuenta["fecha_registro_utc"],
+            new DateTimeZone("UTC")
+        );
+
+        $cuenta["fecha_registro"] = $fechaUtc
+            ->setTimezone(new DateTimeZone("America/Mexico_City"))
+            ->format("Y-m-d H:i:s");
+    }
+
+    unset($cuenta["fecha_registro_utc"]);
+}
+
+unset($cuenta);
+
 
             $json["status"]="ok"; $json["answer"]="Cuentas consultadas correctamente.";
             $json["results"]=["resumen"=>$resumen,"cuentas"=>$cuentas];
@@ -2431,8 +2477,25 @@ public function getDetalleCuenta($data) {
 
 
 if ($tipo==="COBRAR" && (int)$cuenta["sale_id"]>0) {
-    $stmt = $this->ejecutarSqlVenta("SELECT initial_paid,cash_register_id,bank_reference,note_folio,created_at FROM sales WHERE id=? LIMIT 1","i",[(int)$cuenta["sale_id"]]);
+    $stmt = $this->ejecutarSqlVenta("SELECT initial_paid,cash_register_id,bank_reference,
+       note_folio,created_at,registered_at
+FROM sales
+WHERE id=? LIMIT 1","i",[(int)$cuenta["sale_id"]]);
     $venta = $stmt->get_result()->fetch_assoc(); $stmt->close();
+
+if ($venta) {
+    $cuenta["fecha_venta"] = $venta["created_at"];
+
+    $fechaUtc = new DateTimeImmutable(
+        $venta["registered_at"],
+        new DateTimeZone("UTC")
+    );
+
+    $cuenta["fecha_registro"] = $fechaUtc
+        ->setTimezone(new DateTimeZone("America/Mexico_City"))
+        ->format("Y-m-d H:i:s");
+}
+
     if ($venta && (float)$venta["initial_paid"]>0) {
         $referencia = trim((string)$venta["bank_reference"]);
         if ($referencia==="") $referencia = (string)$venta["note_folio"];
