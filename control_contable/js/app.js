@@ -941,7 +941,6 @@ function guardarVentaRapida(fechaSeleccionada = "") {
 
     const venta = state.ventaRapida;
     const datos = {
-        cliente_id: venta.cliente_id || null,
         solicitud_id:venta.solicitud_id,
         caja_id:venta.caja_id,
         forma_pago:venta.forma_pago,
@@ -1098,6 +1097,7 @@ function guardarVentaNota(fechaSeleccionada = "") {
     const venta = state.ventaNota;
     const datos = {
         solicitud_id:venta.solicitud_id,
+        cliente_id: venta.cliente_id || null,
         folio:venta.folio,
         cliente:venta.cliente,
         direccion:venta.direccion,

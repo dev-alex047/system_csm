@@ -1,4 +1,3 @@
-
 const clientesUI = {
     lista: [],
     mapa: null,
@@ -7,6 +6,14 @@ const clientesUI = {
     peticion: null,
     folio: 0
 };
+
+clientesUI.tipoFiltro = 1;
+clientesUI.grupos = [];
+clientesUI.mapaFicha = null;
+clientesUI.paises = [];
+clientesUI.geoVersion = 0;
+clientesUI.estadosVersion = 0;
+clientesUI.catalogosVersion = 0;
 
 function apiClientes(datos) {
     return $.ajax({
@@ -43,69 +50,192 @@ function consultarClientesAdmin() {
     });
 }
 
+
 function pintarClientes() {
     const buscar = String($("#clBuscar").val() || "")
         .trim().toLocaleLowerCase("es");
 
-    const filtrados = clientesUI.lista.filter(function(c) {
+    const tipo = Number(clientesUI.tipoFiltro);
+
+    const clientes = clientesUI.lista.filter(function(c) {
+        return Number(c.tipo) === tipo;
+    });
+
+    const filtrados = clientes.filter(function(c) {
         return [
             nombreCompletoCliente(c),
-            c.alias, c.numero, c.correo, c.domicilio
+            c.alias,
+            c.razon_social,
+            c.rfc,
+            c.numero,
+            c.movil,
+            c.correo,
+            c.domicilio
         ].join(" ").toLocaleLowerCase("es").includes(buscar);
     });
 
-    const $tabla = $("#clTabla").empty();
-
-    $("#clConteo").text(
-        filtrados.length + " de " + clientesUI.lista.length + " clientes"
+    $("#clTotalClientes").text(
+        clientesUI.lista.filter(c => Number(c.tipo) === 1).length
     );
 
-    filtrados.forEach(function(c) {
-        const $fila = $("<tr>");
+    $("#clTotalProspectos").text(
+        clientesUI.lista.filter(c => Number(c.tipo) === 0).length
+    );
 
-        $("<td>").text(nombreCompletoCliente(c)).appendTo($fila);
-        $("<td>").text(c.alias || "—").appendTo($fila);
-        $("<td>").text(c.numero || "—").appendTo($fila);
-        $("<td>").text(c.domicilio || "Sin domicilio").appendTo($fila);
-        $("<td>").text(Number(c.tipo) === 1 ? "Cliente" : "Prospecto")
+    $("#clConteo").text(
+        "Mostrando " + filtrados.length + " de " +
+        clientes.length + (tipo === 1 ? " clientes" : " prospectos")
+    );
+
+    $("#clNuevo").html(
+        '<i class="bi bi-plus-lg me-2"></i>' +
+        (tipo === 1 ? "Agregar cliente" : "Agregar prospecto")
+    );
+
+    const $tabla = $("#clTabla").empty();
+
+    filtrados.forEach(function(c) {
+        const nombre = nombreCompletoCliente(c);
+        const telefono = c.movil || c.numero || "";
+        const grupo = clientesUI.grupos.find(function(g) {
+            return Number(g.id) === Number(c.grupo_id);
+        });
+
+        const $fila = $("<tr>").addClass("cl-fila");
+
+        const $contacto = $("<div>").addClass("cl-contacto");
+
+        $("<span>").addClass("cl-mini-avatar")
+            .text(inicialesCliente(c))
+            .appendTo($contacto);
+
+        const $identidad = $("<div>").addClass("cl-identidad");
+
+        $("<button>", {
+            type: "button",
+            class: "cl-nombre-enlace js-cl-ver",
+            text: nombre
+        }).attr("data-id", c.id).appendTo($identidad);
+
+        $("<small>").text(
+            c.alias ? "También conocido como " + c.alias :
+            c.razon_social || "ID #" + c.id
+        ).appendTo($identidad);
+
+        $contacto.append($identidad);
+        $("<td>").append($contacto).appendTo($fila);
+
+        const $comunicacion = $("<td>");
+
+        $("<div>").addClass("fw-semibold")
+            .text(telefono || "Sin teléfono")
+            .appendTo($comunicacion);
+
+        $("<small>").addClass("cl-muted")
+            .text(c.correo || c.correo_empresarial || "Sin correo")
+            .appendTo($comunicacion);
+
+        $fila.append($comunicacion);
+
+        $("<td>").addClass("cl-domicilio-celda")
+            .text(c.domicilio || "Sin domicilio")
             .appendTo($fila);
 
-        const $acciones = $("<td>").addClass("text-nowrap");
+        const $comercial = $("<td>");
+
+        $("<span>").addClass("cl-grupo-etiqueta")
+            .text(grupo ? grupo.nombre : "Sin grupo")
+            .appendTo($comercial);
+
+        $("<small>").addClass("d-block cl-muted mt-1")
+            .text("Precio " + (c.tipo_precio_id || 1))
+            .appendTo($comercial);
+
+        $fila.append($comercial);
+
+        const $acciones = $("<td>").addClass("text-end");
 
         $("<button>", {
             type: "button",
-            class: "btn btn-sm btn-outline-success me-2 js-cl-editar",
-            text: "Editar"
-        }).attr("data-id", c.id).appendTo($acciones);
+            class: "cl-btn-opciones js-cl-opciones",
+            html: '<i class="bi bi-three-dots"></i>'
+        }).attr({
+            "data-id": c.id,
+            "aria-label": "Opciones de " + nombre,
+            "aria-expanded": "false"
+        }).appendTo($acciones);
 
-        $("<button>", {
-            type: "button",
-            class: "btn btn-sm btn-outline-danger js-cl-eliminar",
-            text: "Eliminar"
-        }).attr("data-id", c.id).appendTo($acciones);
+        $fila.append($acciones);
+        $tabla.append($fila);
 
-        $fila.append($acciones).appendTo($tabla);
+        const $menuFila = $("<tr>").addClass("cl-menu-fila d-none");
+        const $menuCelda = $("<td>").attr("colspan", 5);
+        const $menu = $("<div>").addClass("cl-menu-acciones");
+
+        function accion(texto, icono, clase, estilo) {
+            $("<button>", {
+                type: "button",
+                class: "btn btn-sm " + estilo + " " + clase,
+                html: '<i class="bi bi-' + icono +
+                    ' me-2"></i>' + texto
+            }).attr("data-id", c.id).appendTo($menu);
+        }
+
+        accion("Ver ficha", "eye", "js-cl-ver",
+            "btn-outline-success");
+
+        accion("Editar", "pencil-square", "js-cl-editar",
+            "btn-outline-secondary");
+
+        if (Number(c.tipo) === 0) {
+            accion("Convertir en cliente", "person-check",
+                "js-cl-convertir", "btn-outline-primary");
+        }
+
+        accion("Eliminar", "trash3", "js-cl-eliminar",
+            "btn-outline-danger");
+
+        $menuCelda.append($menu);
+        $menuFila.append($menuCelda);
+        $tabla.append($menuFila);
     });
 
     if (!filtrados.length) {
         $("<tr>").append(
             $("<td>", {
-                colspan: 6,
-                class: "text-center text-secondary py-4",
-                text: "No se encontraron clientes."
+                colspan: 5,
+                class: "text-center py-5 cl-muted",
+                text: "No se encontraron contactos con esos filtros."
             })
         ).appendTo($tabla);
     }
 }
 
+function inicialesCliente(c) {
+    const palabras = nombreCompletoCliente(c)
+        .split(/\s+/)
+        .filter(Boolean);
+
+    return palabras.slice(0, 2).map(function(p) {
+        return p.charAt(0).toUpperCase();
+    }).join("") || "CL";
+}
+
+
 function liberarMapaClientes() {
     clientesUI.folio++;
+    clientesUI.geoVersion++;
+    clientesUI.estadosVersion++;
     clearTimeout(clientesUI.timer);
 
     if (clientesUI.peticion) clientesUI.peticion.abort();
     clientesUI.peticion = null;
 
     if (clientesUI.mapa) clientesUI.mapa.remove();
+    if (clientesUI.mapaFicha) {
+    clientesUI.mapaFicha.remove();
+    clientesUI.mapaFicha = null;
+}
 
     clientesUI.mapa = null;
     clientesUI.pin = null;
@@ -115,6 +245,8 @@ function mostrarListaClientes() {
     liberarMapaClientes();
     $("#clFormulario").addClass("d-none");
     $("#clListadoPanel").removeClass("d-none");
+    $("#clDetallePanel").addClass("d-none");
+    $("#clModal .modal-body").scrollTop(0);
 }
 
 function coordenadasClienteForm() {
@@ -159,6 +291,7 @@ function colocarPinCliente(lat, lng, centrar = true) {
 
 function abrirFormularioCliente(c = null) {
     liberarMapaClientes();
+    $("#clDetallePanel").addClass("d-none");
 
     const $form = $("#clFormulario");
     $form[0].reset();
@@ -171,7 +304,11 @@ function abrirFormularioCliente(c = null) {
     $("#cl_tipo").val(c?.tipo ?? 1);
     $("#cl_limite_credito").val(c?.limite_credito ?? "0.00");
 
-    if (!c) $("#cl_pais").val("México");
+    cambiarTipoCliente(c ? c.tipo : clientesUI.tipoFiltro);
+    cargarCatalogosClienteUI(c);
+    cargarPaisesCliente(c?.pais || "Mexico", c?.estado || "");
+
+    $("#clDetallePanel").addClass("d-none");
 
     $("#clTituloFormulario").text(
         c ? "Editar cliente #" + c.id : "Nuevo cliente"
@@ -204,6 +341,7 @@ function abrirFormularioCliente(c = null) {
     } catch (e) {
         Swal.fire("Mapa no disponible", e.message, "warning");
     }
+    $("#clModal .modal-body").scrollTop(0);
 
     $("#cl_nombre").trigger("focus");
 }
@@ -218,6 +356,7 @@ $(document).on("click", "#btnClientes", function() {
     ).show();
 
     consultarClientesAdmin();
+    cargarCatalogosClienteUI();
 });
 
 $(document).on("hidden.bs.modal", "#clModal", liberarMapaClientes);
@@ -255,6 +394,16 @@ $(document).on("submit", "#clFormulario", function(e) {
         if (r.status !== "ok") {
             return Swal.fire("No se guardó", r.answer, "warning");
         }
+
+        clientesUI.tipoFiltro = Number($("#cl_tipo").val());
+
+$(".js-cl-filtro")
+    .removeClass("active")
+    .attr("aria-pressed", "false");
+
+$(".js-cl-filtro[data-tipo='" + clientesUI.tipoFiltro + "']")
+    .addClass("active")
+    .attr("aria-pressed", "true");
 
         mostrarListaClientes();
         consultarClientesAdmin();
@@ -374,22 +523,33 @@ $(document).on("input", "#clBuscarLugar", function() {
     clientesUI.timer = setTimeout(function() {
         if (!CLAVE_LOCATIONIQ || !CLAVE_LOCATIONIQ.trim()) return;
 
+        const paisSeleccionado = clientesUI.paises.find(function(p) {
+    return p.name === $("#cl_pais").val();
+});
+
+const parametros = {
+    key: CLAVE_LOCATIONIQ.trim(),
+    q: q,
+    "accept-language": "es",
+    limit: 6
+};
+
+if (paisSeleccionado && paisSeleccionado.iso2) {
+    parametros.countrycodes = paisSeleccionado.iso2.toLowerCase();
+}
+
         clientesUI.peticion = $.ajax({
             url: "https://api.locationiq.com/v1/autocomplete",
             method: "GET",
             dataType: "json",
             timeout: 10000,
-            data: {
-                key: CLAVE_LOCATIONIQ.trim(),
-                q: q,
-                countrycodes: "mx",
-                "accept-language": "es",
-                limit: 6
-            }
+            data: parametros
         }).done(function(resultados) {
             if (folio !== clientesUI.folio) return;
 
             $lista.empty().removeClass("d-none");
+
+            
 
             (Array.isArray(resultados) ? resultados : []).forEach(
                 function(lugar) {
@@ -423,15 +583,18 @@ $(document).on("click", ".js-cl-lugar", function() {
     const direccion = lugar.address || {};
 
     const valores = {
-        domicilio: lugar.display_name || lugar.display_address || "",
-        calle: direccion.road || direccion.pedestrian || "",
-        numext: direccion.house_number || "",
-        colonia: direccion.suburb ||
-            direccion.neighbourhood || direccion.quarter || "",
-        cp: direccion.postcode || "",
-        estado: direccion.state || "",
-        pais: direccion.country || "México"
-    };
+    domicilio: lugar.display_name || lugar.display_address || "",
+    calle: direccion.road || direccion.pedestrian || "",
+    numext: direccion.house_number || "",
+    colonia: direccion.suburb ||
+        direccion.neighbourhood ||
+        direccion.quarter || "",
+    municipio: direccion.city ||
+        direccion.town ||
+        direccion.village ||
+        direccion.municipality || "",
+    cp: direccion.postcode || ""
+};
 
     Object.keys(valores).forEach(function(campo) {
         if (!valores[campo]) return;
@@ -445,6 +608,13 @@ $(document).on("click", ".js-cl-lugar", function() {
             )
         );
     });
+
+    if (direccion.country || direccion.country_code) {
+    cargarPaisesCliente(
+        direccion.country_code || direccion.country,
+        direccion.state || ""
+    );
+}
 
     colocarPinCliente(Number(lugar.lat), Number(lugar.lon));
 
@@ -461,7 +631,10 @@ function iniciarSelectorNotaClientes() {
     apiClientes({action: "getClientes"}).done(function(r) {
         if (!document.body.contains($campo[0]) || r.status !== "ok") return;
 
-        const clientes = Array.isArray(r.results) ? r.results : [];
+        const clientes = (Array.isArray(r.results) ? r.results : [])
+        .filter(function(c) {
+            return Number(c.tipo) === 1;
+        });
 
         $campo.attr(
             "placeholder",
@@ -517,3 +690,497 @@ function iniciarSelectorNotaClientes() {
         });
     });
 }
+
+
+$(document).on("click", ".js-cl-filtro", function() {
+    clientesUI.tipoFiltro = Number($(this).attr("data-tipo"));
+
+    $(".js-cl-filtro")
+        .removeClass("active")
+        .attr("aria-pressed", "false");
+
+    $(this).addClass("active").attr("aria-pressed", "true");
+
+    $("#clBuscar").val("");
+    pintarClientes();
+});
+
+$(document).on("click", ".js-cl-opciones", function() {
+    const $fila = $(this).closest("tr");
+    const $menu = $fila.next(".cl-menu-fila");
+    const abrir = $menu.hasClass("d-none");
+
+    $("#clTabla .cl-menu-fila").addClass("d-none");
+    $("#clTabla .js-cl-opciones").attr("aria-expanded", "false");
+
+    $menu.toggleClass("d-none", !abrir);
+    $(this).attr("aria-expanded", abrir ? "true" : "false");
+});
+
+$(document).on("click", ".js-cl-convertir", function() {
+    const id = Number($(this).attr("data-id"));
+
+    const c = clientesUI.lista.find(function(item) {
+        return Number(item.id) === id;
+    });
+
+    if (!c) return;
+
+    abrirFormularioCliente(c);
+    cambiarTipoCliente(1);
+});
+
+function cambiarTipoCliente(tipo) {
+    tipo = Number(tipo) === 0 ? 0 : 1;
+
+    $("#cl_tipo").val(tipo);
+
+    $(".js-cl-tipo")
+        .removeClass("active")
+        .attr("aria-pressed", "false");
+
+    $(".js-cl-tipo[data-tipo='" + tipo + "']")
+        .addClass("active")
+        .attr("aria-pressed", "true");
+}
+
+$(document).on("click", ".js-cl-tipo", function() {
+    cambiarTipoCliente($(this).attr("data-tipo"));
+});
+
+
+function cargarCatalogosClienteUI(c = null) {
+    const version = ++clientesUI.catalogosVersion;
+    const grupoSeleccionado = c?.grupo_id ?? "";
+    const precioSeleccionado = c?.tipo_precio_id ?? 1;
+
+    return apiClientes({
+        action: "getCatalogosClientes"
+    }).done(function(r) {
+        if (version !== clientesUI.catalogosVersion) {
+            return;
+        }
+        if (r.status !== "ok") {
+            Swal.fire("Aviso", r.answer, "warning");
+            return;
+        }
+
+        clientesUI.grupos = r.results.grupos || [];
+
+        const $grupo = $("#cl_grupo_id").empty();
+        const $precio = $("#cl_tipo_precio_id").empty();
+
+        $("<option>").val("").text("Sin grupo").appendTo($grupo);
+
+        clientesUI.grupos.forEach(function(g) {
+            $("<option>").val(g.id).text(g.nombre).appendTo($grupo);
+        });
+
+        (r.results.precios || []).forEach(function(p) {
+            $("<option>").val(p.id).text(p.nombre).appendTo($precio);
+        });
+
+        $grupo.val(String(grupoSeleccionado || ""));
+        $precio.val(String(precioSeleccionado || 1));
+
+        pintarClientes();
+    }).fail(function(xhr) {
+        Swal.fire("Error", errorClientes(xhr), "error");
+    });
+}
+
+$(document).on("click", "#clAgregarGrupo", function() {
+    Swal.fire({
+        title: "Nuevo grupo de clientes",
+        input: "text",
+        inputLabel: "Nombre del grupo",
+        inputPlaceholder: "Ej. Clientes frecuentes",
+        inputAttributes: {maxlength: 80},
+        showCancelButton: true,
+        confirmButtonText: "Crear grupo",
+        cancelButtonText: "Cancelar",
+        preConfirm: function(valor) {
+            if (!valor || !valor.trim()) {
+                Swal.showValidationMessage("Escribe el nombre del grupo.");
+                return false;
+            }
+
+            return valor.trim();
+        }
+    }).then(function(r) {
+        if (!r.isConfirmed) return;
+
+        apiClientes({
+            action: "guardarCatalogoCliente",
+            tipo_catalogo: "grupo",
+            nombre: r.value
+        }).done(function(res) {
+            if (res.status !== "ok") {
+                Swal.fire("Aviso", res.answer, "warning");
+                return;
+            }
+
+            const seleccionado = {
+                grupo_id: res.results.id,
+                tipo_precio_id: $("#cl_tipo_precio_id").val()
+            };
+
+            cargarCatalogosClienteUI(seleccionado);
+        }).fail(function(xhr) {
+            Swal.fire("Error", errorClientes(xhr), "error");
+        });
+    });
+});
+
+
+function normalizarGeoCliente(valor) {
+    return String(valor || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim()
+        .toLowerCase();
+}
+
+function modoGeoCliente(campo, manual, valor = "") {
+    const $select = $("#cl_" + campo);
+    const $manual = $("#cl_" + campo + "_manual");
+
+    $select.toggleClass("d-none", manual)
+        .prop("disabled", manual);
+
+    $manual.toggleClass("d-none", !manual)
+        .prop("disabled", !manual);
+
+    if (manual) $manual.val(valor);
+    else $manual.val("");
+}
+
+function cargarPaisesCliente(paisGuardado = "Mexico", estadoGuardado = "") {
+    const version = ++clientesUI.geoVersion;
+    const $pais = $("#cl_pais");
+
+    modoGeoCliente("pais", false);
+    $pais.prop("disabled", true).empty()
+        .append($("<option>").text("Cargando países..."));
+
+    return apiClientes({
+        action: "getPaisesEstados",
+        nivel: "paises"
+    }).done(function(r) {
+        if (version !== clientesUI.geoVersion) return;
+
+        if (r.status !== "ok" || !Array.isArray(r.results)) {
+            modoGeoCliente("pais", true, paisGuardado);
+            modoGeoCliente("estado", true, estadoGuardado);
+            return;
+        }
+
+        clientesUI.paises = r.results.slice();
+
+        modoGeoCliente("pais", false);
+
+        $pais.empty().append(
+            $("<option>").val("").text("Selecciona un país")
+        );
+
+        clientesUI.paises.sort(function(a, b) {
+            return a.name.localeCompare(b.name, "es");
+        }).forEach(function(p) {
+            $("<option>")
+                .val(p.name)
+                .text(p.name === "Mexico" ? "México" : p.name)
+                .appendTo($pais);
+        });
+
+        const buscado = normalizarGeoCliente(paisGuardado);
+
+        let encontrado = clientesUI.paises.find(function(p) {
+            return normalizarGeoCliente(p.name) === buscado ||
+                normalizarGeoCliente(p.iso2) === buscado;
+        });
+
+        if (!encontrado && buscado) {
+            $("<option>").val(paisGuardado)
+                .text(paisGuardado + " (guardado)")
+                .appendTo($pais);
+
+            $pais.val(paisGuardado);
+        } else if (encontrado) {
+            $pais.val(encontrado.name);
+        }
+
+        cargarEstadosCliente($pais.val(), estadoGuardado);
+    }).fail(function() {
+        if (version !== clientesUI.geoVersion) return;
+
+        modoGeoCliente("pais", true, paisGuardado);
+        modoGeoCliente("estado", true, estadoGuardado);
+    });
+}
+
+function cargarEstadosCliente(pais, seleccionado = "") {
+    const version = ++clientesUI.estadosVersion;
+    const $estado = $("#cl_estado");
+
+    modoGeoCliente("estado", false);
+
+    $estado.prop("disabled", true).empty().append(
+        $("<option>").val("").text(
+            pais ? "Cargando estados..." : "Selecciona primero un país"
+        )
+    );
+
+    if (!pais) return;
+
+    return apiClientes({
+        action: "getPaisesEstados",
+        nivel: "estados",
+        pais: pais
+    }).done(function(r) {
+        if (version !== clientesUI.estadosVersion) return;
+
+        if (r.status !== "ok" ||
+            !Array.isArray(r.results) ||
+            !r.results.length) {
+            modoGeoCliente("estado", true, seleccionado);
+            return;
+        }
+
+        modoGeoCliente("estado", false);
+
+        $estado.empty().append(
+            $("<option>").val("").text("Selecciona un estado")
+        );
+
+        const estados = r.results.slice().sort(function(a, b) {
+            return a.name.localeCompare(b.name, "es");
+        });
+
+        estados.forEach(function(e) {
+            $("<option>").val(e.name).text(e.name)
+                .appendTo($estado);
+        });
+
+        if (seleccionado) {
+            const encontrado = estados.find(function(e) {
+                return normalizarGeoCliente(e.name) ===
+                    normalizarGeoCliente(seleccionado);
+            });
+
+            if (encontrado) {
+                $estado.val(encontrado.name);
+            } else {
+                $("<option>").val(seleccionado)
+                    .text(seleccionado + " (guardado)")
+                    .appendTo($estado);
+
+                $estado.val(seleccionado);
+            }
+        }
+    }).fail(function() {
+        if (version !== clientesUI.estadosVersion) return;
+        modoGeoCliente("estado", true, seleccionado);
+    });
+}
+
+$(document).on("change", "#cl_pais", function() {
+    cargarEstadosCliente(this.value);
+});
+
+
+function agregarDatoFicha(selector, etiqueta, valor, ancho = "col-md-6") {
+    const $col = $("<div>").addClass(ancho);
+    const $dato = $("<div>").addClass("cl-dato");
+
+    $("<span>").addClass("cl-dato-etiqueta")
+        .text(etiqueta).appendTo($dato);
+
+    $("<strong>").text(
+        valor === null || valor === undefined ||
+        String(valor).trim() === "" ? "—" : String(valor)
+    ).appendTo($dato);
+
+    $col.append($dato);
+    $(selector).append($col);
+}
+
+function abrirDetalleCliente(c) {
+    liberarMapaClientes();
+
+    $("#clListadoPanel, #clFormulario").addClass("d-none");
+    $("#clDetallePanel").removeClass("d-none");
+
+    const nombre = nombreCompletoCliente(c);
+
+    $("#clDetalleNombre").text(nombre);
+    $("#clDetalleAvatar").text(inicialesCliente(c));
+    $("#clDetalleTipo").text(
+        Number(c.tipo) === 1 ? "Cliente" : "Prospecto"
+    );
+
+    $("#clDetalleSubtitulo").text(
+        c.alias || c.razon_social || "Registro #" + c.id
+    );
+
+    $("#clDetalleEditar").attr("data-id", c.id);
+
+    $("#clDetalleGeneral, #clDetalleDireccion, #clDetalleAcciones")
+        .empty();
+
+    agregarDatoFicha("#clDetalleGeneral", "Nombre completo", nombre);
+    agregarDatoFicha("#clDetalleGeneral", "Alias", c.alias);
+    agregarDatoFicha("#clDetalleGeneral", "Razón social", c.razon_social);
+    agregarDatoFicha("#clDetalleGeneral", "RFC", c.rfc);
+    agregarDatoFicha("#clDetalleGeneral", "Teléfono", c.numero);
+    agregarDatoFicha("#clDetalleGeneral", "Móvil", c.movil);
+    agregarDatoFicha("#clDetalleGeneral", "Correo", c.correo);
+    agregarDatoFicha(
+        "#clDetalleGeneral", "Correo empresarial", c.correo_empresarial
+    );
+
+    const grupo = clientesUI.grupos.find(function(g) {
+        return Number(g.id) === Number(c.grupo_id);
+    });
+
+    agregarDatoFicha(
+        "#clDetalleGeneral",
+        "Grupo",
+        grupo ? grupo.nombre : "Sin grupo"
+    );
+
+    agregarDatoFicha(
+        "#clDetalleGeneral",
+        "Lista de precios",
+        "Tipo de precio " + (c.tipo_precio_id || 1)
+    );
+
+    agregarDatoFicha(
+        "#clDetalleGeneral",
+        "Límite de crédito",
+        monedaMXN(Number(c.limite_credito || 0))
+    );
+
+    agregarDatoFicha(
+        "#clDetalleDireccion",
+        "Domicilio o referencias",
+        c.domicilio,
+        "col-12"
+    );
+
+    agregarDatoFicha("#clDetalleDireccion", "Calle", c.calle);
+    agregarDatoFicha("#clDetalleDireccion", "Núm. exterior", c.numext);
+    agregarDatoFicha("#clDetalleDireccion", "Núm. interior", c.numint);
+    agregarDatoFicha("#clDetalleDireccion", "Colonia", c.colonia);
+    agregarDatoFicha("#clDetalleDireccion", "Municipio", c.municipio);
+    agregarDatoFicha("#clDetalleDireccion", "Código postal", c.cp);
+    agregarDatoFicha("#clDetalleDireccion", "Estado", c.estado);
+    agregarDatoFicha("#clDetalleDireccion", "País", c.pais);
+
+    $("#clDetalleNotas").text(c.notas || "Sin observaciones.");
+
+    const $acciones = $("#clDetalleAcciones");
+
+    const telefono = String(c.movil || c.numero || "")
+        .replace(/[^\d+]/g, "");
+
+    if (telefono) {
+        $("<a>", {
+            class: "btn btn-outline-success",
+            href: "tel:" + telefono,
+            text: "Llamar al cliente"
+        }).prepend(
+            $("<i>").addClass("bi bi-telephone me-2")
+        ).appendTo($acciones);
+    }
+
+    const correo = c.correo || c.correo_empresarial;
+
+    if (correo) {
+        $("<a>", {
+            class: "btn btn-outline-success",
+            href: "mailto:" + correo,
+            text: "Enviar correo"
+        }).prepend(
+            $("<i>").addClass("bi bi-envelope me-2")
+        ).appendTo($acciones);
+    }
+
+    if (Number(c.tipo) === 0) {
+        $("<button>", {
+            type: "button",
+            class: "btn btn-outline-primary js-cl-convertir",
+            text: "Convertir en cliente"
+        }).attr("data-id", c.id).appendTo($acciones);
+    }
+
+    if (!$acciones.children().length) {
+        $("<p>").addClass("cl-muted mb-0")
+            .text("No hay datos de contacto registrados.")
+            .appendTo($acciones);
+    }
+
+    const tieneCoordenadas =
+        c.latitud !== null && c.longitud !== null &&
+        c.latitud !== "" && c.longitud !== "";
+
+    const lat = Number(c.latitud);
+    const lng = Number(c.longitud);
+
+    const ubicacionValida = tieneCoordenadas &&
+        Number.isFinite(lat) && Number.isFinite(lng) &&
+        Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+
+    $("#clDetalleMapaPanel")
+        .toggleClass("d-none", !ubicacionValida);
+
+    if (ubicacionValida) {
+        $("#clDetalleRuta").attr(
+            "href",
+            "https://www.google.com/maps?q=" + lat + "," + lng
+        );
+
+        try {
+            clientesUI.mapaFicha = crearMapaCosteo(
+                "clMapaFicha", [lat, lng], 16
+            );
+
+            L.marker([lat, lng], {
+                icon: iconoDestinoCosteo()
+            }).addTo(clientesUI.mapaFicha);
+
+            setTimeout(function() {
+                if (clientesUI.mapaFicha) {
+                    clientesUI.mapaFicha.invalidateSize();
+                }
+            }, 100);
+        } catch (error) {
+            $("#clDetalleMapaPanel").addClass("d-none");
+        }
+    }
+
+    $("#clModal .modal-body").scrollTop(0);
+}
+
+$(document).on("click", ".js-cl-ver", function() {
+    const id = Number($(this).attr("data-id"));
+
+    const c = clientesUI.lista.find(function(item) {
+        return Number(item.id) === id;
+    });
+
+    if (c) abrirDetalleCliente(c);
+});
+
+$(document).on("click", "#clDetalleVolver", function() {
+    mostrarListaClientes();
+});
+
+$(document).on("click", "#clDetalleEditar", function() {
+    const id = Number($(this).attr("data-id"));
+
+    const c = clientesUI.lista.find(function(item) {
+        return Number(item.id) === id;
+    });
+
+    if (c) abrirFormularioCliente(c);
+});

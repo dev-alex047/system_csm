@@ -934,42 +934,172 @@
 
             <div class="modal-body">
                 <!-- LISTADO -->
-                <div id="clListadoPanel">
-                    <div class="d-flex justify-content-between align-items-center
-                                flex-wrap gap-3 mb-3">
-                        <div>
-                            <h3 class="h6 fw-bold mb-1">Directorio de clientes</h3>
-                            <small id="clConteo" class="text-secondary"></small>
-                        </div>
-                        <button type="button" id="clNuevo" class="btn btn-success">
-                            <i class="bi bi-person-plus me-1"></i>Nuevo cliente
-                        </button>
-                    </div>
+                
+<div id="clListadoPanel">
 
-                    <div class="input-group mb-3">
-                        <span class="input-group-text bg-white">
-                            <i class="bi bi-search"></i>
-                        </span>
-                        <input id="clBuscar" class="form-control"
-                               placeholder="Buscar por nombre, alias, teléfono o domicilio">
-                    </div>
+    <div class="cl-directorio-cabecera">
+        <div>
+            <span class="cl-eyebrow">DIRECTORIO COMERCIAL</span>
+            <h3 class="cl-titulo-principal">Contactos del negocio</h3>
+            <p class="cl-muted mb-0">
+                Consulta, organiza y administra tus relaciones comerciales.
+            </p>
+        </div>
 
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle">
-                            <thead>
-                                <tr>
-                                    <th>Cliente</th>
-                                    <th>Alias</th>
-                                    <th>Teléfono</th>
-                                    <th>Domicilio</th>
-                                    <th>Tipo</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="clTabla"></tbody>
-                        </table>
-                    </div>
-                </div>
+        <button type="button" id="clNuevo" class="btn btn-success cl-btn-principal">
+            <i class="bi bi-plus-lg me-2"></i>Agregar cliente
+        </button>
+    </div>
+
+    <ul class="nav nav-pills cl-tabs" aria-label="Tipo de contacto">
+        <li class="nav-item">
+            <button type="button"
+                    class="nav-link active js-cl-filtro"
+                    data-tipo="1"
+                    aria-pressed="true">
+                <i class="bi bi-people me-2"></i>
+                Clientes
+                <span id="clTotalClientes" class="cl-tab-numero">0</span>
+            </button>
+        </li>
+
+        <li class="nav-item">
+            <button type="button"
+                    class="nav-link js-cl-filtro"
+                    data-tipo="0"
+                    aria-pressed="false">
+                <i class="bi bi-person-plus me-2"></i>
+                Prospectos
+                <span id="clTotalProspectos" class="cl-tab-numero">0</span>
+            </button>
+        </li>
+    </ul>
+
+    <div class="cl-buscador">
+        <i class="bi bi-search"></i>
+        <input type="search"
+               id="clBuscar"
+               class="form-control"
+               autocomplete="off"
+               placeholder="Buscar nombre, alias, RFC, teléfono o dirección...">
+        <span class="cl-buscador-ayuda d-none d-lg-inline">Búsqueda rápida</span>
+    </div>
+
+    <div class="cl-tabla-panel">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>CONTACTO</th>
+                        <th>COMUNICACIÓN</th>
+                        <th>DOMICILIO</th>
+                        <th>GRUPO / PRECIO</th>
+                        <th class="text-end">ACCIONES</th>
+                    </tr>
+                </thead>
+                <tbody id="clTabla"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="cl-directorio-pie">
+        <span id="clConteo" aria-live="polite"></span>
+        <span>
+            <i class="bi bi-shield-check me-1"></i>
+            Los registros eliminados conservan su historial.
+        </span>
+    </div>
+
+</div>
+
+
+
+<div id="clDetallePanel" class="d-none">
+
+    <div class="cl-detalle-toolbar">
+        <button type="button" id="clDetalleVolver"
+                class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Directorio
+        </button>
+
+        <button type="button" id="clDetalleEditar"
+                class="btn btn-success">
+            <i class="bi bi-pencil-square me-2"></i>Editar datos
+        </button>
+    </div>
+
+    <div class="cl-perfil-encabezado">
+        <div class="cl-avatar" id="clDetalleAvatar">
+            CL
+        </div>
+
+        <div class="flex-grow-1">
+            <span id="clDetalleTipo" class="cl-etiqueta">
+                Cliente
+            </span>
+            <h3 id="clDetalleNombre" class="cl-perfil-nombre"></h3>
+            <p id="clDetalleSubtitulo" class="cl-muted mb-0"></p>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="cl-panel mb-3">
+                <h4>
+                    <i class="bi bi-person-vcard"></i>
+                    Información general
+                </h4>
+                <div id="clDetalleGeneral" class="row g-3"></div>
+            </div>
+
+            <div class="cl-panel mb-3">
+                <h4>
+                    <i class="bi bi-geo-alt"></i>
+                    Dirección
+                </h4>
+                <div id="clDetalleDireccion" class="row g-3"></div>
+            </div>
+
+            <div class="cl-panel">
+                <h4>
+                    <i class="bi bi-journal-text"></i>
+                    Notas
+                </h4>
+                <p id="clDetalleNotas" class="mb-0"></p>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="cl-panel mb-3">
+                <h4>
+                    <i class="bi bi-lightning-charge"></i>
+                    Acciones rápidas
+                </h4>
+
+                <div id="clDetalleAcciones" class="d-grid gap-2"></div>
+            </div>
+
+            <div id="clDetalleMapaPanel" class="cl-panel d-none">
+                <h4>
+                    <i class="bi bi-pin-map"></i>
+                    Ubicación
+                </h4>
+
+                <div id="clMapaFicha"></div>
+
+                <a id="clDetalleRuta"
+                   class="btn btn-outline-success w-100 mt-3"
+                   target="_blank"
+                   rel="noopener noreferrer">
+                    <i class="bi bi-signpost-2 me-2"></i>
+                    Ver ubicación
+                </a>
+            </div>
+        </div>
+    </div>
+
+</div>
+
 
                 <!-- FORMULARIO -->
                 <form id="clFormulario" class="d-none">
@@ -980,6 +1110,9 @@
                             <h3 id="clTituloFormulario" class="h5 fw-bold mb-1">
                                 Nuevo cliente
                             </h3>
+
+
+
                             <small class="text-secondary">
                                 Los campos con * son obligatorios.
                             </small>
@@ -990,10 +1123,29 @@
                         </button>
                     </div>
 
-                    <h4 class="h6 fw-bold mb-3">
+                    <h4 class="cl-seccion-titulo">
                         <i class="bi bi-person-vcard text-success me-2"></i>
                         Información general
                     </h4>
+
+                    <div class="cl-tipo-selector mb-4" role="group"
+     aria-label="Clasificar contacto">
+
+    <button type="button" class="cl-tipo-btn active js-cl-tipo"
+            data-tipo="1" aria-pressed="true">
+        <i class="bi bi-person-check me-2"></i>
+        Cliente
+    </button>
+
+    <button type="button" class="cl-tipo-btn js-cl-tipo"
+            data-tipo="0" aria-pressed="false">
+        <i class="bi bi-person-plus me-2"></i>
+        Prospecto
+    </button>
+
+</div>
+
+<input type="hidden" id="cl_tipo" name="tipo" value="1">
 
                     <div class="row g-3 mb-4">
                         <div class="col-md-6">
@@ -1006,29 +1158,53 @@
                             <input id="cl_apellido" name="apellido"
                                    class="form-control" maxlength="150">
                         </div>
+
+<div class="col-md-8">
+    <label for="cl_razon_social" class="form-label">
+        Razón social
+    </label>
+    <input id="cl_razon_social" name="razon_social"
+           class="form-control" maxlength="200"
+           placeholder="Nombre fiscal, cuando corresponda">
+</div>
+
+<div class="col-md-4">
+    <label for="cl_rfc" class="form-label">RFC</label>
+    <input id="cl_rfc" name="rfc"
+           class="form-control text-uppercase" maxlength="13"
+           placeholder="RFC">
+</div>
+
                         <div class="col-md-6">
                             <label for="cl_alias" class="form-label">Alias o nombre conocido</label>
                             <input id="cl_alias" name="alias"
                                    class="form-control" maxlength="150">
                         </div>
-                        <div class="col-md-6">
-                            <label for="cl_tipo" class="form-label">Clasificación</label>
-                            <select id="cl_tipo" name="tipo" class="form-select">
-                                <option value="1">Cliente</option>
-                                <option value="0">Prospecto</option>
-                            </select>
-                        </div>
+                       
                         <div class="col-md-6">
                             <label for="cl_numero" class="form-label">Teléfono</label>
                             <input id="cl_numero" name="numero" class="form-control"
                                    maxlength="30" type="tel">
                         </div>
                         <div class="col-md-6">
+    <label for="cl_movil" class="form-label">Teléfono móvil</label>
+    <input id="cl_movil" name="movil" type="tel"
+           class="form-control" maxlength="30"
+           placeholder="Número de celular">
+</div>
+                        <div class="col-md-6">
                             <label for="cl_correo" class="form-label">Correo electrónico</label>
                             <input id="cl_correo" name="correo" type="email"
                                    class="form-control" maxlength="190">
                         </div>
                         <div class="col-md-6">
+    <label for="cl_correo_empresarial" class="form-label">
+        Correo empresarial
+    </label>
+    <input id="cl_correo_empresarial" name="correo_empresarial"
+           type="email" class="form-control" maxlength="190">
+</div>
+                        <!--<div class="col-md-6">
                             <label for="cl_usuario" class="form-label">Usuario (opcional)</label>
                             <input id="cl_usuario" name="usuario"
                                    class="form-control" maxlength="100">
@@ -1037,7 +1213,7 @@
                             <label for="cl_compania" class="form-label">Compañía</label>
                             <input id="cl_compania" name="compania"
                                    class="form-control" maxlength="150">
-                        </div>
+                        </div>-->
                         <div class="col-md-6">
                             <label for="cl_limite_credito" class="form-label">
                                 Límite de crédito
@@ -1046,11 +1222,52 @@
                                    type="number" min="0" step="0.01"
                                    class="form-control" value="0.00">
                         </div>
+
+<div class="col-md-6">
+    <label for="cl_grupo_id" class="form-label">
+        Grupo de cliente
+    </label>
+
+    <div class="input-group cl-grupo-control">
+        <select id="cl_grupo_id" name="grupo_id" class="form-select">
+            <option value="">Sin grupo</option>
+        </select>
+
+        <button type="button" id="clAgregarGrupo"
+                class="btn btn-outline-success"
+                title="Crear grupo" aria-label="Crear grupo">
+            <i class="bi bi-plus-lg"></i>
+        </button>
+    </div>
+</div>
+
+<div class="col-md-6">
+    <label for="cl_tipo_precio_id" class="form-label">
+        Lista de precios
+    </label>
+
+    <select id="cl_tipo_precio_id" name="tipo_precio_id"
+            class="form-select">
+        <option value="1">Tipo de precio 1</option>
+    </select>
+</div>
+
+<div class="col-12">
+    <label for="cl_notas" class="form-label">
+        Notas y observaciones
+    </label>
+
+    <textarea id="cl_notas" name="notas"
+              class="form-control" rows="3"
+              maxlength="3000"
+              placeholder="Indicaciones, preferencias, acuerdos u observaciones..."></textarea>
+</div>
+
                     </div>
 
                     <hr class="my-4">
 
-                    <h4 class="h6 fw-bold mb-3">
+                    <h4 class="cl-seccion-titulo">
                         <i class="bi bi-geo-alt text-success me-2"></i>
                         Domicilio del cliente
                     </h4>
@@ -1089,16 +1306,42 @@
                             <input id="cl_cp" name="cp"
                                    class="form-control" maxlength="10">
                         </div>
-                        <div class="col-md-3">
-                            <label for="cl_estado" class="form-label">Estado</label>
-                            <input id="cl_estado" name="estado"
-                                   class="form-control" maxlength="100">
-                        </div>
-                        <div class="col-md-6">
-                            <label for="cl_pais" class="form-label">País</label>
-                            <input id="cl_pais" name="pais"
-                                   class="form-control" maxlength="100">
-                        </div>
+
+<div class="col-md-6">
+    <label for="cl_pais" class="form-label">País</label>
+
+    <select id="cl_pais" name="pais" class="form-select" disabled>
+        <option value="">Cargando países...</option>
+    </select>
+
+    <input id="cl_pais_manual" name="pais" maxlength="100"
+           class="form-control d-none" disabled
+           placeholder="Escribe el país">
+</div>
+
+<div class="col-md-6">
+    <label for="cl_estado" class="form-label">Estado o provincia</label>
+
+    <select id="cl_estado" name="estado"
+            class="form-select" disabled>
+        <option value="">Primero selecciona un país</option>
+    </select>
+
+    <input id="cl_estado_manual" name="estado" maxlength="100"
+           class="form-control d-none" disabled
+           placeholder="Escribe el estado o provincia">
+</div>
+
+<div class="col-md-6">
+    <label for="cl_municipio" class="form-label">
+        Municipio o ciudad
+    </label>
+
+    <input id="cl_municipio" name="municipio"
+           class="form-control" maxlength="120"
+           placeholder="Municipio o ciudad">
+</div>
+
                         <div class="col-md-3">
                             <label for="cl_latitud" class="form-label">Latitud</label>
                             <input id="cl_latitud" name="latitud" type="number"
@@ -1154,10 +1397,10 @@
                         </small>
                     </div>
 
-                    <div class="d-flex justify-content-end gap-2">
+                    <div class="d-flex justify-content-end gap-2 cl-form-acciones">
                         <button type="button" id="clVolverAbajo"
                                 class="btn btn-outline-secondary"
-                                onclick="document.getElementById('clVolver').click()">
+                                >
                             Cancelar
                         </button>
                         <button type="submit" id="clGuardar" class="btn btn-success px-4">

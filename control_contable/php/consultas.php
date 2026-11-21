@@ -4706,17 +4706,47 @@ public function cambiarEstadoCatalogoCosteo(array $data): array {
         try {
             if (!$this->conn) throw new RuntimeException('Sin conexión.');
 
-            $stmt = $this->ejecutarSqlVenta(
-                'SELECT corp_id, id, nombre, apellido, correo, usuario,
-                        alias, numero, domicilio, calle, numext, numint,
-                        colonia, cp, estado, pais, latitud, longitud,
-                        tipo, compania, limite_credito, formAlta,
-                        fechaAlta, fechaEditado
-                 FROM clientes
-                 WHERE corp_id=? AND eliminado=0
-                 ORDER BY nombre, apellido, id',
-                's', [$this->corpClientes()]
-            );
+            
+$stmt = $this->ejecutarSqlVenta(
+    "SELECT
+        corp_id,
+        id,
+        nombre,
+        apellido,
+        razon_social,
+        rfc,
+        alias,
+        correo,
+        correo_empresarial,
+        numero,
+        movil,
+        domicilio,
+        calle,
+        numext,
+        numint,
+        colonia,
+        municipio,
+        cp,
+        estado,
+        pais,
+        latitud,
+        longitud,
+        tipo,
+        grupo_id,
+        tipo_precio_id,
+        limite_credito,
+        notas,
+        formAlta,
+        fechaAlta,
+        fechaEditado
+     FROM clientes
+     WHERE corp_id = ?
+       AND eliminado = 0
+     ORDER BY nombre ASC, apellido ASC, id ASC",
+    "s",
+    [$this->corpClientes()]
+);
+
 
             $clientes = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             $stmt->close();
@@ -4754,23 +4784,28 @@ public function cambiarEstadoCatalogoCosteo(array $data): array {
                 throw new InvalidArgumentException('ID inválido.');
             }
 
-            $longitudes = [
-                'nombre'=>100,
-                'apellido'=>150,
-                'alias'=>150,
-                'correo'=>190,
-                'usuario'=>100,
-                'numero'=>30,
-                'domicilio'=>255,
-                'calle'=>150,
-                'numext'=>20,
-                'numint'=>20,
-                'colonia'=>150,
-                'cp'=>10,
-                'estado'=>100,
-                'pais'=>100,
-                'compania'=>150
-            ];
+            
+$longitudes = [
+    'nombre' => 100,
+    'apellido' => 150,
+    'razon_social' => 200,
+    'rfc' => 13,
+    'alias' => 150,
+    'correo' => 190,
+    'correo_empresarial' => 190,
+    'numero' => 30,
+    'movil' => 30,
+    'domicilio' => 255,
+    'calle' => 150,
+    'numext' => 20,
+    'numint' => 20,
+    'colonia' => 150,
+    'municipio' => 120,
+    'cp' => 10,
+    'estado' => 100,
+    'pais' => 100
+];
+
 
             $valores = [];
 
@@ -4778,6 +4813,39 @@ public function cambiarEstadoCatalogoCosteo(array $data): array {
                 $texto = $this->textoVenta($data, $campo, $maximo);
                 $valores[$campo] = $texto === '' ? null : $texto;
             }
+
+
+$notas = $this->textoVenta($data, 'notas', 3000);
+$valores['notas'] = $notas === '' ? null : $notas;
+
+if ($valores['rfc'] !== null) {
+    $rfc = strtoupper($valores['rfc']);
+    $rfc = str_replace('ñ', 'Ñ', $rfc);
+
+    if (!preg_match(
+        '/^[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}$/u',
+        $rfc
+    )) {
+        throw new InvalidArgumentException(
+            'El RFC debe contener 12 o 13 caracteres válidos.'
+        );
+    }
+
+    $valores['rfc'] = $rfc;
+}
+
+if (
+    $valores['correo_empresarial'] !== null &&
+    !filter_var(
+        $valores['correo_empresarial'],
+        FILTER_VALIDATE_EMAIL
+    )
+) {
+    throw new InvalidArgumentException(
+        'El correo empresarial no es válido.'
+    );
+}
+
 
             if ($valores['nombre'] === null) {
                 throw new InvalidArgumentException(
@@ -4814,6 +4882,78 @@ public function cambiarEstadoCatalogoCosteo(array $data): array {
             }
 
             $valores['limite_credito'] = $credito;
+
+
+if (
+    isset($data['grupo_id']) &&
+    !is_scalar($data['grupo_id'])
+) {
+    throw new InvalidArgumentException(
+        'El grupo seleccionado no es válido.'
+    );
+}
+
+$grupo = trim((string)($data['grupo_id'] ?? ''));
+
+$valores['grupo_id'] = null;
+
+if ($grupo !== '') {
+    if (!ctype_digit($grupo) || (int)$grupo <= 0) {
+        throw new InvalidArgumentException(
+            'Selecciona un grupo válido.'
+        );
+    }
+
+    $grupoId = (int)$grupo;
+
+    $stmt = $this->ejecutarSqlVenta(
+        "SELECT id
+         FROM clientes_grupos
+         WHERE corp_id = ?
+           AND id = ?
+           AND eliminado = 0
+         LIMIT 1",
+        "si",
+        [$corp, $grupoId]
+    );
+
+    $grupoExiste = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$grupoExiste) {
+        throw new InvalidArgumentException(
+            'El grupo seleccionado no existe o fue eliminado.'
+        );
+    }
+
+    $valores['grupo_id'] = $grupoId;
+}
+
+if (
+    isset($data['tipo_precio_id']) &&
+    !is_scalar($data['tipo_precio_id'])
+) {
+    throw new InvalidArgumentException(
+        'El tipo de precio no es válido.'
+    );
+}
+
+$tipoPrecio = trim(
+    (string)($data['tipo_precio_id'] ?? '1')
+);
+
+if ($tipoPrecio === '') {
+    $tipoPrecio = '1';
+}
+
+if (!preg_match('/^(10|[1-9])$/D', $tipoPrecio)) {
+    throw new InvalidArgumentException(
+        'El tipo de precio debe estar entre 1 y 10.'
+    );
+}
+
+$valores['tipo_precio_id'] = (int)$tipoPrecio;
+
 
             $coordenadas = [];
 
@@ -4915,11 +5055,10 @@ public function cambiarEstadoCatalogoCosteo(array $data): array {
                     $asignaciones[] = '`' . $columna . '`=?';
                 }
 
-                $sql = 'UPDATE clientes
- SET eliminado=1,
-     fechaEliminado=NOW(),
-     fechaEditado=NOW()
- WHERE corp_id=? AND id=? AND eliminado=0';
+                $sql = 'UPDATE clientes SET ' .
+    implode(', ', $asignaciones) .
+    ', fechaEditado=NOW()
+     WHERE corp_id=? AND id=? AND eliminado=0';
 
                 $stmt = $this->ejecutarSqlVenta(
                     $sql,
@@ -4974,14 +5113,19 @@ public function cambiarEstadoCatalogoCosteo(array $data): array {
                 throw new InvalidArgumentException('ID inválido.');
             }
 
-            $stmt = $this->ejecutarSqlVenta(
-                'UPDATE clientes
-                 SET eliminado=1,
-                     fechaEliminado=NOW(),
-                     fechaEditado=NOW(),
-                 WHERE corp_id=? AND id=? AND eliminado=0',
-                'si', [$this->corpClientes(), $id]
-            );
+            
+$stmt = $this->ejecutarSqlVenta(
+    "UPDATE clientes
+     SET eliminado = 1,
+         fechaEliminado = NOW(),
+         fechaEditado = NOW()
+     WHERE corp_id = ?
+       AND id = ?
+       AND eliminado = 0",
+    "si",
+    [$this->corpClientes(), $id]
+);
+
 
             $cambiados = $stmt->affected_rows;
             $stmt->close();
@@ -5017,6 +5161,171 @@ public function cambiarEstadoCatalogoCosteo(array $data): array {
                 'status'=>'error',
                 'code'=>500,
                 'answer'=>'No fue posible eliminar el cliente.'
+            ];
+        }
+    }
+
+
+    public function getCatalogosClientes(): array {
+        try {
+            if (!$this->conn) {
+                throw new RuntimeException('Sin conexión con MySQL.');
+            }
+
+            $corp = $this->corpClientes();
+
+            $stmt = $this->ejecutarSqlVenta(
+                "SELECT id, nombre
+                 FROM clientes_grupos
+                 WHERE corp_id = ?
+                   AND eliminado = 0
+                 ORDER BY nombre ASC, id ASC",
+                "s",
+                [$corp]
+            );
+
+            $grupos = $stmt->get_result()
+                ->fetch_all(MYSQLI_ASSOC);
+
+            $stmt->close();
+
+            $precios = [];
+
+            for ($i = 1; $i <= 10; $i++) {
+                $precios[] = [
+                    'id' => $i,
+                    'nombre' => 'Tipo de precio ' . $i
+                ];
+            }
+
+            return [
+                'status' => 'ok',
+                'code' => 200,
+                'answer' => 'Catálogos consultados correctamente.',
+                'results' => [
+                    'grupos' => $grupos,
+                    'precios' => $precios
+                ]
+            ];
+
+        } catch (Throwable $e) {
+            error_log(
+                'getCatalogosClientes: ' . $e->getMessage()
+            );
+
+            return [
+                'status' => 'error',
+                'code' => 500,
+                'answer' => 'No fue posible consultar los catálogos.'
+            ];
+        }
+    }
+
+
+    public function guardarCatalogoCliente(array $data = []): array {
+        try {
+            if (!$this->conn) {
+                throw new RuntimeException('Sin conexión con MySQL.');
+            }
+
+            $this->exigirAdminClientes();
+
+            $tipo = $this->textoVenta(
+                $data,
+                'tipo_catalogo',
+                20
+            );
+
+            if ($tipo !== 'grupo') {
+                throw new InvalidArgumentException(
+                    'Solo se permite crear grupos de clientes.'
+                );
+            }
+
+            $nombre = $this->textoVenta(
+                $data,
+                'nombre',
+                80
+            );
+
+            if ($nombre === '') {
+                throw new InvalidArgumentException(
+                    'Escribe el nombre del grupo.'
+                );
+            }
+
+            $corp = $this->corpClientes();
+
+            $stmt = $this->ejecutarSqlVenta(
+                "SELECT id
+                 FROM clientes_grupos
+                 WHERE corp_id = ?
+                   AND nombre = ?
+                   AND eliminado = 0
+                 LIMIT 1",
+                "ss",
+                [$corp, $nombre]
+            );
+
+            $existe = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if ($existe) {
+                return [
+                    'status' => 'warning',
+                    'code' => 409,
+                    'answer' => 'Ya existe un grupo con ese nombre.'
+                ];
+            }
+
+            $stmt = $this->ejecutarSqlVenta(
+                "INSERT INTO clientes_grupos (
+                    corp_id,
+                    nombre,
+                    eliminado,
+                    fechaAlta
+                ) VALUES (?, ?, 0, NOW())",
+                "ss",
+                [$corp, $nombre]
+            );
+
+            $stmt->close();
+
+            $id = (int)$this->conn->insert_id;
+
+            return [
+                'status' => 'ok',
+                'code' => 200,
+                'answer' => 'Grupo creado correctamente.',
+                'results' => [
+                    'id' => $id,
+                    'nombre' => $nombre
+                ]
+            ];
+
+        } catch (DomainException $e) {
+            return [
+                'status' => 'warning',
+                'code' => 403,
+                'answer' => $e->getMessage()
+            ];
+
+        } catch (InvalidArgumentException $e) {
+            return [
+                'status' => 'warning',
+                'code' => 400,
+                'answer' => $e->getMessage()
+            ];
+
+        } catch (Throwable $e) {
+            error_log(
+                'guardarCatalogoCliente: ' . $e->getMessage()
+            );
+
+            return [
+                'status' => 'error',
+                'code' => 500,
+                'answer' => 'No fue posible crear el grupo.'
             ];
         }
     }

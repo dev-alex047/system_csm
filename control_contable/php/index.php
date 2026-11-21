@@ -15,11 +15,13 @@ csmExigirSesion();
 
 require_once __DIR__ . "/conexion.php";
 require_once __DIR__ . "/consultas.php";
+require_once __DIR__ . "/utils.php";
 require_once __DIR__ . "/notaVenta.php";
 require_once __DIR__ . "/ticketVenta.php";
 
 $action = isset($_POST["action"]) ? trim((string)$_POST["action"]) : "";
 $consultas = new consultas();
+$utils = new utils();
 $response = [];
 
 switch ($action) {
@@ -146,6 +148,18 @@ switch ($action) {
 
     case "eliminarCliente":
         $response = $consultas->eliminarCliente($_POST);
+        break;
+
+    case "getCatalogosClientes":
+        $response = $consultas->getCatalogosClientes();
+        break;
+
+    case "guardarCatalogoCliente":
+        $response = $consultas->guardarCatalogoCliente($_POST);
+        break;
+
+    case "getPaisesEstados":
+        $response = $utils->getPaisesEstados($_POST);
         break;
 
     default:
