@@ -466,6 +466,7 @@ public function getVentas($data = []) {
                     throw new InvalidArgumentException("Indica fechas válidas.");
                 }
             }
+            
 
             if ($inicio !== "" && $fin !== "" && $inicio > $fin) {
                 throw new InvalidArgumentException("La fecha inicial no puede superar la final.");
