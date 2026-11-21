@@ -103,14 +103,13 @@ class utils{
             ];
 
         } catch (Throwable $e) {
-            error_log(
-                'getPaisesEstados: ' . $e->getMessage()
-            );
+            
 
             return [
                 'status' => 'error',
                 'code' => 500,
-                'answer' => 'No se pudo leer el catálogo geográfico.'
+                'answer' => 'No se pudo leer el catálogo geográfico.',
+                'error' => 'getPaisesEstados: ' . $e->getMessage()
             ];
         }
     }
@@ -211,9 +210,7 @@ class utils{
                         LOCK_EX
                     ) === false
                 ) {
-                    error_log(
-                        'No se pudo guardar caché: ' . $archivo
-                    );
+                    
                 }
 
                 return $json;
@@ -345,9 +342,7 @@ class utils{
             ];
 
         } catch (Throwable $e) {
-            error_log(
-                'getPaisesEstados: ' . $e->getMessage()
-            );
+           
 
             return [
                 'status' => 'error',

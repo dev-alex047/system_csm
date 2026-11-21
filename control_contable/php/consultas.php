@@ -94,7 +94,7 @@ public function getResumenInicial($data = []) {
             $json["code"] = 200;
 
         } catch (Throwable $e) {
-            error_log("getResumenInicial: " . $e->getMessage());
+            
             $json = ["status"=>"error","answer"=>"No fue posible obtener el resumen contable.","code"=>500];
         }
     }
@@ -290,9 +290,7 @@ public function buscarProductosVenta($data = []) {
         ];
 
     } catch (Throwable $e) {
-        error_log(
-            "buscarProductosVenta: " . $e->getMessage()
-        );
+      
 
         return [
             "status" => "error",
@@ -332,7 +330,7 @@ public function getUnidadProducto($data = []) {
             "code"=>400
         ];
     } catch (Throwable $e) {
-        error_log("getUnidadProducto: " . $e->getMessage());
+      
 
         return [
             "status"=>"error",
@@ -432,7 +430,7 @@ public function getCajasVenta() {
             $stmt->close();
             $json = ['status'=>'ok','answer'=>'Cajas consultadas correctamente.','results'=>$cajas,'code'=>200];
         } catch (Throwable $e) {
-            error_log('getCajasVenta: ' . $e->getMessage());
+            
             $json = ['status'=>'error','answer'=>'No fue posible consultar las cajas.','code'=>500];
         }
     }
@@ -581,7 +579,7 @@ public function getVentas($data = []) {
             $json["answer"] = $e->getMessage();
             $json["code"] = 400;
         } catch (Throwable $e) {
-            error_log("getVentas: " . $e->getMessage());
+            
             $json["status"] = "error";
             $json["answer"] = "No fue posible consultar el historial de ventas.";
             $json["code"] = 500;
@@ -1054,11 +1052,11 @@ $etapa = "registrar_cobro";
             $json = ['status'=>'warning','answer'=>$e->getMessage(),'code'=>400];
         } catch (Throwable $e) {
             if ($transaccion) $this->conn->rollback();
-            //error_log('guardarVentaNota: ' . $e->getMessage());
+            
             //$json = ['status'=>'error','answer'=>'No fue posible confirmar el registro de la venta.','code'=>500];
 
 
-error_log("guardarVentaNota [" . $etapa . "] Código " . $e->getCode() . ": " . $e->getMessage());
+
 
 $json["status"] = "error";
 $json["answer"] = "No fue posible confirmar el registro de la venta.";
@@ -1103,7 +1101,7 @@ $stmt = $this->ejecutarSqlVenta(
                         $json = ['status'=>'warning','answer'=>'El folio ya está utilizado en otra nota.','code'=>409];
                     }
                 } catch (Throwable $otroError) {
-                    error_log('Validar venta duplicada: ' . $otroError->getMessage());
+                    
                 }
             }
         }
@@ -1256,7 +1254,6 @@ public function generarPdfNotaVenta($idVenta)
         $json["code"] = 200;
     
 } catch (Throwable $e) {
-    error_log("generarPdfNotaVenta: " . $e->getMessage());
 
     $json["status"] = "error";
     $json["answer"] = "No fue posible generar la nota de venta.";
@@ -1589,7 +1586,7 @@ $stmtItem->close();
         $json["code"] = 400;
     } catch (Throwable $e) {
         if ($transaccion) $this->conn->rollback();
-        error_log("guardarVentaRapida: " . $e->getMessage());
+        
 
         $json["status"] = "error";
         $json["answer"] = "No fue posible guardar la venta rápida.";
@@ -1633,7 +1630,7 @@ if (
                     $json["code"] = 409;
                 }
             } catch (Throwable $otroError) {
-                error_log("Verificar duplicado venta rápida: " . $otroError->getMessage());
+                
             }
         }
     }
@@ -1772,7 +1769,7 @@ public function getControlCaja($data = []) {
             $json["answer"] = $e->getMessage();
             $json["code"] = 400;
         } catch (Throwable $e) {
-            error_log("getControlCaja: " . $e->getMessage());
+            
             $json["status"] = "error";
             $json["answer"] = "No fue posible consultar el control de caja.";
             $json["code"] = 500;
@@ -1908,7 +1905,7 @@ public function abrirCaja($data) {
             if ($transaccion) {
                 $this->conn->rollback();
             }
-            error_log("abrirCaja: " . $e->getMessage());
+            
             $json["status"] = "error";
             $json["answer"] = "No fue posible abrir la caja.";
             $json["code"] = 500;
@@ -2113,7 +2110,7 @@ $stmt = $this->ejecutarSqlVenta(
             $json["code"] = 400;
         } catch (Throwable $e) {
             if ($transaccion) $this->conn->rollback();
-            error_log("cerrarCaja: " . $e->getMessage());
+            
             $json["status"] = "error";
             $json["answer"] = "No fue posible realizar el cierre de caja.";
             $json["code"] = 500;
@@ -2166,7 +2163,7 @@ AND (link_type IS NULL OR link_type <> 'CXP')
             $json["code"] = 200;
 
         } catch (Throwable $e) {
-            error_log("getEgresos: " . $e->getMessage());
+            
             $json["status"] = "error";
             $json["answer"] = "No fue posible consultar los egresos.";
             $json["code"] = 500;
@@ -2364,8 +2361,7 @@ public function guardarEgreso($data) {
             $json["code"] = 400;
         } catch (Throwable $e) {
             if ($transaccion) $this->conn->rollback();
-            error_log("guardarEgreso: " . $e->getMessage());
-
+            
             $json["status"] = "error";
             $json["answer"] = "No fue posible registrar el egreso.";
             $json["code"] = 500;
@@ -2390,7 +2386,7 @@ public function guardarEgreso($data) {
                         $json["code"] = 200;
                     }
                 } catch (Throwable $otroError) {
-                    error_log("Verificar egreso duplicado: " . $otroError->getMessage());
+                    
                 }
             }
         }
@@ -2489,7 +2485,7 @@ unset($cuenta);
         } catch (InvalidArgumentException $e) {
             $json["status"]="warning"; $json["answer"]=$e->getMessage(); $json["code"]=400;
         } catch (Throwable $e) {
-            error_log("getCuentas: ".$e->getMessage());
+           
             $json["status"]="error"; $json["answer"]="No fue posible consultar las cuentas."; $json["code"]=500;
         }
     }
@@ -2568,7 +2564,7 @@ $stmt = $this->ejecutarSqlVenta(
         } catch (InvalidArgumentException $e) {
             $json["status"]="warning"; $json["answer"]=$e->getMessage(); $json["code"]=400;
         } catch (Throwable $e) {
-            error_log("crearCuenta: ".$e->getMessage());
+            
             $json["status"]="error"; $json["answer"]="No fue posible registrar la cuenta. Si la solicitud se procesó, puedes reintentar con el mismo identificador."; $json["code"]=500;
         }
     }
@@ -2638,7 +2634,7 @@ if ($venta) {
         } catch (InvalidArgumentException $e) {
             $json["status"]="warning"; $json["answer"]=$e->getMessage(); $json["code"]=400;
         } catch (Throwable $e) {
-            error_log("getDetalleCuenta: ".$e->getMessage());
+           
             $json["status"]="error"; $json["answer"]="No fue posible obtener el historial."; $json["code"]=500;
         }
     }
@@ -2794,7 +2790,7 @@ $stmt = $this->ejecutarSqlVenta(
             $json["status"]="warning"; $json["answer"]=$e->getMessage(); $json["code"]=400;
         } catch (Throwable $e) {
             if ($transaccion) $this->conn->rollback();
-            error_log("registrarAbonoCuenta: ".$e->getMessage());
+            
             $json["status"]="error"; $json["answer"]="No fue posible confirmar el pago. Reintenta con el mismo identificador para evitar duplicados."; $json["code"]=500;
             if ((int)$e->getCode()===1062 && $token!=="") {
                 try {
@@ -2805,7 +2801,7 @@ $stmt = $this->ejecutarSqlVenta(
                         $json["results"]=["id"=>(int)$repetido["id"],"duplicado"=>true]; $json["code"]=200;
                     }
                 } catch (Throwable $otroError) {
-                    error_log("Verificar abono duplicado: ".$otroError->getMessage());
+                    
                 }
             }
         }
@@ -2833,7 +2829,7 @@ public function getPersonasCuentas($data = []) {
         } catch (InvalidArgumentException $e) {
             $json=["status"=>"warning","answer"=>$e->getMessage(),"code"=>400];
         } catch (Throwable $e) {
-            error_log("getPersonasCuentas: ".$e->getMessage());
+            
             $json=["status"=>"error","answer"=>"No fue posible consultar los deudores o proveedores.","code"=>500];
         }
     }
@@ -2888,7 +2884,7 @@ if ($tipo==="COBRAR") {
         } catch (InvalidArgumentException $e) {
             $json=["status"=>"warning","answer"=>$e->getMessage(),"code"=>400];
         } catch (Throwable $e) {
-            error_log("getAbonosCuentas: ".$e->getMessage());
+            
             $json=["status"=>"error","answer"=>"No fue posible consultar los abonos o pagos.","code"=>500];
         }
     }
@@ -3031,7 +3027,7 @@ public function generarDocumentosNotaVenta($data) {
     } catch (Throwable $e) {
         if ($transaccion) $this->conn->rollback();
         foreach ($creados as $ruta) @unlink($ruta);
-        error_log('generarDocumentosNotaVenta: '.$e->getMessage());
+      
         $json=[
             'status'=>'error',
             'answer'=>'No se pudieron generar los PDF. Los importes de la venta permanecen intactos.',
@@ -3220,7 +3216,7 @@ COALESCE(
     } catch (InvalidArgumentException $e) {
         $json=['status'=>'warning','answer'=>$e->getMessage(),'code'=>400];
     } catch (Throwable $e) {
-        error_log('generarConcentradoCxc: '.$e->getMessage());
+        
         $json=['status'=>'error','answer'=>'No fue posible generar el concentrado.','code'=>500];
     }
     return $json;
@@ -3332,7 +3328,7 @@ COALESCE(
             $json["code"] = 404;
 
         } catch (Throwable $e) {
-            error_log("generarTicketVenta: " . $e->getMessage());
+            
 
             $json["status"] = "error";
             $json["answer"] = "No fue posible generar el ticket.";
@@ -3448,7 +3444,7 @@ $sqls = [
         ];
 
     } catch (Throwable $e) {
-        error_log('getCatalogosCosteo: ' . $e->getMessage());
+        
 
         $json = [
             'status' => 'error',
@@ -3991,7 +3987,7 @@ if ($cat['tipo'] === 'PROPIO' &&
     } catch (Throwable $e) {
         if ($transaccion) $this->conn->rollback();
 
-        error_log('cotizarMaterial: ' . $e->getMessage());
+        
 
         $json = [
             'status' => 'error',
@@ -4509,7 +4505,7 @@ if ($tarifaExistente && (int)$tarifaExistente['eliminado'] === 1) {
         ];
 
     } catch (mysqli_sql_exception $e) {
-        error_log('guardarCatalogoCosteo: ' . $e->getMessage());
+        
 
         $json = [
             'status' => 'error',
@@ -4520,7 +4516,7 @@ if ($tarifaExistente && (int)$tarifaExistente['eliminado'] === 1) {
         ];
 
     } catch (Throwable $e) {
-        error_log('guardarCatalogoCosteo: ' . $e->getMessage());
+        
 
         $json = [
             'status' => 'error',
@@ -4664,7 +4660,7 @@ public function cambiarEstadoCatalogoCosteo(array $data): array {
 
     } catch (Throwable $e) {
         if ($transaccion) $this->conn->rollback();
-        error_log('cambiarEstadoCatalogoCosteo: ' . $e->getMessage());
+       
         $json = [
             'status'=>'error',
             'answer'=>'No fue posible actualizar el estado del registro.',
@@ -4758,7 +4754,7 @@ $stmt = $this->ejecutarSqlVenta(
                 'results'=>$clientes
             ];
         } catch (Throwable $e) {
-            error_log('getClientes: ' . $e->getMessage());
+            
             return [
                 'status'=>'error',
                 'code'=>500,
@@ -5088,7 +5084,7 @@ $valores['tipo_precio_id'] = (int)$tipoPrecio;
                 'answer'=>$e->getMessage()
             ];
         } catch (Throwable $e) {
-            error_log('guardarCliente: ' . $e->getMessage());
+            
             return [
                 'status'=>'error',
                 'code'=>500,
@@ -5156,7 +5152,7 @@ $stmt = $this->ejecutarSqlVenta(
                 'answer'=>$e->getMessage()
             ];
         } catch (Throwable $e) {
-            error_log('eliminarCliente: ' . $e->getMessage());
+            
             return [
                 'status'=>'error',
                 'code'=>500,
@@ -5209,9 +5205,7 @@ $stmt = $this->ejecutarSqlVenta(
             ];
 
         } catch (Throwable $e) {
-            error_log(
-                'getCatalogosClientes: ' . $e->getMessage()
-            );
+           
 
             return [
                 'status' => 'error',
@@ -5318,9 +5312,7 @@ $stmt = $this->ejecutarSqlVenta(
             ];
 
         } catch (Throwable $e) {
-            error_log(
-                'guardarCatalogoCliente: ' . $e->getMessage()
-            );
+          
 
             return [
                 'status' => 'error',
