@@ -686,24 +686,16 @@ function iniciarSelectorNotaClientes() {
                         c.numero
                     ].join(" ").toLocaleLowerCase("es").includes(buscar);
                 });
-
                 
                 devolver(encontrados.slice(0, 12).map(function(c) {
                     const nombre = nombreCompletoCliente(c);
 
-                    const detalles = [
-                        "ID #" + c.id,
-                        c.alias || "",
-                        c.movil || c.numero || ""
-                    ].filter(Boolean).join(" · ");
-
                     return {
-                        label: nombre + " — " + detalles,
+                        label: nombre,
                         value: nombre,
                         cliente: c
                     };
                 }));
-
             },
 
             select: function(e, ui) {
