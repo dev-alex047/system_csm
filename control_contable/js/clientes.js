@@ -222,23 +222,22 @@ function inicialesCliente(c) {
 }
 
 
+
 function liberarMapaClientes() {
     clientesUI.folio++;
     clientesUI.geoVersion++;
     clientesUI.estadosVersion++;
+
     clearTimeout(clientesUI.timer);
 
-    if (clientesUI.peticion) clientesUI.peticion.abort();
-    clientesUI.peticion = null;
+    if (clientesUI.peticion) {
+        clientesUI.peticion.abort();
+        clientesUI.peticion = null;
+    }
 
-    if (clientesUI.mapa) clientesUI.mapa.remove();
-    if (clientesUI.mapaFicha) {
-    clientesUI.mapaFicha.remove();
-    clientesUI.mapaFicha = null;
-}
-
-if (clientesUI.mapa) {
+    if (clientesUI.mapa) {
         clientesUI.mapa.remove();
+        clientesUI.mapa = null;
     }
 
     if (clientesUI.mapaFicha) {
@@ -246,7 +245,6 @@ if (clientesUI.mapa) {
         clientesUI.mapaFicha = null;
     }
 
-    clientesUI.mapa = null;
     clientesUI.pin = null;
 }
 
@@ -607,45 +605,38 @@ if (paisSeleccionado && paisSeleccionado.iso2) {
 });
 
 $(document).on("click", ".js-cl-lugar", function() {
-    const lugar = $(this).data("lugar");
-
-    if (!lugar) return;
-
-    const direccion = lugar.address || {};
-
+    
     const valores = {
-    domicilio: lugar.display_name || lugar.display_address || "",
-    calle: direccion.road || direccion.pedestrian || "",
-    numext: direccion.house_number || "",
-    colonia: direccion.suburb ||
-        direccion.neighbourhood ||
-        direccion.quarter || "",
-    municipio: direccion.city ||
-        direccion.town ||
-        direccion.village ||
-        direccion.municipality || "",
-    cp: direccion.postcode || ""
-};
+        domicilio: lugar.display_name || lugar.display_address || "",
+        calle: direccion.road || direccion.pedestrian || "",
+        numext: direccion.house_number || "",
+        colonia: direccion.suburb ||
+            direccion.neighbourhood ||
+            direccion.quarter || "",
+        municipio: direccion.city ||
+            direccion.town ||
+            direccion.village ||
+            direccion.municipality || "",
+        cp: direccion.postcode || ""
+    };
 
     Object.keys(valores).forEach(function(campo) {
-        if (direccion.country || direccion.country_code) {
-    cargarPaisesCliente(
-        direccion.country_code || direccion.country,
-        direccion.state || ""
-    );
-}
         if (!valores[campo]) return;
 
         const $control = $("#cl_" + campo);
+        const maximo = Number($control.attr("maxlength")) || 255;
 
         $control.val(
-            String(valores[campo]).slice(
-                0,
-                Number($control.attr("maxlength")) || 255
-            )
+            String(valores[campo]).slice(0, maximo)
         );
     });
 
+    if (direccion.country || direccion.country_code) {
+        cargarPaisesCliente(
+            direccion.country_code || direccion.country,
+            direccion.state || ""
+        );
+    }
 
     colocarPinCliente(Number(lugar.lat), Number(lugar.lon));
 

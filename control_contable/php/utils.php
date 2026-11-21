@@ -5,163 +5,226 @@ class utils{
     }
 
     
+    
     public function getPaisesEstados(array $data = []): array {
         try {
             $nivel = trim((string)($data['nivel'] ?? ''));
+            $pais = trim((string)($data['pais'] ?? ''));
 
             if (!in_array($nivel, ['paises', 'estados'], true)) {
                 throw new InvalidArgumentException(
-                    'Tipo de consulta geográfica inválido.'
+                    'Consulta geográfica inválida.'
                 );
             }
 
-            $pais = trim((string)($data['pais'] ?? ''));
-
-            if ($nivel === 'estados' &&
-                ($pais === '' || strlen($pais) > 100)) {
+            if (
+                $nivel === 'estados' &&
+                ($pais === '' || strlen($pais) > 100)
+            ) {
                 throw new InvalidArgumentException(
                     'Selecciona un país válido.'
                 );
             }
 
-            $cache = sys_get_temp_dir() . '/csm_geo_' .
-                sha1($nivel . '|' . $pais) . '.json';
+            $base = 'https://cdn.jsdelivr.net/gh/' .
+                'srestre/world-countries-cities-db@main';
 
-            if (is_file($cache) &&
-                (time() - filemtime($cache)) < 86400) {
+            $carpeta = sys_get_temp_dir();
 
-                $guardado = json_decode(
-                    file_get_contents($cache), true
+            $obtenerJson = function(
+                string $ruta,
+                string $archivo
+            ) use ($base): array {
+
+                if (is_file($archivo)) {
+                    $guardado = json_decode(
+                        (string)file_get_contents($archivo),
+                        true
+                    );
+
+                    if (is_array($guardado)) {
+                        return $guardado;
+                    }
+                }
+
+                if (!function_exists('curl_init')) {
+                    throw new RuntimeException(
+                        'PHP no tiene habilitado cURL.'
+                    );
+                }
+
+                $curl = curl_init($base . $ruta);
+
+                curl_setopt_array($curl, [
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_CONNECTTIMEOUT => 5,
+                    CURLOPT_TIMEOUT => 25,
+                    CURLOPT_SSL_VERIFYPEER => true,
+                    CURLOPT_FOLLOWLOCATION => false,
+                    CURLOPT_USERAGENT => 'ControlContable/1.0',
+                    CURLOPT_ENCODING => ''
+                ]);
+
+                $respuesta = curl_exec($curl);
+
+                $http = (int)curl_getinfo(
+                    $curl,
+                    CURLINFO_HTTP_CODE
                 );
 
-                if (is_array($guardado)) {
-                    return [
-                        'status' => 'ok',
-                        'code' => 200,
-                        'answer' => 'Catálogo consultado.',
-                        'results' => $guardado
+                $errorCurl = curl_error($curl);
+
+                curl_close($curl);
+
+                if (
+                    $respuesta === false ||
+                    $http !== 200 ||
+                    strlen((string)$respuesta) > 12000000
+                ) {
+                    throw new RuntimeException(
+                        'Catálogo HTTP ' . $http .
+                        ': ' . $errorCurl
+                    );
+                }
+
+                $json = json_decode($respuesta, true);
+
+                if (!is_array($json)) {
+                    throw new RuntimeException(
+                        'El JSON geográfico no es válido.'
+                    );
+                }
+
+                if (
+                    @file_put_contents(
+                        $archivo,
+                        $respuesta,
+                        LOCK_EX
+                    ) === false
+                ) {
+                    error_log(
+                        'No se pudo guardar caché: ' . $archivo
+                    );
+                }
+
+                return $json;
+            };
+
+            $indice = $obtenerJson(
+                '/metadata/index.json',
+                $carpeta . '/csm_geo_indice_v2.json'
+            );
+
+            $resultados = [];
+
+            if ($nivel === 'paises') {
+
+                foreach ($indice as $iso => $info) {
+                    if (
+                        !is_array($info) ||
+                        !preg_match('/^[A-Z]{2}$/', (string)$iso)
+                    ) {
+                        continue;
+                    }
+
+                    $nombre = trim((string)(
+                        $info['name_es'] ??
+                        $info['name'] ?? ''
+                    ));
+
+                    if ($nombre === '') {
+                        continue;
+                    }
+
+                    $resultados[] = [
+                        'name' => $nombre,
+                        'iso2' => $iso
+                    ];
+                }
+
+            } else {
+
+                $iso = strtoupper($pais);
+
+                if (!isset($indice[$iso])) {
+                    $iso = '';
+
+                    foreach ($indice as $codigo => $info) {
+                        if (!is_array($info)) {
+                            continue;
+                        }
+
+                        if (
+                            strcasecmp(
+                                $pais,
+                                (string)($info['name'] ?? '')
+                            ) === 0 ||
+
+                            strcasecmp(
+                                $pais,
+                                (string)($info['name_es'] ?? '')
+                            ) === 0 ||
+
+                            (
+                                $codigo === 'MX' &&
+                                strcasecmp($pais, 'Mexico') === 0
+                            )
+                        ) {
+                            $iso = $codigo;
+                            break;
+                        }
+                    }
+                }
+
+                if (
+                    !preg_match('/^[A-Z]{2}$/', $iso) ||
+                    !isset($indice[$iso])
+                ) {
+                    throw new InvalidArgumentException(
+                        'El país seleccionado no existe.'
+                    );
+                }
+
+                $detalle = $obtenerJson(
+                    '/countries/' . $iso . '.json',
+                    $carpeta . '/csm_geo_' . $iso . '_v2.json'
+                );
+
+                $datosPais = isset($detalle[0])
+                    ? $detalle[0] : $detalle;
+
+                $estados = $datosPais['states'] ?? [];
+
+                if (!is_array($estados)) {
+                    throw new RuntimeException(
+                        'No se recibió un catálogo de estados válido.'
+                    );
+                }
+
+                foreach ($estados as $estado) {
+                    if (!is_array($estado)) {
+                        continue;
+                    }
+
+                    $nombre = trim((string)(
+                        $estado['name'] ?? ''
+                    ));
+
+                    if ($nombre === '') {
+                        continue;
+                    }
+
+                    $resultados[] = [
+                        'name' => $nombre,
+                        'iso2' => ''
                     ];
                 }
             }
 
-            if (!function_exists('curl_init')) {
-                throw new RuntimeException(
-                    'PHP no tiene habilitada la extensión cURL.'
-                );
-            }
-
-            $url = 'https://countriesnow.space/api/v0.1/countries/' .
-                ($nivel === 'paises' ? 'iso' : 'states');
-
-            $curl = curl_init($url);
-
-            if ($curl === false) {
-                throw new RuntimeException(
-                    'No se pudo inicializar cURL.'
-                );
-            }
-
-            $opciones = [
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_CONNECTTIMEOUT => 5,
-                CURLOPT_TIMEOUT => 15,
-                CURLOPT_SSL_VERIFYPEER => true,
-                CURLOPT_FOLLOWLOCATION => false,
-                CURLOPT_HTTPHEADER => [
-                    'Accept: application/json'
-                ]
-            ];
-
-            if ($nivel === 'estados') {
-                $opciones[CURLOPT_POST] = true;
-
-                $opciones[CURLOPT_POSTFIELDS] = json_encode(
-                    ['country' => $pais],
-                    JSON_UNESCAPED_UNICODE
-                );
-
-                $opciones[CURLOPT_HTTPHEADER] = [
-                    'Accept: application/json',
-                    'Content-Type: application/json'
-                ];
-            }
-
-            curl_setopt_array($curl, $opciones);
-
-            $respuesta = curl_exec($curl);
-            $codigoHttp = (int)curl_getinfo(
-                $curl,
-                CURLINFO_HTTP_CODE
-            );
-
-            $errorCurl = curl_error($curl);
-            curl_close($curl);
-
-            if ($respuesta === false ||
-                $codigoHttp !== 200 ||
-                strlen((string)$respuesta) > 3000000) {
-                throw new RuntimeException(
-                    'CountriesNow HTTP ' . $codigoHttp .
-                    ': ' . $errorCurl
-                );
-            }
-
-            $json = json_decode($respuesta, true);
-
-            if (!is_array($json) ||
-                ($json['error'] ?? true) !== false) {
-                throw new RuntimeException(
-                    'CountriesNow devolvió una respuesta inválida: ' .
-                    (string)($json['msg'] ?? '')
-                );
-            }
-
-            $filas = $nivel === 'paises'
-                ? ($json['data'] ?? [])
-                : ($json['data']['states'] ?? []);
-
-            if (!is_array($filas)) {
-                throw new RuntimeException(
-                    'El catálogo geográfico no tiene el formato esperado.'
-                );
-            }
-
-            $resultados = [];
-
-            foreach ($filas as $fila) {
-                if (!is_array($fila)) {
-                    continue;
-                }
-
-                $nombre = trim((string)($fila['name'] ?? ''));
-
-                if ($nombre === '') {
-                    continue;
-                }
-
-                $resultados[] = [
-                    'name' => $nombre,
-                    'iso2' => $nivel === 'paises'
-                        ? strtoupper((string)(
-                            $fila['Iso2'] ?? $fila['iso2'] ?? ''
-                        ))
-                        : ''
-                ];
-            }
-
-            @file_put_contents(
-                $cache,
-                json_encode(
-                    $resultados,
-                    JSON_UNESCAPED_UNICODE
-                ),
-                LOCK_EX
-            );
-
             return [
                 'status' => 'ok',
                 'code' => 200,
-                'answer' => 'Ubicaciones consultadas correctamente.',
+                'answer' => 'Catálogo geográfico consultado.',
                 'results' => $resultados
             ];
 
@@ -181,10 +244,11 @@ class utils{
                 'status' => 'error',
                 'code' => 503,
                 'answer' => 'No se pudo consultar el catálogo geográfico.',
-                'razon' => 'razon ' . $e->getMessage()
-            ]; 
+                'razon' => $e->getMessage()
+            ];
         }
     }
+
 
 
 }
