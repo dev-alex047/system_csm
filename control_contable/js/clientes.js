@@ -664,9 +664,9 @@ function iniciarSelectorNotaClientes() {
         if (!document.body.contains($campo[0]) || r.status !== "ok") return;
 
         const clientes = (Array.isArray(r.results) ? r.results : [])
-        .filter(function(c) {
-            return Number(c.tipo) === 1;
-        });
+    .filter(function(c) {
+        return Number(c.tipo) === 1;
+    });
 
         $campo.attr(
             "placeholder",
@@ -687,14 +687,23 @@ function iniciarSelectorNotaClientes() {
                     ].join(" ").toLocaleLowerCase("es").includes(buscar);
                 });
 
+                
                 devolver(encontrados.slice(0, 12).map(function(c) {
+                    const nombre = nombreCompletoCliente(c);
+
+                    const detalles = [
+                        "ID #" + c.id,
+                        c.alias || "",
+                        c.movil || c.numero || ""
+                    ].filter(Boolean).join(" · ");
+
                     return {
-                        label: nombreCompletoCliente(c) +
-                            (c.alias ? " · " + c.alias : ""),
-                        value: nombreCompletoCliente(c),
+                        label: nombre + " — " + detalles,
+                        value: nombre,
                         cliente: c
                     };
                 }));
+
             },
 
             select: function(e, ui) {

@@ -474,7 +474,22 @@ function validarVentaNota() {
     const venta = state.ventaNota;
 
     if (venta.folio.trim().length > 50) return errorVentaNota("El folio puede tener hasta 50 caracteres.","#notaFolio");
-    if (!venta.cliente.trim()) return errorVentaNota("Captura el nombre del cliente.","#notaCliente");
+    
+    if (!Number.isSafeInteger(Number(venta.cliente_id)) ||
+        Number(venta.cliente_id) <= 0) {
+        return errorVentaNota(
+            "Debes seleccionar un cliente registrado del catálogo.",
+            "#notaCliente"
+        );
+    }
+
+    if (!venta.cliente.trim()) {
+        return errorVentaNota(
+            "Selecciona un cliente registrado.",
+            "#notaCliente"
+        );
+    }
+
     if (!venta.vendedor.trim()) return errorVentaNota("Captura el nombre del vendedor.","#notaVendedor");
     if (!venta.items.length) return errorVentaNota("Agrega al menos un artículo.");
 

@@ -471,9 +471,12 @@ public function getVentas($data = []) {
                 throw new InvalidArgumentException("La fecha inicial no puede superar la final.");
             }
 
-            $where = " WHERE s.sale_kind IN ('NOTA','RAPIDA')";
-            $tipos = "";
-            $params = [];
+            $where = " WHERE s.corp_id = ?
+            AND s.sale_kind IN ('NOTA','RAPIDA')";
+
+            $tipos = "s";
+            $params = [$this->corpClientes()];
+
 
             if ($tipo !== "TODAS") {
                 $where .= " AND s.sale_kind = ?";
@@ -522,7 +525,8 @@ public function getVentas($data = []) {
             $offset = ($pagina - 1) * $limite;
 
             $sql = "SELECT s.id, s.sale_kind, s.note_folio,
-                s.ticket_barcode, s.client_name, s.seller_name,
+                 s.ticket_barcode, s.cliente_id,
+    s.client_name, s.seller_name,
                 s.created_at, s.payment_method, s.total_amount,
                 s.initial_paid, s.pending_amount
                 FROM sales s" . $where . "
@@ -635,7 +639,7 @@ if ($modoFecha === "AUTOMATICA" && $fechaSolicitada !== "") {
             $token = $this->textoVenta($venta, 'solicitud_id', 32);
             if (!preg_match('/^[a-f0-9]{32}$/D', $token)) throw new InvalidArgumentException('Identificador de solicitud inválido.');
 
-            $cliente = $this->textoVenta($venta, 'cliente', 100);
+            $cliente = '';
             $vendedor = $this->textoVenta($venta, 'vendedor', 100);
             $direccion = $this->textoVenta($venta, 'direccion', 255);
             $telefono = $this->textoVenta($venta, 'telefono', 50);
@@ -647,55 +651,65 @@ if ($modoFecha === "AUTOMATICA" && $fechaSolicitada !== "") {
             $referenciaAbono = $this->textoVenta($venta, 'referencia_abono', 80);
             $cajaId = isset($venta['caja_id']) ? (int)$venta['caja_id'] : 0;
 
-            if ($cliente === '' || $vendedor === '') throw new InvalidArgumentException('Completa el cliente y el vendedor.');
+            if ($vendedor === '') {
+                throw new InvalidArgumentException(
+                    'Debes indicar el vendedor.'
+                );
+            }
             
             
-$clienteId = filter_var(
-    $venta['cliente_id'] ?? 0,
-    FILTER_VALIDATE_INT,
-    ['options'=>['min_range'=>0]]
-);
 
-if ($clienteId === false) {
-    throw new InvalidArgumentException(
-        'El identificador del cliente no es válido.'
-    );
-}
+            $clienteId = filter_var(
+                $venta['cliente_id'] ?? null,
+                FILTER_VALIDATE_INT,
+                ['options' => ['min_range' => 1]]
+            );
 
-$corpId = $this->corpClientes();
+            if ($clienteId === false) {
+                throw new InvalidArgumentException(
+                    'Debes seleccionar un cliente registrado.'
+                );
+            }
 
-if ($clienteId > 0) {
+            $corpId = $this->corpClientes();
 
-    $stmt = $this->ejecutarSqlVenta(
-        "SELECT nombre, apellido
-         FROM clientes
-         WHERE corp_id=? AND id=? AND eliminado=0
-         LIMIT 1",
-        "si", [$corpId, $clienteId]
-    );
+            $stmt = $this->ejecutarSqlVenta(
+                "SELECT id, nombre, apellido, tipo
+                 FROM clientes
+                 WHERE corp_id = ?
+                   AND id = ?
+                   AND eliminado = 0
+                 LIMIT 1",
+                "si",
+                [$corpId, $clienteId]
+            );
 
-    $registroCliente = $stmt->get_result()->fetch_assoc();
-    $stmt->close();
+            $registroCliente = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
 
-    if (!$registroCliente) {
-        throw new InvalidArgumentException(
-            'El cliente seleccionado ya no está disponible.'
-        );
-    }
+            if (!$registroCliente) {
+                throw new InvalidArgumentException(
+                    'El cliente seleccionado no existe o fue eliminado.'
+                );
+            }
 
-    $cliente = trim(
-        $registroCliente['nombre'] . ' ' .
-        ($registroCliente['apellido'] ?? '')
-    );
+            if ((int)$registroCliente['tipo'] !== 1) {
+                throw new InvalidArgumentException(
+                    'No puedes registrar ventas a prospectos.'
+                );
+            }
 
-    if (strlen($cliente) > 100) {
-        throw new InvalidArgumentException(
-            'El nombre del cliente supera el límite de la nota.'
-        );
-    }
-} else {
-    $clienteId = null;
-}
+            $cliente = trim(
+                (string)$registroCliente['nombre'] . ' ' .
+                (string)($registroCliente['apellido'] ?? '')
+            );
+
+            if ($cliente === '' || strlen($cliente) > 100) {
+                throw new InvalidArgumentException(
+                    'El nombre del cliente no es válido para la nota.'
+                );
+            }
+
 
             if ($folioManual !== '' && !preg_match('~^[A-Za-z0-9][A-Za-z0-9._/-]{0,49}$~D', $folioManual)) throw new InvalidArgumentException('El folio solamente permite letras, números, puntos, guiones y diagonales.');
             if (!in_array($forma, ['EFECTIVO','TRANSFERENCIA','CREDITO','PARCIALIDADES'], true)) throw new InvalidArgumentException('Modalidad de pago inválida.');
