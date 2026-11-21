@@ -1308,28 +1308,42 @@
                         </div>
 
 <div class="col-md-6">
-    <label for="cl_pais" class="form-label">País</label>
+    <label for="cl_pais" class="form-label">
+        País
+    </label>
 
-    <select id="cl_pais" name="pais" class="form-select" disabled>
+    <select id="cl_pais" name="pais"
+            class="form-select" disabled>
         <option value="">Cargando países...</option>
     </select>
-
-    <input id="cl_pais_manual" name="pais" maxlength="100"
-           class="form-control d-none" disabled
-           placeholder="Escribe el país">
 </div>
 
 <div class="col-md-6">
-    <label for="cl_estado" class="form-label">Estado o provincia</label>
+    <label for="cl_estado" class="form-label">
+        Estado o provincia
+    </label>
 
     <select id="cl_estado" name="estado"
             class="form-select" disabled>
         <option value="">Primero selecciona un país</option>
     </select>
+</div>
+<div class="col-12 d-none" id="clGeoError">
+    <div class="alert alert-warning d-flex align-items-center
+                justify-content-between gap-3 flex-wrap mb-0">
 
-    <input id="cl_estado_manual" name="estado" maxlength="100"
-           class="form-control d-none" disabled
-           placeholder="Escribe el estado o provincia">
+        <span id="clGeoMensaje">
+            No se pudieron cargar las ubicaciones.
+        </span>
+
+        <button type="button"
+                id="clGeoReintentar"
+                class="btn btn-sm btn-outline-warning">
+            <i class="bi bi-arrow-clockwise me-1"></i>
+            Reintentar
+        </button>
+
+    </div>
 </div>
 
 <div class="col-md-6">

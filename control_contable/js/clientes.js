@@ -597,6 +597,12 @@ $(document).on("click", ".js-cl-lugar", function() {
 };
 
     Object.keys(valores).forEach(function(campo) {
+        if (direccion.country || direccion.country_code) {
+    cargarPaisesCliente(
+        direccion.country_code || direccion.country,
+        direccion.state || ""
+    );
+}
         if (!valores[campo]) return;
 
         const $control = $("#cl_" + campo);
@@ -609,12 +615,6 @@ $(document).on("click", ".js-cl-lugar", function() {
         );
     });
 
-    if (direccion.country || direccion.country_code) {
-    cargarPaisesCliente(
-        direccion.country_code || direccion.country,
-        direccion.state || ""
-    );
-}
 
     colocarPinCliente(Number(lugar.lat), Number(lugar.lon));
 
@@ -841,27 +841,33 @@ function normalizarGeoCliente(valor) {
         .toLowerCase();
 }
 
-function modoGeoCliente(campo, manual, valor = "") {
-    const $select = $("#cl_" + campo);
-    const $manual = $("#cl_" + campo + "_manual");
 
-    $select.toggleClass("d-none", manual)
-        .prop("disabled", manual);
+function errorGeoCliente(mensaje) {
+    $("#clGeoMensaje").text(mensaje);
+    $("#clGeoError").removeClass("d-none");
+}
 
-    $manual.toggleClass("d-none", !manual)
-        .prop("disabled", !manual);
-
-    if (manual) $manual.val(valor);
-    else $manual.val("");
+function limpiarErrorGeoCliente() {
+    $("#clGeoError").addClass("d-none");
+    $("#clGeoMensaje").text("");
 }
 
 function cargarPaisesCliente(paisGuardado = "Mexico", estadoGuardado = "") {
     const version = ++clientesUI.geoVersion;
-    const $pais = $("#cl_pais");
+    ++clientesUI.estadosVersion;
 
-    modoGeoCliente("pais", false);
-    $pais.prop("disabled", true).empty()
-        .append($("<option>").text("Cargando países..."));
+    const $pais = $("#cl_pais");
+    const $estado = $("#cl_estado");
+
+    limpiarErrorGeoCliente();
+
+    $pais.prop("disabled", true).empty().append(
+        $("<option>").val("").text("Cargando países...")
+    );
+
+    $estado.prop("disabled", true).empty().append(
+        $("<option>").val("").text("Primero selecciona un país")
+    );
 
     return apiClientes({
         action: "getPaisesEstados",
@@ -869,23 +875,30 @@ function cargarPaisesCliente(paisGuardado = "Mexico", estadoGuardado = "") {
     }).done(function(r) {
         if (version !== clientesUI.geoVersion) return;
 
-        if (r.status !== "ok" || !Array.isArray(r.results)) {
-            modoGeoCliente("pais", true, paisGuardado);
-            modoGeoCliente("estado", true, estadoGuardado);
+        if (r.status !== "ok" ||
+            !Array.isArray(r.results) ||
+            !r.results.length) {
+
+            $pais.empty().append(
+                $("<option>").val("").text("No se pudieron cargar países")
+            );
+
+            errorGeoCliente(
+                r.answer || "No se pudo consultar la lista de países."
+            );
+
             return;
         }
 
-        clientesUI.paises = r.results.slice();
-
-        modoGeoCliente("pais", false);
+        clientesUI.paises = r.results.slice().sort(function(a, b) {
+            return a.name.localeCompare(b.name, "es");
+        });
 
         $pais.empty().append(
             $("<option>").val("").text("Selecciona un país")
         );
 
-        clientesUI.paises.sort(function(a, b) {
-            return a.name.localeCompare(b.name, "es");
-        }).forEach(function(p) {
+        clientesUI.paises.forEach(function(p) {
             $("<option>")
                 .val(p.name)
                 .text(p.name === "Mexico" ? "México" : p.name)
@@ -894,27 +907,38 @@ function cargarPaisesCliente(paisGuardado = "Mexico", estadoGuardado = "") {
 
         const buscado = normalizarGeoCliente(paisGuardado);
 
-        let encontrado = clientesUI.paises.find(function(p) {
+        const encontrado = clientesUI.paises.find(function(p) {
             return normalizarGeoCliente(p.name) === buscado ||
                 normalizarGeoCliente(p.iso2) === buscado;
         });
 
-        if (!encontrado && buscado) {
-            $("<option>").val(paisGuardado)
+        if (encontrado) {
+            $pais.val(encontrado.name);
+        } else if (paisGuardado) {
+            $("<option>")
+                .val(paisGuardado)
                 .text(paisGuardado + " (guardado)")
                 .appendTo($pais);
 
             $pais.val(paisGuardado);
-        } else if (encontrado) {
-            $pais.val(encontrado.name);
         }
 
-        cargarEstadosCliente($pais.val(), estadoGuardado);
-    }).fail(function() {
+        $pais.prop("disabled", false);
+
+        cargarEstadosCliente(
+            $pais.val() || "",
+            estadoGuardado
+        );
+    }).fail(function(xhr) {
         if (version !== clientesUI.geoVersion) return;
 
-        modoGeoCliente("pais", true, paisGuardado);
-        modoGeoCliente("estado", true, estadoGuardado);
+        $pais.empty().append(
+            $("<option>").val("").text("Error al cargar países")
+        );
+
+        errorGeoCliente(
+            errorClientes(xhr) + " Intenta nuevamente."
+        );
     });
 }
 
@@ -922,11 +946,11 @@ function cargarEstadosCliente(pais, seleccionado = "") {
     const version = ++clientesUI.estadosVersion;
     const $estado = $("#cl_estado");
 
-    modoGeoCliente("estado", false);
+    limpiarErrorGeoCliente();
 
     $estado.prop("disabled", true).empty().append(
         $("<option>").val("").text(
-            pais ? "Cargando estados..." : "Selecciona primero un país"
+            pais ? "Cargando estados..." : "Primero selecciona un país"
         )
     );
 
@@ -939,25 +963,34 @@ function cargarEstadosCliente(pais, seleccionado = "") {
     }).done(function(r) {
         if (version !== clientesUI.estadosVersion) return;
 
-        if (r.status !== "ok" ||
-            !Array.isArray(r.results) ||
-            !r.results.length) {
-            modoGeoCliente("estado", true, seleccionado);
+        if (r.status !== "ok" || !Array.isArray(r.results)) {
+            $estado.empty().append(
+                $("<option>").val("").text("Error al cargar estados")
+            );
+
+            errorGeoCliente(
+                r.answer || "No se pudieron consultar los estados."
+            );
+
             return;
         }
-
-        modoGeoCliente("estado", false);
-
-        $estado.empty().append(
-            $("<option>").val("").text("Selecciona un estado")
-        );
 
         const estados = r.results.slice().sort(function(a, b) {
             return a.name.localeCompare(b.name, "es");
         });
 
+        $estado.empty().append(
+            $("<option>").val("").text(
+                estados.length
+                    ? "Selecciona un estado o provincia"
+                    : "Sin estados disponibles"
+            )
+        );
+
         estados.forEach(function(e) {
-            $("<option>").val(e.name).text(e.name)
+            $("<option>")
+                .val(e.name)
+                .text(e.name)
                 .appendTo($estado);
         });
 
@@ -970,18 +1003,40 @@ function cargarEstadosCliente(pais, seleccionado = "") {
             if (encontrado) {
                 $estado.val(encontrado.name);
             } else {
-                $("<option>").val(seleccionado)
+                $("<option>")
+                    .val(seleccionado)
                     .text(seleccionado + " (guardado)")
                     .appendTo($estado);
 
                 $estado.val(seleccionado);
             }
         }
-    }).fail(function() {
+
+        $estado.prop("disabled", !estados.length && !seleccionado);
+    }).fail(function(xhr) {
         if (version !== clientesUI.estadosVersion) return;
-        modoGeoCliente("estado", true, seleccionado);
+
+        $estado.empty().append(
+            $("<option>").val("").text("Error al cargar estados")
+        );
+
+        errorGeoCliente(
+            errorClientes(xhr) + " Intenta nuevamente."
+        );
     });
 }
+
+$(document).on("change", "#cl_pais", function() {
+    cargarEstadosCliente($(this).val() || "", "");
+});
+
+$(document).on("click", "#clGeoReintentar", function() {
+    cargarPaisesCliente(
+        $("#cl_pais").val() || "Mexico",
+        $("#cl_estado").val() || ""
+    );
+});
+
 
 $(document).on("change", "#cl_pais", function() {
     cargarEstadosCliente(this.value);

@@ -4,23 +4,23 @@ class utils{
     public function __construct() {
     }
 
+    
     public function getPaisesEstados(array $data = []): array {
         try {
-            $nivel = $this->textoVenta($data, 'nivel', 10);
+            $nivel = trim((string)($data['nivel'] ?? ''));
 
             if (!in_array($nivel, ['paises', 'estados'], true)) {
                 throw new InvalidArgumentException(
-                    'Consulta geográfica inválida.'
+                    'Tipo de consulta geográfica inválido.'
                 );
             }
 
-            $pais = $nivel === 'estados'
-                ? $this->textoVenta($data, 'pais', 100)
-                : '';
+            $pais = trim((string)($data['pais'] ?? ''));
 
-            if ($nivel === 'estados' && $pais === '') {
+            if ($nivel === 'estados' &&
+                ($pais === '' || strlen($pais) > 100)) {
                 throw new InvalidArgumentException(
-                    'Selecciona un país.'
+                    'Selecciona un país válido.'
                 );
             }
 
@@ -28,7 +28,8 @@ class utils{
                 sha1($nivel . '|' . $pais) . '.json';
 
             if (is_file($cache) &&
-                time() - filemtime($cache) < 43200) {
+                (time() - filemtime($cache)) < 86400) {
+
                 $guardado = json_decode(
                     file_get_contents($cache), true
                 );
@@ -37,6 +38,7 @@ class utils{
                     return [
                         'status' => 'ok',
                         'code' => 200,
+                        'answer' => 'Catálogo consultado.',
                         'results' => $guardado
                     ];
                 }
@@ -44,7 +46,7 @@ class utils{
 
             if (!function_exists('curl_init')) {
                 throw new RuntimeException(
-                    'La extensión cURL no está disponible.'
+                    'PHP no tiene habilitada la extensión cURL.'
                 );
             }
 
@@ -52,6 +54,12 @@ class utils{
                 ($nivel === 'paises' ? 'iso' : 'states');
 
             $curl = curl_init($url);
+
+            if ($curl === false) {
+                throw new RuntimeException(
+                    'No se pudo inicializar cURL.'
+                );
+            }
 
             $opciones = [
                 CURLOPT_RETURNTRANSFER => true,
@@ -66,6 +74,7 @@ class utils{
 
             if ($nivel === 'estados') {
                 $opciones[CURLOPT_POST] = true;
+
                 $opciones[CURLOPT_POSTFIELDS] = json_encode(
                     ['country' => $pais],
                     JSON_UNESCAPED_UNICODE
@@ -81,16 +90,19 @@ class utils{
 
             $respuesta = curl_exec($curl);
             $codigoHttp = (int)curl_getinfo(
-                $curl, CURLINFO_HTTP_CODE
+                $curl,
+                CURLINFO_HTTP_CODE
             );
 
+            $errorCurl = curl_error($curl);
             curl_close($curl);
 
             if ($respuesta === false ||
                 $codigoHttp !== 200 ||
-                strlen($respuesta) > 3000000) {
+                strlen((string)$respuesta) > 3000000) {
                 throw new RuntimeException(
-                    'No fue posible consultar las ubicaciones.'
+                    'CountriesNow HTTP ' . $codigoHttp .
+                    ': ' . $errorCurl
                 );
             }
 
@@ -99,7 +111,8 @@ class utils{
             if (!is_array($json) ||
                 ($json['error'] ?? true) !== false) {
                 throw new RuntimeException(
-                    'El servicio devolvió una respuesta inválida.'
+                    'CountriesNow devolvió una respuesta inválida: ' .
+                    (string)($json['msg'] ?? '')
                 );
             }
 
@@ -109,27 +122,28 @@ class utils{
 
             if (!is_array($filas)) {
                 throw new RuntimeException(
-                    'No se recibió un catálogo válido.'
+                    'El catálogo geográfico no tiene el formato esperado.'
                 );
             }
 
-            $results = [];
+            $resultados = [];
 
             foreach ($filas as $fila) {
-                if (!is_array($fila)) continue;
+                if (!is_array($fila)) {
+                    continue;
+                }
 
-                $nombre = trim(
-                    (string)($fila['name'] ?? '')
-                );
+                $nombre = trim((string)($fila['name'] ?? ''));
 
-                if ($nombre === '') continue;
+                if ($nombre === '') {
+                    continue;
+                }
 
-                $results[] = [
+                $resultados[] = [
                     'name' => $nombre,
                     'iso2' => $nivel === 'paises'
                         ? strtoupper((string)(
-                            $fila['Iso2'] ??
-                            $fila['iso2'] ?? ''
+                            $fila['Iso2'] ?? $fila['iso2'] ?? ''
                         ))
                         : ''
                 ];
@@ -138,7 +152,7 @@ class utils{
             @file_put_contents(
                 $cache,
                 json_encode(
-                    $results,
+                    $resultados,
                     JSON_UNESCAPED_UNICODE
                 ),
                 LOCK_EX
@@ -147,8 +161,8 @@ class utils{
             return [
                 'status' => 'ok',
                 'code' => 200,
-                'answer' => 'Ubicaciones consultadas.',
-                'results' => $results
+                'answer' => 'Ubicaciones consultadas correctamente.',
+                'results' => $resultados
             ];
 
         } catch (InvalidArgumentException $e) {
@@ -166,10 +180,11 @@ class utils{
             return [
                 'status' => 'error',
                 'code' => 503,
-                'answer' => 'No se pudieron consultar países y estados.'
+                'answer' => 'No se pudo consultar el catálogo geográfico.'
             ];
         }
     }
+
 
 }
 ?>
