@@ -3939,14 +3939,13 @@ AND (
             ];
 
         } catch (Throwable $e) {
-            error_log(
-                "getPersonasCuentas: " . $e->getMessage()
-            );
+         
 
             return [
                 "status" => "error",
                 "code" => 500,
-                "answer" => "No fue posible consultar los deudores o proveedores."
+                "answer" => "No fue posible consultar los deudores o proveedores.",
+                'error' => $e->getMessage()
             ];
         }
     }
@@ -6506,7 +6505,6 @@ public function getColaboradores(array $data = []): array {
     } catch (InvalidArgumentException $e) {
         $json = ['status'=>'warning', 'answer'=>$e->getMessage(), 'code'=>400];
     } catch (Throwable $e) {
-        error_log('getColaboradores: ' . $e->getMessage());
         $json = ['status'=>'error', 'answer'=>'No fue posible consultar colaboradores.', 'code'=>500];
     }
 
@@ -6667,7 +6665,7 @@ public function guardarColaborador(array $data = []): array {
     } catch (InvalidArgumentException $e) {
         $json = ['status'=>'warning', 'answer'=>$e->getMessage(), 'code'=>400];
     } catch (Throwable $e) {
-        error_log('guardarColaborador: ' . $e->getMessage());
+       
         $json = ['status'=>'error', 'answer'=>'No fue posible guardar el colaborador.', 'code'=>500];
     }
 
@@ -6729,7 +6727,7 @@ public function eliminarColaborador(array $data = []): array {
     } catch (InvalidArgumentException $e) {
         $json = ['status'=>'warning', 'answer'=>$e->getMessage(), 'code'=>400];
     } catch (Throwable $e) {
-        error_log('eliminarColaborador: ' . $e->getMessage());
+       
         $json = ['status'=>'error', 'answer'=>'No fue posible eliminar el colaborador.', 'code'=>500];
     }
 
@@ -6826,14 +6824,13 @@ private function valeLiberar(?string $nombre): void {
 
         $stmt->close();
     } catch (Throwable $e) {
-        error_log('valeLiberar: ' . $e->getMessage());
+        
     }
 }
 
-
-
 public function getPreparacionValesMaterial(array $data = []): array {
     $json = [];
+    $etapa = 'inicio';
 
     try {
         if (!$this->conn) {
@@ -6844,6 +6841,8 @@ public function getPreparacionValesMaterial(array $data = []): array {
 
         $corp = $this->corpClientes();
         $ventaId = $this->valeId($data, 'venta_id');
+
+        $etapa = 'consultar_venta';
 
         $stmt = $this->ejecutarSqlVenta(
             "SELECT id, note_folio, sale_kind, cliente_id,
@@ -7020,12 +7019,11 @@ public function getPreparacionValesMaterial(array $data = []): array {
             'answer'=>$e->getMessage()
         ];
     } catch (Throwable $e) {
-        error_log('getPreparacionValesMaterial: ' . $e->getMessage());
-
         $json = [
             'status'=>'error',
             'code'=>500,
-            'answer'=>'No fue posible consultar los vales.'
+            'answer'=>'No fue posible consultar los vales.',
+            'error' => $e->getMessage()
         ];
     }
 
@@ -7585,12 +7583,11 @@ public function guardarValeMaterial(array $data = []): array {
             'answer'=>$e->getMessage()
         ];
     } catch (Throwable $e) {
-        error_log('guardarValeMaterial: ' . $e->getMessage());
-
         $json = [
             'status'=>'error',
             'code'=>500,
-            'answer'=>'No fue posible guardar el vale.'
+            'answer'=>'No fue posible guardar el vale.',
+            'error' => $e->getMessage()
         ];
     } finally {
         $this->valeLiberar($bloqueo);
@@ -7726,12 +7723,12 @@ public function confirmarValeMaterial(array $data = []): array {
             'answer'=>$e->getMessage()
         ];
     } catch (Throwable $e) {
-        error_log('confirmarValeMaterial: ' . $e->getMessage());
 
         $json = [
             'status'=>'error',
             'code'=>500,
-            'answer'=>'No fue posible confirmar el vale.'
+            'answer'=>'No fue posible confirmar el vale.',
+            'error' => $e->getMessage()
         ];
     } finally {
         $this->valeLiberar($bloqueo);
@@ -7872,12 +7869,11 @@ public function anularValeMaterial(array $data = []): array {
             'answer'=>$e->getMessage()
         ];
     } catch (Throwable $e) {
-        error_log('anularValeMaterial: ' . $e->getMessage());
-
         $json = [
             'status'=>'error',
             'code'=>500,
-            'answer'=>'No fue posible anular el vale.'
+            'answer'=>'No fue posible anular el vale.',
+            'error' => $e->getMessage()
         ];
     } finally {
         $this->valeLiberar($bloqueo);
@@ -7885,6 +7881,8 @@ public function anularValeMaterial(array $data = []): array {
 
     return $json;
 }
+
+
 
 
 
