@@ -7065,12 +7065,51 @@ function obtenerDatosPdfEvaluacion(tipoReporte, firma) {
     const periodo = String($('#evaluationPeriod').val() || '').trim();
     const ciclo = String($('#evaluationCycle').val() || '').trim();
 
-    const subject = state.subjects.find((item) => item.id === subjectId);
+    
+    /*const subject = state.subjects.find((item) => item.id === subjectId);
     const maestroId = 2;
     
     const teacher = state.teachers.find(function(item) {
         return Number(item.id) === maestroId;
+    });*/
+
+
+
+const subject = state.subjects.find(function(item) {
+    return Number(item.id) === subjectId;
+});
+
+const asignacion = state.assignments.find(function(item) {
+    return Number(item.asignatura_id) === subjectId &&
+        String(item.group || '').replace(/\s+/g, ' ').trim() ===
+        groupValue.replace(/\s+/g, ' ').trim() &&
+        String(item.ciclo_escolar || '').trim() === ciclo;
+});
+
+if (!asignacion) {
+    Swal.fire({
+        icon: 'warning',
+        title: 'Asignación no encontrada',
+        text: 'No se encontró un profesor asignado a esta materia, grupo y ciclo escolar.',
+        confirmButtonColor: '#1D1D1F'
     });
+    return null;
+}
+
+const maestroId = Number(asignacion.maestro_id);
+const nombreProfesor = String(asignacion.maestro || '').trim();
+
+if (!nombreProfesor) {
+    Swal.fire({
+        icon: 'warning',
+        title: 'Nombre del profesor vacío',
+        text: 'La asignación existe, pero no contiene el nombre del profesor.',
+        confirmButtonColor: '#1D1D1F'
+    });
+    return null;
+}
+
+
     
     const students = state.students.filter((student) => {
         return student.group === groupValue;
@@ -7087,7 +7126,8 @@ function obtenerDatosPdfEvaluacion(tipoReporte, firma) {
 
     const datos = {
     tipo_reporte: tipoReporte,
-    maestro_id: MAESTRO_ID_ACTUAL,
+    //maestro_id: MAESTRO_ID_ACTUAL,
+    maestro_id: maestroId,
 
     escuela: {
         nombre: 'INSTITUTO ESTATAL DE EDUCACIÓN PÚBLICA DE OAXACA',
@@ -7096,7 +7136,8 @@ function obtenerDatosPdfEvaluacion(tipoReporte, firma) {
         cct: '20DES0193I'
     },
 
-    profesor: teacher ? teacher.name : '',
+    //profesor: teacher ? teacher.name : '',
+    profesor: nombreProfesor,
     asignatura: subject ? subject.name : '',
     periodo: periodo,
     grado: grado,
