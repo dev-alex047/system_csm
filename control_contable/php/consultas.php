@@ -3055,17 +3055,17 @@ AND (
     )
 )
 
+                
                 ORDER BY
                     CASE
                         WHEN r.due_date IS NOT NULL
-                            AND r.due_date <> '0000-00-00'
-                            AND r.due_date < CURDATE()
+                             AND r.due_date < CURDATE()
                         THEN 0
                         WHEN r.due_date IS NOT NULL
-                            AND r.due_date <> '0000-00-00'
                         THEN 1
                         ELSE 2
                     END,
+
                     r.due_date ASC,
                     COALESCE(
                         s.created_at, r.created_at

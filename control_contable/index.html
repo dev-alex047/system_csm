@@ -901,10 +901,72 @@ autocomplete="off" required>
 
 <template id="tplAbonoCuenta">
 <div class="text-start">
+
+    <ul id="abonoModoNav"
+        class="nav nav-pills nav-fill gap-2 bg-light rounded-3 p-2 mb-3 d-none"
+        role="tablist"
+        aria-label="Modalidad del cobro">
+
+        <li class="nav-item" role="presentation">
+            <button type="button"
+                    class="nav-link active w-100 js-abono-modo"
+                    data-modo="INDIVIDUAL"
+                    role="tab"
+                    aria-selected="true">
+                <i class="bi bi-receipt me-1"></i>
+                Individual
+            </button>
+        </li>
+
+        <li class="nav-item" role="presentation">
+            <button type="button"
+                    class="nav-link w-100 js-abono-modo"
+                    data-modo="GLOBAL"
+                    role="tab"
+                    aria-selected="false">
+                <i class="bi bi-wallet2 me-1"></i>
+                Abono total
+            </button>
+        </li>
+    </ul>
+
+    <div id="abonoModoAviso"
+         class="small text-danger mb-3 d-none"
+         role="status"></div>
+
     <div class="alert alert-light border rounded-3 mb-3">
-        <small class="text-secondary d-block">Saldo disponible para liquidar</small>
+        <small id="abonoTextoSaldo" class="text-secondary d-block">
+    Saldo del crédito seleccionado
+</small>
         <strong id="abonoSaldoDisponible" class="fs-4 text-success">$0.00</strong>
     </div>
+
+    <div id="abonoDetalleGlobal" class="d-none mb-3">
+
+        <div class="alert alert-light border rounded-3 small">
+            <i class="bi bi-info-circle text-success me-1"></i>
+            El importe se distribuirá entre los créditos pendientes,
+            priorizando vencimientos y después antigüedad.
+        </div>
+
+        <div class="table-responsive"
+             style="max-height: 260px; overflow-y: auto;">
+
+            <table class="table table-sm align-middle small">
+                <thead class="table-light">
+                    <tr>
+                        <th>Crédito</th>
+                        <th>Origen / vencimiento</th>
+                        <th class="text-end">Aplicado</th>
+                        <th class="text-end">Saldo final</th>
+                    </tr>
+                </thead>
+                <tbody id="abonoRepartoGlobal"></tbody>
+            </table>
+
+        </div>
+    </div>
+
     <div class="row g-3">
         <div class="col-md-6"><label for="abonoMonto" class="form-label">Importe *</label><input id="abonoMonto" class="form-control" type="number" min="0.01" step="0.01" placeholder="0.00"></div>
         <div class="col-md-6"><label for="abonoMetodo" class="form-label">Método *</label><select id="abonoMetodo" class="form-select"><option value="EFECTIVO">Efectivo</option><option value="TRANSFERENCIA">Transferencia</option></select></div>

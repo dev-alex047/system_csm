@@ -277,3 +277,21 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
 
 /*costeo*/
 
+
+
+#abonoModoNav .nav-link {
+    color: #365647;
+    font-weight: 600;
+    border-radius: 10px;
+    padding: 11px 14px;
+    transition: background-color .2s ease, color .2s ease;
+}
+
+#abonoModoNav .nav-link.active {
+    background-color: #086b47;
+    color: #fff;
+}
+
+#abonoModoNav .nav-link:not(.active):hover {
+    background-color: #e4f0e9;
+}
