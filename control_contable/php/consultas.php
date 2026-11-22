@@ -2758,20 +2758,35 @@ WHERE id=? LIMIT 1","i",[(int)$cuenta["sale_id"]]);
                 $cuenta["fecha_venta"] = $venta["created_at"];
                 $cuenta["fecha_registro"] = null;
 
-                if (!empty($venta["registered_at"]) &&
-                    $venta["registered_at"] !== "0000-00-00 00:00:00") {
+                
+                $fechaTexto = trim(
+                    (string)($venta["registered_at"] ?? "")
+                );
 
-                    $fechaUtc = new DateTimeImmutable(
-                        $venta["registered_at"],
-                        new DateTimeZone("UTC")
+                if (
+                    $fechaTexto !== "" &&
+                    $fechaTexto !== "0000-00-00 00:00:00"
+                ) {
+                    $zonaUtc = new DateTimeZone("UTC");
+
+                    $fechaUtc = DateTimeImmutable::createFromFormat(
+                        "!Y-m-d H:i:s",
+                        $fechaTexto,
+                        $zonaUtc
                     );
 
-                    $cuenta["fecha_registro"] = $fechaUtc
-                        ->setTimezone(
-                            new DateTimeZone("America/Mexico_City")
-                        )
-                        ->format("Y-m-d H:i:s");
+                    if (
+                        $fechaUtc !== false &&
+                        $fechaUtc->format("Y-m-d H:i:s") === $fechaTexto
+                    ) {
+                        $cuenta["fecha_registro"] = $fechaUtc
+                            ->setTimezone(
+                                new DateTimeZone("America/Mexico_City")
+                            )
+                            ->format("Y-m-d H:i:s");
+                    }
                 }
+
             }
 
 

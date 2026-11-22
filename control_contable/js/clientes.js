@@ -824,6 +824,7 @@ function cargarCatalogosClienteUI(c = null) {
 
 $(document).on("click", "#clAgregarGrupo", function() {
     Swal.fire({
+        target: document.getElementById("clModal"),
         title: "Nuevo grupo de clientes",
         input: "text",
         inputLabel: "Nombre del grupo",
