@@ -2366,7 +2366,11 @@ function abrirAbonoCuenta(id,saldo) {
         confirmButtonText:tipo==="COBRAR" ? "Confirmar cobro" : "Confirmar pago",
         cancelButtonText:"Cancelar",confirmButtonColor:"#086b47",
         didOpen:function(){
-            prepararFechasAdmin(Swal.getHtmlContainer());
+            prepararFechasAdmin(
+                Swal.getHtmlContainer()
+            );
+            $("#abonoNotas").attr("maxlength", 450);
+            $("#abonoMetodo").trigger("change");
             $.ajax({url:"php/index.php",type:"POST",dataType:"json",data:{action:"getCajasVenta"}}).done(function(r){
                 const $select = $("#abonoCaja");
                 if (!$select.length) return;

@@ -3046,10 +3046,15 @@ public function registrarAbonoCuenta($data) {
                 WHERE r.client_id = ?
                   AND r.status = 'PENDIENTE'
                   AND r.pending_amount > 0
-                  AND (
-                      r.sale_id IS NULL
-                      OR s.corp_id = ?
-                  )
+                  
+AND (
+    r.sale_id IS NULL
+    OR (
+        s.corp_id = ?
+        AND s.cliente_id = r.client_id
+    )
+)
+
                 ORDER BY
                     CASE
                         WHEN r.due_date IS NOT NULL
@@ -5807,9 +5812,7 @@ public function cambiarEstadoCatalogoCosteo(array $data): array {
         $stmt->close();
 
         if (!$usuario || (int)$usuario['role_id'] !== 1) {
-            throw new DomainException(
-                'Solo administración puede modificar clientes.'
-            );
+            throw new DomainException('Esta operación requiere permisos de administrador.');
         }
     }
 
@@ -6436,6 +6439,302 @@ $stmt = $this->ejecutarSqlVenta(
             ];
         }
     }
+
+
+
+public function getColaboradores(array $data = []): array {
+    $json = [];
+
+    try {
+        if (!$this->conn) throw new RuntimeException('No hay conexión con MySQL.');
+        $this->exigirAdminClientes();
+        $corp = $this->corpClientes();
+        $buscar = $this->textoVenta($data, 'buscar', 100);
+        $pagina = filter_var($data['pagina'] ?? 1, FILTER_VALIDATE_INT, ['options'=>['min_range'=>1]]);
+        if ($pagina === false || $pagina > 100000) throw new InvalidArgumentException('Página inválida.');
+
+        $limite = 12;
+        $where = 'WHERE corp_id=? AND eliminado=0';
+        $tipos = 's';
+        $params = [$corp];
+
+        if ($buscar !== '') {
+            $patron = '%' . str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $buscar) . '%';
+            $where .= " AND (nombre LIKE ? ESCAPE '!' OR apellidos LIKE ? ESCAPE '!'
+                         OR CONCAT_WS(' ', nombre, apellidos) LIKE ? ESCAPE '!'
+                         OR correo LIKE ? ESCAPE '!' OR correo_empresarial LIKE ? ESCAPE '!'
+                         OR telefono LIKE ? ESCAPE '!' OR movil LIKE ? ESCAPE '!'
+                         OR area LIKE ? ESCAPE '!' OR cargo LIKE ? ESCAPE '!')";
+            $tipos .= str_repeat('s', 9);
+            $params = array_merge($params, array_fill(0, 9, $patron));
+        }
+
+        $stmt = $this->ejecutarSqlVenta("SELECT COUNT(*) AS total FROM colaboradores $where", $tipos, $params);
+        $total = (int)$stmt->get_result()->fetch_assoc()['total'];
+        $stmt->close();
+
+        $paginas = max(1, (int)ceil($total / $limite));
+        $pagina = min($pagina, $paginas);
+        $offset = ($pagina - 1) * $limite;
+
+        $stmt = $this->ejecutarSqlVenta(
+            "SELECT corp_id, id, usuario_id, nombre, apellidos, correo, correo_empresarial,
+                    telefono, movil, curp, rfc, nss, area, cargo, fecha_ingreso,
+                    sindicalizado, horas_semanales, dias_trabajo, tipo_pago, salario_mensual,
+                    direccion, colonia, municipio, codigo_postal, estado, pais, foto_ruta,
+                    observaciones, fechaAlta, fechaEditado
+             FROM colaboradores $where ORDER BY id DESC LIMIT ? OFFSET ?",
+            $tipos . 'ii', array_merge($params, [$limite, $offset])
+        );
+
+        $colaboradores = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+
+        foreach ($colaboradores as &$colaborador) {
+            $colaborador['id'] = (int)$colaborador['id'];
+            $colaborador['usuario_id'] = $colaborador['usuario_id'] === null ? null : (int)$colaborador['usuario_id'];
+            $colaborador['sindicalizado'] = (int)$colaborador['sindicalizado'];
+        }
+        unset($colaborador);
+
+        $json['status'] = 'ok';
+        $json['answer'] = 'Colaboradores consultados correctamente.';
+        $json['results'] = compact('colaboradores', 'total', 'pagina', 'paginas');
+        $json['code'] = 200;
+    } catch (DomainException $e) {
+        $json = ['status'=>'warning', 'answer'=>$e->getMessage(), 'code'=>403];
+    } catch (InvalidArgumentException $e) {
+        $json = ['status'=>'warning', 'answer'=>$e->getMessage(), 'code'=>400];
+    } catch (Throwable $e) {
+        error_log('getColaboradores: ' . $e->getMessage());
+        $json = ['status'=>'error', 'answer'=>'No fue posible consultar colaboradores.', 'code'=>500];
+    }
+
+    return $json;
+}
+
+
+
+public function guardarColaborador(array $data = []): array {
+    $json = [];
+
+    try {
+        if (!$this->conn) throw new RuntimeException('No hay conexión con MySQL.');
+        $this->exigirAdminClientes();
+        $corp = $this->corpClientes();
+        $id = filter_var($data['id'] ?? 0, FILTER_VALIDATE_INT, ['options'=>['min_range'=>0]]);
+        if ($id === false) throw new InvalidArgumentException('Identificador del colaborador inválido.');
+
+        $limites = [
+            'nombre'=>100, 'apellidos'=>150, 'correo'=>190, 'correo_empresarial'=>190,
+            'telefono'=>30, 'movil'=>30, 'curp'=>18, 'rfc'=>13, 'nss'=>11,
+            'area'=>100, 'cargo'=>100, 'direccion'=>255, 'colonia'=>150,
+            'municipio'=>120, 'codigo_postal'=>10, 'estado'=>100, 'pais'=>100,
+            'observaciones'=>3000
+        ];
+
+        $campos = [];
+        foreach ($limites as $campo => $maximo) {
+            $valor = $this->textoVenta($data, $campo, $maximo);
+            $campos[$campo] = $valor === '' ? null : $valor;
+        }
+
+        if ($campos['nombre'] === null || $campos['apellidos'] === null) {
+            throw new InvalidArgumentException('Escribe el nombre y los apellidos del colaborador.');
+        }
+
+        if ($campos['pais'] === null) $campos['pais'] = 'México';
+
+        foreach (['correo', 'correo_empresarial'] as $campo) {
+            if ($campos[$campo] !== null && !filter_var($campos[$campo], FILTER_VALIDATE_EMAIL)) {
+                throw new InvalidArgumentException('Revisa el formato de ' . $campo . '.');
+            }
+        }
+
+        foreach (['curp', 'rfc', 'nss'] as $campo) {
+            if ($campos[$campo] !== null) $campos[$campo] = strtoupper($campos[$campo]);
+        }
+
+        if ($campos['curp'] !== null && !preg_match('/^[A-Z0-9]{18}$/D', $campos['curp'])) {
+            throw new InvalidArgumentException('La CURP debe tener 18 caracteres válidos.');
+        }
+
+        if ($campos['rfc'] !== null && !preg_match('/^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$/uD', $campos['rfc'])) {
+            throw new InvalidArgumentException('El RFC no es válido.');
+        }
+
+        if ($campos['nss'] !== null && !preg_match('/^\d{11}$/D', $campos['nss'])) {
+            throw new InvalidArgumentException('El NSS debe tener 11 dígitos.');
+        }
+
+        $fecha = $this->textoVenta($data, 'fecha_ingreso', 10);
+        if ($fecha !== '') {
+            $fechaValida = DateTime::createFromFormat('!Y-m-d', $fecha);
+            if (!$fechaValida || $fechaValida->format('Y-m-d') !== $fecha) {
+                throw new InvalidArgumentException('La fecha de ingreso no es válida.');
+            }
+        }
+        $campos['fecha_ingreso'] = $fecha === '' ? null : $fecha;
+
+        $sindicalizado = $this->textoVenta($data, 'sindicalizado', 1);
+        if ($sindicalizado === '') $sindicalizado = '0';
+        if (!in_array($sindicalizado, ['0', '1'], true)) {
+            throw new InvalidArgumentException('El valor de sindicalizado no es válido.');
+        }
+        $campos['sindicalizado'] = (int)$sindicalizado;
+
+        $horas = $this->textoVenta($data, 'horas_semanales', 6);
+        if ($horas !== '' && (!preg_match('/^\d{1,3}(?:\.\d{1,2})?$/D', $horas) || (float)$horas > 168)) {
+            throw new InvalidArgumentException('Las horas semanales deben estar entre 0 y 168.');
+        }
+        $campos['horas_semanales'] = $horas === '' ? null : $horas;
+
+        $salario = $this->textoVenta($data, 'salario_mensual', 15);
+        if ($salario !== '' && !preg_match('/^\d{1,12}(?:\.\d{1,2})?$/D', $salario)) {
+            throw new InvalidArgumentException('Indica un salario mensual válido.');
+        }
+        $campos['salario_mensual'] = $salario === '' ? null : $salario;
+
+        $tipoPago = $this->textoVenta($data, 'tipo_pago', 10);
+        if ($tipoPago !== '' && !in_array($tipoPago, ['SEMANAL', 'QUINCENAL', 'MENSUAL'], true)) {
+            throw new InvalidArgumentException('Selecciona un tipo de pago válido.');
+        }
+        $campos['tipo_pago'] = $tipoPago === '' ? null : $tipoPago;
+
+        $dias = $data['dias_trabajo'] ?? [];
+        if (is_string($dias)) $dias = $dias === '' ? [] : explode(',', $dias);
+        if (!is_array($dias)) throw new InvalidArgumentException('Los días de trabajo son inválidos.');
+
+        $seleccion = [];
+        foreach ($dias as $dia) {
+            if (!is_scalar($dia) || !preg_match('/^[1-7]$/D', trim((string)$dia))) {
+                throw new InvalidArgumentException('Selecciona días de trabajo válidos.');
+            }
+            $seleccion[(int)$dia] = true;
+        }
+
+        ksort($seleccion);
+        $campos['dias_trabajo'] = $seleccion ? implode(',', array_keys($seleccion)) : null;
+
+        // usuario_id y foto_ruta se conservan; no se aceptan desde POST.
+        $columnas = array_keys($campos);
+        $parametros = array_values($campos);
+
+        if ($id === 0) {
+            $sql = 'INSERT INTO colaboradores (`corp_id`,`' . implode('`,`', $columnas) . '`)
+                    VALUES (?,' . implode(',', array_fill(0, count($columnas), '?')) . ')';
+
+            $stmt = $this->ejecutarSqlVenta(
+                $sql, 's' . str_repeat('s', count($columnas)),
+                array_merge([$corp], $parametros)
+            );
+            $stmt->close();
+
+            $id = (int)$this->conn->insert_id;
+            $mensaje = 'Colaborador registrado correctamente.';
+        } else {
+            $stmt = $this->ejecutarSqlVenta(
+                'SELECT id FROM colaboradores WHERE corp_id=? AND id=? AND eliminado=0 LIMIT 1',
+                'si', [$corp, $id]
+            );
+
+            $existe = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if (!$existe) throw new OutOfBoundsException('El colaborador no existe o fue eliminado.');
+
+            $asignaciones = array_map(static fn($columna) => '`' . $columna . '`=?', $columnas);
+            $sql = 'UPDATE colaboradores SET ' . implode(', ', $asignaciones) . ', fechaEditado=NOW()
+                    WHERE corp_id=? AND id=? AND eliminado=0';
+
+            $stmt = $this->ejecutarSqlVenta(
+                $sql, str_repeat('s', count($columnas)) . 'si',
+                array_merge($parametros, [$corp, $id])
+            );
+            $stmt->close();
+
+            $mensaje = 'Colaborador actualizado correctamente.';
+        }
+
+        $json['status'] = 'ok';
+        $json['answer'] = $mensaje;
+        $json['results'] = ['id'=>$id, 'corp_id'=>$corp];
+        $json['code'] = 200;
+    } catch (DomainException $e) {
+        $json = ['status'=>'warning', 'answer'=>$e->getMessage(), 'code'=>403];
+    } catch (OutOfBoundsException $e) {
+        $json = ['status'=>'warning', 'answer'=>$e->getMessage(), 'code'=>404];
+    } catch (InvalidArgumentException $e) {
+        $json = ['status'=>'warning', 'answer'=>$e->getMessage(), 'code'=>400];
+    } catch (Throwable $e) {
+        error_log('guardarColaborador: ' . $e->getMessage());
+        $json = ['status'=>'error', 'answer'=>'No fue posible guardar el colaborador.', 'code'=>500];
+    }
+
+    return $json;
+}
+
+
+
+public function eliminarColaborador(array $data = []): array {
+    $json = [];
+
+    try {
+        if (!$this->conn) throw new RuntimeException('No hay conexión con MySQL.');
+        $this->exigirAdminClientes();
+        $corp = $this->corpClientes();
+        $id = filter_var($data['id'] ?? null, FILTER_VALIDATE_INT, ['options'=>['min_range'=>1]]);
+
+        if ($id === false || $id === null) {
+            throw new InvalidArgumentException('Identificador inválido.');
+        }
+
+        $stmt = $this->ejecutarSqlVenta(
+            'SELECT usuario_id FROM colaboradores WHERE corp_id=? AND id=? AND eliminado=0 LIMIT 1',
+            'si', [$corp, $id]
+        );
+
+        $colaborador = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$colaborador) {
+            throw new OutOfBoundsException('El colaborador ya no está disponible.');
+        }
+
+        if ($colaborador['usuario_id'] !== null) {
+            throw new DomainException('Desactiva primero la cuenta de acceso vinculada al colaborador.');
+        }
+
+        $stmt = $this->ejecutarSqlVenta(
+            'UPDATE colaboradores SET eliminado=1, fechaEliminado=NOW(), fechaEditado=NOW()
+             WHERE corp_id=? AND id=? AND eliminado=0',
+            'si', [$corp, $id]
+        );
+
+        $afectados = $stmt->affected_rows;
+        $stmt->close();
+
+        if ($afectados !== 1) {
+            throw new OutOfBoundsException('El colaborador ya no está disponible.');
+        }
+
+        $json['status'] = 'ok';
+        $json['answer'] = 'Colaborador eliminado correctamente.';
+        $json['results'] = ['id'=>$id];
+        $json['code'] = 200;
+    } catch (DomainException $e) {
+        $json = ['status'=>'warning', 'answer'=>$e->getMessage(), 'code'=>403];
+    } catch (OutOfBoundsException $e) {
+        $json = ['status'=>'warning', 'answer'=>$e->getMessage(), 'code'=>404];
+    } catch (InvalidArgumentException $e) {
+        $json = ['status'=>'warning', 'answer'=>$e->getMessage(), 'code'=>400];
+    } catch (Throwable $e) {
+        error_log('eliminarColaborador: ' . $e->getMessage());
+        $json = ['status'=>'error', 'answer'=>'No fue posible eliminar el colaborador.', 'code'=>500];
+    }
+
+    return $json;
+}
 
 
 

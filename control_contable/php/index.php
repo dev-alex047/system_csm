@@ -169,6 +169,18 @@ switch ($action) {
     case "getPaisesEstados":
         $response = $utils->getPaisesEstados($_POST);
         break;
+        
+    case "getColaboradores":
+        $response = $consultas->getColaboradores($_POST);
+        break;
+        
+    case "guardarColaborador":
+        $response = $consultas->guardarColaborador($_POST);
+        break;
+        
+    case "eliminarColaborador":
+        $response = $consultas->eliminarColaborador($_POST);
+        break;
 
     default:
         $response["status"] = "warning";
