@@ -1729,6 +1729,9 @@ function getCajasVentaRapida() {
 
 
 state.tipoCuentaActual = null;
+state.clienteCuentaId = null;
+state.filtroClienteCuentasId = null;
+
 state.peticionCuentas = 0;
 state.guardandoCuenta = false;
 state.guardandoAbono = false;
@@ -1739,7 +1742,24 @@ state.vistaCuentas = "CREDITOS";
 
 function bindCuentas() {
     $(document).on("click","#btnNuevaCuenta",function(){$("#panelNuevaCuenta").removeClass("d-none");$("#cuentaNombre").trigger("focus");});
-    $(document).on("click","#btnCancelarCuentaNueva",function(){$("#panelNuevaCuenta").addClass("d-none");});
+    
+    $(document).on("click", "#btnCancelarCuentaNueva", function() {
+        if (state.guardandoCuenta) return;
+
+        $("#panelNuevaCuenta").addClass("d-none");
+
+        const formulario = $("#formCuentaNueva")[0];
+
+        if (formulario) {
+            formulario.reset();
+        }
+
+        state.clienteCuentaId = null;
+        state.tokenNuevaCuenta = generarIdSolicitudVenta();
+
+        $("#cuentaNombre").removeClass("is-invalid");
+    });
+
     //$(document).on("submit","#formFiltroCuentas",function(e){e.preventDefault();consultarCuentas();});
     $(document).on("submit","#formFiltroCuentas",function(e){e.preventDefault();consultarVistaCuentas();});
     $(document).on("submit","#formCuentaNueva",function(e){e.preventDefault();guardarCuentaNueva();});
@@ -1758,8 +1778,6 @@ $(document).on("click",".btnCuentaReporte",function(){
     mostrarConcentradoCxc(id);
 });
 
-
-
 $(document).on("click",".js-vista-cuentas",function(){mostrarVistaCuentas($(this).attr("data-vista"));});
 $(document).on("click",".js-filtro-cuentas",function(){
     const filtro=$(this).attr("data-filtro");
@@ -1768,13 +1786,56 @@ $(document).on("click",".js-filtro-cuentas",function(){
     $(this).addClass("active").attr("aria-pressed","true");
     consultarCuentas();
 });
-$(document).on("click",".btnPersonaCreditos",function(){mostrarVistaCuentas("CREDITOS",$(this).attr("data-nombre"));});
+
+    $(document).on("click", ".btnPersonaCreditos", function() {
+        const nombre = $(this).attr("data-nombre") || "";
+
+        if (state.tipoCuentaActual === "COBRAR") {
+            const clienteId = Number(
+                $(this).attr("data-cliente-id")
+            );
+
+            if (!Number.isSafeInteger(clienteId) || clienteId <= 0) {
+                return Swal.fire(
+                    "Cliente no vinculado",
+                    "Esta cuenta todavía no tiene un cliente registrado.",
+                    "warning"
+                );
+            }
+
+            mostrarVistaCuentas(
+                "CREDITOS",
+                "",
+                clienteId,
+                nombre
+            );
+        } else {
+            mostrarVistaCuentas("CREDITOS", nombre);
+        }
+    });
+
+    $(document).on("input", "#cuentasBuscar", function() {
+        if (state.filtroClienteCuentasId) {
+            state.filtroClienteCuentasId = null;
+
+            $(this).attr(
+                "placeholder",
+                state.tipoCuentaActual === "COBRAR"
+                    ? "Cliente, documento o cuenta"
+                    : "Proveedor, factura o cuenta"
+            );
+        }
+    });
+
+
 $(document).on("click",".btnMovimientoCuenta",function(){verDetalleCuenta(Number($(this).attr("data-id")));});
 
 }
 
 function renderCuentas(tipo) {
     state.tipoCuentaActual = tipo;
+    state.clienteCuentaId = null;
+    state.filtroClienteCuentasId = null;
     const tpl = document.getElementById("tplCuentas");
     if (!tpl) return console.error("No existe tplCuentas");
     $("#contenidoModulo").empty().append(tpl.content.cloneNode(true));
@@ -1785,11 +1846,114 @@ function renderCuentas(tipo) {
     if (!state.tokenNuevaCuenta) state.tokenNuevaCuenta = generarIdSolicitudVenta();
     //consultarCuentas();
     mostrarVistaCuentas("CREDITOS");
+
+    if (tipo === "COBRAR") {
+        iniciarSelectorCreditoClientes();
+    }
 }
 
+function iniciarSelectorCreditoClientes() {
+    const $campo = $("#cuentaNombre");
 
-function mostrarVistaCuentas(vista,buscar) {
+    if (!$campo.length) return;
+
+    $campo.attr({
+        placeholder: "Buscar cliente registrado...",
+        autocomplete: "off"
+    });
+
+    $.ajax({
+        url: "php/index.php",
+        type: "POST",
+        dataType: "json",
+        data: {
+            action: "getClientes"
+        }
+    }).done(function(r) {
+        if (!document.body.contains($campo[0])) return;
+        if (state.tipoCuentaActual !== "COBRAR") return;
+
+        if (!r || r.status !== "ok") {
+            return Swal.fire(
+                "Aviso",
+                r && r.answer || "No se pudieron consultar clientes.",
+                "warning"
+            );
+        }
+
+        const clientes = (Array.isArray(r.results) ? r.results : [])
+            .filter(function(c) {
+                return Number(c.tipo) === 1;
+            });
+
+        $campo.autocomplete({
+            minLength: 0,
+            source: function(p, devolver) {
+                const buscar = String(p.term || "")
+                    .toLocaleLowerCase("es");
+
+                const encontrados = clientes.filter(function(c) {
+                    return [
+                        c.nombre,
+                        c.apellido,
+                        c.alias,
+                        c.numero,
+                        c.movil
+                    ].join(" ").toLocaleLowerCase("es").includes(buscar);
+                });
+
+                devolver(encontrados.slice(0, 12).map(function(c) {
+                    const nombre = [c.nombre, c.apellido]
+                        .filter(Boolean).join(" ").trim();
+
+                    return {
+                        label: nombre,
+                        value: nombre,
+                        cliente: c
+                    };
+                }));
+            },
+            select: function(e, ui) {
+                const c = ui.item.cliente;
+
+                state.clienteCuentaId = Number(c.id);
+                $campo.val(ui.item.value);
+                $campo.removeClass("is-invalid");
+
+                return false;
+            }
+        });
+
+        $campo.off("input.cuentaCliente")
+            .on("input.cuentaCliente", function() {
+                state.clienteCuentaId = null;
+            });
+
+        $campo.off("focus.cuentaCliente")
+            .on("focus.cuentaCliente", function() {
+                $(this).autocomplete("search", this.value);
+            });
+
+    }).fail(function(xhr) {
+        Swal.fire(
+            "Error",
+            xhr.responseJSON && xhr.responseJSON.answer ||
+                "No se pudieron consultar los clientes.",
+            "error"
+        );
+    });
+}
+
+function mostrarVistaCuentas(vista, buscar, clienteId = null, clienteNombre = "") {
     if (!["PERSONAS","CREDITOS","MOVIMIENTOS"].includes(vista)) return;
+    const id = Number(clienteId);
+
+    state.filtroClienteCuentasId =
+        vista === "CREDITOS" &&
+        state.tipoCuentaActual === "COBRAR" &&
+        Number.isSafeInteger(id) && id > 0
+            ? id
+            : null;
     state.vistaCuentas = vista;
     state.peticionCuentas++;
     const cobrar = state.tipoCuentaActual==="COBRAR";
@@ -1806,8 +1970,18 @@ function mostrarVistaCuentas(vista,buscar) {
     $("#cuentasRangoFechas").toggleClass("d-none",vista!=="MOVIMIENTOS");
     $("#cuentasFiltroHoy").text(cobrar ? "Cobrar hoy":"Pagar hoy");
     $("#cuentasBuscar").val(buscar||"");
+    $("#cuentasBuscar").attr(
+        "placeholder",
+        state.filtroClienteCuentasId
+            ? "Créditos de " + clienteNombre
+            : (cobrar ? "Cliente, documento o cuenta" : "Proveedor, factura o cuenta")
+    );
+
+
     //$("#cuentasEstado").val("PENDIENTE");
-    const filtroInicial = buscar ? "TODAS" : "PENDIENTE";
+    const filtroInicial = (buscar || state.filtroClienteCuentasId)
+        ? "TODAS"
+        : "PENDIENTE";
 $("#cuentasEstado").val(filtroInicial);
     $(".js-filtro-cuentas").removeClass("active").attr("aria-pressed","false");
     //$(".js-filtro-cuentas[data-filtro='PENDIENTE']").addClass("active").attr("aria-pressed","true");
@@ -1846,7 +2020,38 @@ if (vista==="MOVIMIENTOS") {
             const $tr=$("<tr>");
             const datosFila=vista==="PERSONAS" ? [x.nombre,x.creditos,monedaMXN(x.total),monedaMXN(x.abonado),monedaMXN(x.pendiente),x.vencidos,x.proximo_pago||"Sin fecha"] : [x.origen==="INICIAL" ? "Inicial" : x.id,x.nombre,"#"+x.account_id,x.created_at,x.origen==="INICIAL"?"Anticipo inicial":(tipo==="COBRAR"?"Abono":"Pago"),x.method,x.reference||"—",monedaMXN(x.amount)];
             datosFila.forEach(function(valor){$tr.append($("<td>").text(valor));});
-            const $boton=vista==="PERSONAS" ? $('<button type="button" class="btn btn-outline-success btn-sm btnPersonaCreditos">Ver cuentas</button>').attr("data-nombre",x.nombre) : $('<button type="button" class="btn btn-outline-success btn-sm btnMovimientoCuenta">Ver cuenta</button>').attr("data-id",x.account_id);
+            
+            let $boton;
+
+            if (vista === "PERSONAS") {
+                const clienteId = Number(x.cliente_id);
+
+                if (tipo === "COBRAR" &&
+                    (!Number.isSafeInteger(clienteId) || clienteId <= 0)) {
+
+                    $boton = $("<span>")
+                        .addClass("text-secondary small")
+                        .text("Sin cliente vinculado");
+
+                } else {
+                    $boton = $("<button>", {
+                        type: "button",
+                        class: "btn btn-outline-success btn-sm btnPersonaCreditos",
+                        text: "Ver cuentas"
+                    }).attr("data-nombre", x.nombre);
+
+                    if (tipo === "COBRAR") {
+                        $boton.attr("data-cliente-id", clienteId);
+                    }
+                }
+            } else {
+                $boton = $("<button>", {
+                    type: "button",
+                    class: "btn btn-outline-success btn-sm btnMovimientoCuenta",
+                    text: "Ver cuenta"
+                }).attr("data-id", x.account_id);
+            }
+
             $tabla.append($tr.append($("<td>").append($boton)));
         });
     }).fail(function(xhr){
@@ -1859,7 +2064,25 @@ function consultarCuentas() {
     const version = state.versionVista, solicitud = ++state.peticionCuentas, tipo = state.tipoCuentaActual;
     const buscar = $("#cuentasBuscar").val() || "", estado = $("#cuentasEstado").val() || "TODAS";
     $("#tablaCuentas").html('<tr><td colspan="9" class="text-center py-4 text-secondary">Consultando cuentas...</td></tr>');
-    $.ajax({url:"php/index.php",type:"POST",dataType:"json",data:{action:"getCuentas",tipo:tipo,buscar:buscar,estado:estado}}).done(function(r){
+    
+    const parametros = {
+        action: "getCuentas",
+        tipo: tipo,
+        buscar: buscar,
+        estado: estado
+    };
+
+    if (tipo === "COBRAR" && state.filtroClienteCuentasId) {
+        parametros.cliente_id = state.filtroClienteCuentasId;
+    }
+
+    $.ajax({
+        url: "php/index.php",
+        type: "POST",
+        dataType: "json",
+        data: parametros
+    })
+.done(function(r){
         if (version!==state.versionVista || solicitud!==state.peticionCuentas || tipo!==state.tipoCuentaActual) return;
         if (!r || r.status!=="ok") return Swal.fire("Aviso",r && r.answer || "No se pudieron consultar las cuentas.","warning");
         const resumen = r.results.resumen || {}, registros = r.results.cuentas || [];
@@ -1977,13 +2200,12 @@ $acciones.append($dropdown);
     });
 }
 
-
-
 function guardarCuentaNueva() {
     if (state.guardandoCuenta) return;
     const d = {
         action:"crearCuenta",tipo:state.tipoCuentaActual,solicitud_id:state.tokenNuevaCuenta,
         nombre:$("#cuentaNombre").val().trim(),
+        cliente_id: state.tipoCuentaActual === "COBRAR" ? state.clienteCuentaId : null,
         referencia:$("#cuentaReferencia").val().trim(),
         concepto:$("#cuentaConcepto").val().trim(),
         monto:$("#cuentaMonto").val(),
@@ -1991,6 +2213,22 @@ function guardarCuentaNueva() {
         fecha_operacion: window.CSM_ES_ADMIN ? $("#cuentaFechaOperacion").val() : ""
     };
     if (!d.nombre || !d.concepto || numeroNotaValido(d.monto,0.01,99999999.99)===null) return Swal.fire("Aviso","Completa el nombre, concepto e importe.","warning");
+    
+    if (d.tipo === "COBRAR" &&
+        (!Number.isSafeInteger(Number(d.cliente_id)) ||
+        Number(d.cliente_id) <= 0)) {
+
+        $("#cuentaNombre").addClass("is-invalid").trigger("focus");
+
+        return Swal.fire({
+            icon: "warning",
+            title: "Selecciona un cliente",
+            text: "Debes elegir un cliente registrado del catálogo.",
+            confirmButtonText: "Entendido"
+        });
+    }
+
+    
     Swal.fire({title:"¿Registrar esta cuenta?",text:d.nombre+" · "+monedaMXN(d.monto),icon:"question",showCancelButton:true,confirmButtonText:"Registrar",cancelButtonText:"Cancelar",confirmButtonColor:"#086b47"}).then(function(c){
         if (!c.isConfirmed || state.guardandoCuenta) return;
         state.guardandoCuenta = true;
@@ -1998,6 +2236,7 @@ function guardarCuentaNueva() {
         $.ajax({url:"php/index.php",type:"POST",dataType:"json",data:d}).done(function(r){
             if (!r || r.status!=="ok") return Swal.fire("Aviso",r && r.answer || "No se registró la cuenta.","warning");
             state.tokenNuevaCuenta = generarIdSolicitudVenta();
+            state.clienteCuentaId = null;
             if ($("#formCuentaNueva").length){$("#formCuentaNueva")[0].reset();$("#panelNuevaCuenta").addClass("d-none");}
             //if (state.moduloActual==="cuentas" && state.tipoCuentaActual===d.tipo) consultarCuentas();
             if (state.moduloActual==="cuentas" && state.tipoCuentaActual===d.tipo) consultarVistaCuentas();
@@ -2125,7 +2364,22 @@ function abrirAbonoCuenta(id,saldo) {
             state.abonoCuentaIdentidad = "";
             //if (state.moduloActual==="cuentas" && state.tipoCuentaActual===tipo) consultarCuentas();
             if (state.moduloActual==="cuentas" && state.tipoCuentaActual===tipo) consultarVistaCuentas();
-            Swal.fire({icon:"success",title:tipo==="COBRAR"?"Cobro registrado":"Pago registrado",text:r.results && r.results.duplicado ? "Esta operación ya estaba registrada; no se duplicó." : "Saldo pendiente: "+monedaMXN(r.results.saldo),confirmButtonColor:"#086b47"});
+            
+            const duplicado = !!(r.results && r.results.duplicado);
+
+            Swal.fire({
+                icon: "success",
+                title: duplicado
+                    ? "Operación ya registrada"
+                    : (tipo === "COBRAR"
+                        ? "Cobro registrado"
+                        : "Pago registrado"),
+                text: duplicado
+                    ? "Este movimiento ya estaba registrado y no se duplicó."
+                    : "Saldo pendiente: " + monedaMXN(r.results.saldo),
+                confirmButtonColor: "#086b47"
+            });
+
         }).fail(function(xhr){
             Swal.fire("Error",xhr.responseJSON && xhr.responseJSON.answer || "No fue posible confirmar el movimiento. Puedes reintentar sin duplicarlo.","error");
         }).always(function(){state.guardandoAbono=false;});
@@ -2152,9 +2406,7 @@ function mostrarConcentradoCxc(id) {
                     <strong>Concentrado completo del cliente</strong>
                     <small class="d-block ms-4 text-secondary">Incluye todas sus cuentas pendientes registradas.</small>
                 </label>
-                <div class="alert alert-warning small mt-3 mb-0">
-                    Si el cliente no tiene ID registrado, las cuentas se agrupan por nombre exacto. Verifica que correspondan a la misma persona.
-                </div>
+
             </div>`,
         width:'570px',
         showCancelButton:true,

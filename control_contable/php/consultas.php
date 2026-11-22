@@ -467,7 +467,6 @@ public function getVentas($data = []) {
                 }
             }
             
-
             if ($inicio !== "" && $fin !== "" && $inicio > $fin) {
                 throw new InvalidArgumentException("La fecha inicial no puede superar la final.");
             }
@@ -2424,19 +2423,79 @@ public function getCuentas($data = []) {
         $json["status"]="error"; $json["answer"]="No hay conexión con MySQL."; $json["code"]=500;
     } else {
         try {
-            $meta = $this->metaCuenta(isset($data["tipo"]) ? $data["tipo"] : "");
+            $tipo = isset($data["tipo"]) ? trim((string)$data["tipo"]) : "";
+            $meta = $this->metaCuenta($tipo);
+
+            //$meta = $this->metaCuenta(isset($data["tipo"]) ? $data["tipo"] : "");
             $tabla = $meta["tabla"]; $nombre = $meta["nombre"];
             $buscar = $this->textoVenta($data,"buscar",100);
             $estado = isset($data["estado"]) ? trim((string)$data["estado"]) : "TODAS";
             if (!in_array($estado,["TODAS","PENDIENTE","VENCIDO","PAGADO","CANCELADO","HOY"],true)) throw new InvalidArgumentException("Filtro de estado inválido.");
 
-            $stmt = $this->ejecutarSqlVenta("SELECT COUNT(*) AS total, COALESCE(SUM(CASE WHEN status='PENDIENTE' THEN pending_amount ELSE 0 END),0) AS pendiente, COALESCE(SUM(CASE WHEN status='PENDIENTE' AND due_date<CURDATE() THEN pending_amount ELSE 0 END),0) AS vencido, SUM(CASE WHEN status='PENDIENTE' AND due_date IS NULL THEN 1 ELSE 0 END) AS sin_vencimiento FROM `$tabla` WHERE status<>'CANCELADO'");
-            $resumen = $stmt->get_result()->fetch_assoc(); $stmt->close();
-
+           
             $where = " WHERE 1=1"; $tipos = ""; $params = [];
+
+            if ($tipo === "COBRAR" && isset($data["cliente_id"])) {
+                $clienteIdFiltro = filter_var(
+                    $data["cliente_id"],
+                    FILTER_VALIDATE_INT,
+                    ["options" => ["min_range" => 1]]
+                );
+
+                if ($clienteIdFiltro === false) {
+                    throw new InvalidArgumentException(
+                        "El ID del cliente es inválido."
+                    );
+                }
+
+                $where .= " AND client_id = ?";
+                $tipos .= "i";
+                $params[] = $clienteIdFiltro;
+            }
+
+            $resumenWhere = " WHERE status <> 'CANCELADO'";
+            $resumenTipos = "";
+            $resumenParams = [];
+
+            if ($tipo === "COBRAR" && isset($clienteIdFiltro)) {
+                $resumenWhere .= " AND client_id = ?";
+                $resumenTipos = "i";
+                $resumenParams[] = $clienteIdFiltro;
+            }
+
+            $sqlResumen = "SELECT
+                COUNT(*) AS total,
+                COALESCE(SUM(
+                    CASE WHEN status = 'PENDIENTE'
+                    THEN pending_amount ELSE 0 END
+                ), 0) AS pendiente,
+                COALESCE(SUM(
+                    CASE WHEN status = 'PENDIENTE'
+                        AND due_date < CURDATE()
+                    THEN pending_amount ELSE 0 END
+                ), 0) AS vencido,
+                COALESCE(SUM(
+                    CASE WHEN status = 'PENDIENTE'
+                        AND due_date IS NULL
+                    THEN 1 ELSE 0 END
+                ), 0) AS sin_vencimiento
+                FROM `$tabla`" . $resumenWhere;
+
+            $stmt = $this->ejecutarSqlVenta(
+                $sqlResumen,
+                $resumenTipos,
+                $resumenParams
+            );
+
+            $resumen = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+
             if ($buscar !== "") {
                 $where .= " AND (`$nombre` LIKE ? OR document_reference LIKE ? OR CAST(id AS CHAR) LIKE ?)";
-                $patron = "%".$buscar."%"; $tipos .= "sss"; $params = [$patron,$patron,$patron];
+                $patron = "%" . $buscar . "%";
+                $tipos .= "sss";
+                array_push($params, $patron, $patron, $patron);
             }
             if ($estado === "PENDIENTE") $where .= " AND status='PENDIENTE' AND pending_amount>0";
             if ($estado === "VENCIDO") $where .= " AND status='PENDIENTE' AND pending_amount>0 AND due_date<CURDATE()";
@@ -2457,17 +2516,25 @@ $camposFechas = $tipo === "COBRAR"
     : ", NULL AS fecha_venta,
          NULL AS fecha_registro_utc";
 
-$sql = "SELECT id, `$nombre` AS nombre,
-               total_amount, paid_amount, pending_amount,
-               status, due_date, document_reference,
-               description, created_at
-               $camposFechas
-        FROM `$tabla`" . $where . "
-        ORDER BY CASE WHEN status='PENDIENTE' THEN 0 ELSE 1 END,
-                 due_date IS NULL,
-                 due_date ASC,
-                 id DESC
-        LIMIT 200";
+            $campoCliente = $tipo === "COBRAR"
+                ? "client_id AS cliente_id,"
+                : "NULL AS cliente_id,";
+
+
+            $sql = "SELECT id, `$nombre` AS nombre,
+                           $campoCliente
+                           total_amount, paid_amount, pending_amount,
+                           status, due_date, document_reference,
+                           description, created_at
+                           $camposFechas
+                    FROM `$tabla`" . $where . "
+                    ORDER BY
+                        CASE WHEN status='PENDIENTE' THEN 0 ELSE 1 END,
+                        due_date IS NULL,
+                        due_date ASC,
+                        id DESC
+                    LIMIT 200";
+
 
 
             $stmt = $this->ejecutarSqlVenta($sql,$tipos,$params);
@@ -2507,6 +2574,11 @@ unset($cuenta);
     return $json;
 }
 
+public function getDatos(){
+    $json = [];
+
+    return $json;
+}
 
 public function crearCuenta($data) {
     $json = []; $token = "";
@@ -2523,6 +2595,59 @@ public function crearCuenta($data) {
             $concepto = $this->textoVenta($data,"concepto",255);
             $fechaVence = $this->textoVenta($data,"vencimiento",10);
             $montoCentavos = $this->centavosVenta(isset($data["monto"]) ? $data["monto"] : "");
+
+            $clienteId = null;
+
+            if ($tipo === "COBRAR") {
+                $clienteId = filter_var(
+                    $data["cliente_id"] ?? null,
+                    FILTER_VALIDATE_INT,
+                    ["options" => ["min_range" => 1]]
+                );
+
+                if ($clienteId === false) {
+                    throw new InvalidArgumentException(
+                        "Debes seleccionar un cliente registrado."
+                    );
+                }
+
+                $stmt = $this->ejecutarSqlVenta(
+                    "SELECT id, nombre, apellido, tipo
+                     FROM clientes
+                     WHERE corp_id = ?
+                       AND id = ?
+                       AND eliminado = 0
+                     LIMIT 1",
+                    "si",
+                    [$this->corpClientes(), $clienteId]
+                );
+
+                $registroCliente = $stmt->get_result()->fetch_assoc();
+                $stmt->close();
+
+                if (!$registroCliente) {
+                    throw new InvalidArgumentException(
+                        "El cliente seleccionado no existe."
+                    );
+                }
+
+                if ((int)$registroCliente["tipo"] !== 1) {
+                    throw new InvalidArgumentException(
+                        "No puedes registrar créditos a prospectos."
+                    );
+                }
+
+                $nombre = trim(
+                    (string)$registroCliente["nombre"] . " " .
+                    (string)($registroCliente["apellido"] ?? "")
+                );
+
+                if ($nombre === "" || strlen($nombre) > 100) {
+                    throw new InvalidArgumentException(
+                        "El nombre del cliente no es válido para el crédito."
+                    );
+                }
+            }
 
             if (!preg_match('/^[a-f0-9]{32}$/D',$token)) throw new InvalidArgumentException("Solicitud inválida.");
             if ($nombre==="") throw new InvalidArgumentException("Indica el cliente o proveedor.");
@@ -2548,27 +2673,41 @@ public function crearCuenta($data) {
                 //$sql = "INSERT INTO `$tabla` ($relacion,`$nombreCol`,user_id,total_amount,paid_amount,pending_amount,status,due_date,created_at,updated_at,description,document_reference,request_token) VALUES (NULL,NULL,?,?,?,0,?,'PENDIENTE',?,?,?,?,?,?)";
                 //$stmt = $this->ejecutarSqlVenta($sql,"sissssssss",[$nombre,$this->usuarioOperador,$monto,$monto,$fechaVence,$ahora,$ahora,$concepto,$referencia,$token]);
                 
-$sql = "INSERT INTO `$tabla`
-    ($relacion, `$nombreCol`, user_id, total_amount, paid_amount,
-    status, due_date, created_at, updated_at, description,
-    document_reference, request_token)
-    VALUES (NULL, NULL, ?, ?, ?, 0, 'PENDIENTE', ?, ?, ?, ?, ?, ?)";
 
-$stmt = $this->ejecutarSqlVenta(
-    $sql,
-    "sisssssss",
-    [
-        $nombre,
-        $this->usuarioOperador,
-        $monto,
-        $fechaVence,
-        $fechaOperacion,
-        $ahora,
-        $concepto,
-        $referencia,
-        $token
-    ]
-);
+                $idRelacionado = $tipo === "COBRAR"
+                    ? $clienteId
+                    : null;
+
+                
+                $sql = "INSERT INTO `$tabla`
+                    ($relacion, `$nombreCol`, user_id,
+                     total_amount, paid_amount, pending_amount,
+                     status, due_date, created_at, updated_at,
+                     description, document_reference, request_token)
+                    VALUES (
+                        NULL, ?, ?, ?, ?, 0, ?,
+                        'PENDIENTE', ?, ?, ?, ?, ?, ?
+                    )";
+
+                $stmt = $this->ejecutarSqlVenta(
+                    $sql,
+                    "isissssssss",
+                    [
+                        $idRelacionado,
+                        $nombre,
+                        $this->usuarioOperador,
+                        $monto,
+                        $monto,
+                        $fechaVence,
+                        $fechaOperacion,
+                        $ahora,
+                        $concepto,
+                        $referencia,
+                        $token
+                    ]
+                );
+
+
 
                 
                 $stmt->close();
@@ -2614,18 +2753,27 @@ FROM sales
 WHERE id=? LIMIT 1","i",[(int)$cuenta["sale_id"]]);
     $venta = $stmt->get_result()->fetch_assoc(); $stmt->close();
 
-if ($venta) {
-    $cuenta["fecha_venta"] = $venta["created_at"];
 
-    $fechaUtc = new DateTimeImmutable(
-        $venta["registered_at"],
-        new DateTimeZone("UTC")
-    );
+            if ($venta) {
+                $cuenta["fecha_venta"] = $venta["created_at"];
+                $cuenta["fecha_registro"] = null;
 
-    $cuenta["fecha_registro"] = $fechaUtc
-        ->setTimezone(new DateTimeZone("America/Mexico_City"))
-        ->format("Y-m-d H:i:s");
-}
+                if (!empty($venta["registered_at"]) &&
+                    $venta["registered_at"] !== "0000-00-00 00:00:00") {
+
+                    $fechaUtc = new DateTimeImmutable(
+                        $venta["registered_at"],
+                        new DateTimeZone("UTC")
+                    );
+
+                    $cuenta["fecha_registro"] = $fechaUtc
+                        ->setTimezone(
+                            new DateTimeZone("America/Mexico_City")
+                        )
+                        ->format("Y-m-d H:i:s");
+                }
+            }
+
 
     if ($venta && (float)$venta["initial_paid"]>0) {
         $referencia = trim((string)$venta["bank_reference"]);
@@ -2761,11 +2909,25 @@ public function registrarAbonoCuenta($data) {
                 $stmt = $this->ejecutarSqlVenta("UPDATE account_settlements SET account_move_id=? WHERE id=?","ii",[$idMovimiento,$idAbono]); $stmt->close();
                 //$stmt = $this->ejecutarSqlVenta("UPDATE `$tabla` SET paid_amount=?,pending_amount=?,status=?,updated_at=? WHERE id=?","ssssi",[$pagadoNuevo,$saldoNuevo,$estadoNuevo,$ahora,$id]);
                 
-$stmt = $this->ejecutarSqlVenta(
-    "UPDATE `$tabla` SET paid_amount=?,status=?,updated_at=? WHERE id=?",
-    "sssi",
-    [$pagadoNuevo,$estadoNuevo,$ahora,$id]
-);
+
+                $stmt = $this->ejecutarSqlVenta(
+                    "UPDATE `$tabla`
+                     SET paid_amount = ?,
+                         pending_amount = ?,
+                         status = ?,
+                         updated_at = ?
+                     WHERE id = ?
+                       AND status = 'PENDIENTE'",
+                    "ssssi",
+                    [
+                        $pagadoNuevo,
+                        $saldoNuevo,
+                        $estadoNuevo,
+                        $ahora,
+                        $id
+                    ]
+                );
+
 
                 
                 if ($stmt->affected_rows!==1) throw new RuntimeException("No fue posible actualizar la cuenta.");
@@ -2825,31 +2987,166 @@ $stmt = $this->ejecutarSqlVenta(
 }
 
 
-public function getPersonasCuentas($data = []) {
-    $json = [];
-    if (!$this->conn) {
-        $json = ["status"=>"error","answer"=>"No hay conexión con MySQL.","code"=>500];
-    } else {
+
+    public function getPersonasCuentas($data = []) {
+        if (!$this->conn) {
+            return [
+                "status" => "error",
+                "code" => 500,
+                "answer" => "No hay conexión con MySQL."
+            ];
+        }
+
         try {
-            $meta = $this->metaCuenta($data["tipo"] ?? "");
-            $tabla = $meta["tabla"]; $col = $meta["nombre"];
-            $buscar = $this->textoVenta($data,"buscar",100);
-            $sql = "SELECT `$col` AS nombre,COUNT(*) AS creditos,COALESCE(SUM(total_amount),0) AS total,COALESCE(SUM(paid_amount),0) AS abonado,COALESCE(SUM(pending_amount),0) AS pendiente,SUM(CASE WHEN status='PENDIENTE' AND pending_amount>0 AND due_date<CURDATE() THEN 1 ELSE 0 END) AS vencidos,MIN(CASE WHEN status='PENDIENTE' AND pending_amount>0 AND due_date>=CURDATE() THEN due_date END) AS proximo_pago FROM `$tabla` WHERE status<>'CANCELADO'";
-            $tipos=""; $params=[];
-            if ($buscar!=="") {$sql.=" AND `$col` LIKE ?";$tipos="s";$params=["%".$buscar."%"];}
-            $sql.=" GROUP BY `$col` ORDER BY pendiente DESC,nombre ASC LIMIT 200";
-            $stmt=$this->ejecutarSqlVenta($sql,$tipos,$params);
-            $personas=$stmt->get_result()->fetch_all(MYSQLI_ASSOC); $stmt->close();
-            $json=["status"=>"ok","answer"=>"Personas consultadas.","results"=>["personas"=>$personas],"code"=>200];
+            $tipo = $this->textoVenta($data, "tipo", 10);
+            $meta = $this->metaCuenta($tipo);
+            $buscar = $this->textoVenta($data, "buscar", 100);
+
+            if ($tipo === "COBRAR") {
+                $sql = "
+                    SELECT
+                        r.client_id AS cliente_id,
+                        COALESCE(
+                            MAX(NULLIF(
+                                TRIM(CONCAT_WS(' ', c.nombre, c.apellido)),
+                                ''
+                            )),
+                            MAX(r.client_name)
+                        ) AS nombre,
+                        COUNT(*) AS creditos,
+                        COALESCE(SUM(r.total_amount), 0) AS total,
+                        COALESCE(SUM(r.paid_amount), 0) AS abonado,
+                        COALESCE(SUM(r.pending_amount), 0) AS pendiente,
+                        SUM(
+                            CASE
+                                WHEN r.status = 'PENDIENTE'
+                                    AND r.pending_amount > 0
+                                    AND r.due_date < CURDATE()
+                                THEN 1 ELSE 0
+                            END
+                        ) AS vencidos,
+                        MIN(
+                            CASE
+                                WHEN r.status = 'PENDIENTE'
+                                    AND r.pending_amount > 0
+                                    AND r.due_date >= CURDATE()
+                                THEN r.due_date
+                            END
+                        ) AS proximo_pago
+                    FROM receivables r
+                    LEFT JOIN clientes c
+                        ON c.corp_id = ?
+                        AND c.id = r.client_id
+                    WHERE r.status <> 'CANCELADO'
+                    GROUP BY
+                        r.client_id,
+                        CASE
+                            WHEN r.client_id IS NULL THEN r.id
+                            ELSE 0
+                        END
+                ";
+
+                $tipos = "s";
+                $params = [$this->corpClientes()];
+
+                if ($buscar !== "") {
+                    $sql .= "
+                        HAVING nombre LIKE ?
+                            OR CAST(cliente_id AS CHAR) = ?
+                    ";
+
+                    $tipos .= "ss";
+                    $params[] = "%" . $buscar . "%";
+                    $params[] = $buscar;
+                }
+
+            } else {
+                $tabla = $meta["tabla"];
+                $col = $meta["nombre"];
+
+                $sql = "
+                    SELECT
+                        NULL AS cliente_id,
+                        `$col` AS nombre,
+                        COUNT(*) AS creditos,
+                        COALESCE(SUM(total_amount), 0) AS total,
+                        COALESCE(SUM(paid_amount), 0) AS abonado,
+                        COALESCE(SUM(pending_amount), 0) AS pendiente,
+                        SUM(
+                            CASE
+                                WHEN status = 'PENDIENTE'
+                                    AND pending_amount > 0
+                                    AND due_date < CURDATE()
+                                THEN 1 ELSE 0
+                            END
+                        ) AS vencidos,
+                        MIN(
+                            CASE
+                                WHEN status = 'PENDIENTE'
+                                    AND pending_amount > 0
+                                    AND due_date >= CURDATE()
+                                THEN due_date
+                            END
+                        ) AS proximo_pago
+                    FROM `$tabla`
+                    WHERE status <> 'CANCELADO'
+                ";
+
+                $tipos = "";
+                $params = [];
+
+                if ($buscar !== "") {
+                    $sql .= " AND `$col` LIKE ?";
+                    $tipos = "s";
+                    $params[] = "%" . $buscar . "%";
+                }
+
+                $sql .= " GROUP BY `$col`";
+            }
+
+            $sql .= "
+                ORDER BY pendiente DESC, nombre ASC
+                LIMIT 200
+            ";
+
+            $stmt = $this->ejecutarSqlVenta(
+                $sql,
+                $tipos,
+                $params
+            );
+
+            $personas = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            $stmt->close();
+
+            return [
+                "status" => "ok",
+                "code" => 200,
+                "answer" => "Personas consultadas.",
+                "results" => [
+                    "personas" => $personas
+                ]
+            ];
+
         } catch (InvalidArgumentException $e) {
-            $json=["status"=>"warning","answer"=>$e->getMessage(),"code"=>400];
+            return [
+                "status" => "warning",
+                "code" => 400,
+                "answer" => $e->getMessage()
+            ];
+
         } catch (Throwable $e) {
-            
-            $json=["status"=>"error","answer"=>"No fue posible consultar los deudores o proveedores.","code"=>500];
+            error_log(
+                "getPersonasCuentas: " . $e->getMessage()
+            );
+
+            return [
+                "status" => "error",
+                "code" => 500,
+                "answer" => "No fue posible consultar los deudores o proveedores."
+            ];
         }
     }
-    return $json;
-}
+
 
 
 
@@ -3076,14 +3373,18 @@ public function generarConcentradoCxc($data) {
         $where='r.id=?'; $tipos='i'; $params=[$id];
 
         if ($agrupar) {
-            if ((int)$origen['client_id']>0) {
-                $where='r.client_id=?';
-                $params=[(int)$origen['client_id']];
-            } else {
-                $where='r.client_id IS NULL AND BINARY r.client_name=BINARY ?';
-                $tipos='s';
-                $params=[$origen['client_name']];
+            $clienteId = (int)$origen["client_id"];
+
+            if ($clienteId <= 0) {
+                throw new InvalidArgumentException(
+                    "Este crédito no tiene un cliente vinculado. " .
+                    "Asígnale un cliente antes de generar su concentrado."
+                );
             }
+
+            $where = "r.client_id = ?";
+            $tipos = "i";
+            $params = [$clienteId];
         }
 
         $sql="SELECT r.id,r.sale_id,r.description,r.document_reference,
