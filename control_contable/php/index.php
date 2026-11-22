@@ -182,6 +182,22 @@ switch ($action) {
         $response = $consultas->eliminarColaborador($_POST);
         break;
 
+    case "getPreparacionValesMaterial":
+        $response = $consultas->getPreparacionValesMaterial($_POST);
+        break;
+        
+    case "guardarValeMaterial":
+        $response = $consultas->guardarValeMaterial($_POST);
+        break;
+        
+    case "confirmarValeMaterial":
+        $response = $consultas->confirmarValeMaterial($_POST);
+        break;
+        
+    case "anularValeMaterial":
+        $response = $consultas->anularValeMaterial($_POST);
+        break;
+
     default:
         $response["status"] = "warning";
         $response["answer"] = "La acción solicitada no es válida.";

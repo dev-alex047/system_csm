@@ -6737,6 +6737,1156 @@ public function eliminarColaborador(array $data = []): array {
 }
 
 
+//auxiliare
+
+
+private function valeId($data, string $campo, bool $obligatorio = true): ?int {
+    $valor = $data[$campo] ?? null;
+
+    if (($valor === null || $valor === '') && !$obligatorio) {
+        return null;
+    }
+
+    $id = filter_var(
+        $valor,
+        FILTER_VALIDATE_INT,
+        ['options'=>['min_range'=>1]]
+    );
+
+    if ($id === false || $id === null) {
+        throw new InvalidArgumentException(
+            'Identificador inválido: ' . $campo . '.'
+        );
+    }
+
+    return $id;
+}
+
+private function valeCantidad4($valor, bool $permitirCero = false): int {
+    if (!is_string($valor) && !is_int($valor)) {
+        throw new InvalidArgumentException('Cantidad inválida.');
+    }
+
+    $texto = trim((string)$valor);
+
+    if (!preg_match('/^\d{1,10}(?:\.\d{1,4})?$/D', $texto)) {
+        throw new InvalidArgumentException(
+            'La cantidad admite hasta cuatro decimales.'
+        );
+    }
+
+    $partes = explode('.', $texto, 2);
+
+    $numero = (int)$partes[0] * 10000 +
+        (int)str_pad($partes[1] ?? '', 4, '0');
+
+    if ($numero <= 0 && !$permitirCero) {
+        throw new InvalidArgumentException(
+            'La cantidad debe ser mayor que cero.'
+        );
+    }
+
+    return $numero;
+}
+
+private function valeBloquear(string $corp): string {
+    $nombre = 'csm_vales_' . substr(
+        hash('sha256', $corp),
+        0,
+        40
+    );
+
+    $stmt = $this->ejecutarSqlVenta(
+        'SELECT GET_LOCK(?, 8) AS obtenido',
+        's',
+        [$nombre]
+    );
+
+    $fila = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if ((int)($fila['obtenido'] ?? 0) !== 1) {
+        throw new RuntimeException(
+            'Otra operación está procesando vales. Intenta nuevamente.'
+        );
+    }
+
+    return $nombre;
+}
+
+private function valeLiberar(?string $nombre): void {
+    if ($nombre === null) return;
+
+    try {
+        $stmt = $this->ejecutarSqlVenta(
+            'SELECT RELEASE_LOCK(?)',
+            's',
+            [$nombre]
+        );
+
+        $stmt->close();
+    } catch (Throwable $e) {
+        error_log('valeLiberar: ' . $e->getMessage());
+    }
+}
+
+
+
+public function getPreparacionValesMaterial(array $data = []): array {
+    $json = [];
+
+    try {
+        if (!$this->conn) {
+            throw new RuntimeException('Sin conexión con MySQL.');
+        }
+
+        $this->exigirAdminClientes();
+
+        $corp = $this->corpClientes();
+        $ventaId = $this->valeId($data, 'venta_id');
+
+        $stmt = $this->ejecutarSqlVenta(
+            "SELECT id, note_folio, sale_kind, cliente_id,
+                    client_name, created_at
+             FROM sales
+             WHERE corp_id=?
+               AND id=?
+               AND sale_kind='NOTA'
+             LIMIT 1",
+            'si',
+            [$corp, $ventaId]
+        );
+
+        $venta = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$venta) {
+            throw new OutOfBoundsException(
+                'La nota no existe en este corporativo.'
+            );
+        }
+
+        $stmt = $this->ejecutarSqlVenta(
+            "SELECT
+                si.id AS venta_item_id,
+                si.product_id AS producto_id,
+                COALESCE(
+                    NULLIF(si.manual_name, ''),
+                    p.name,
+                    'Artículo'
+                ) AS descripcion_producto,
+                COALESCE(
+                    NULLIF(si.manual_code, ''),
+                    p.code
+                ) AS codigo_producto,
+                COALESCE(
+                    NULLIF(si.unit_code, ''),
+                    p.unit
+                ) AS unidad,
+                si.quantity AS cantidad_vendida,
+                COALESCE(v.cantidad_asignada, 0) AS cantidad_asignada,
+                GREATEST(
+                    si.quantity - COALESCE(v.cantidad_asignada, 0),
+                    0
+                ) AS cantidad_disponible
+             FROM sale_items si
+             LEFT JOIN products p
+                ON p.id=si.product_id
+             LEFT JOIN (
+                SELECT venta_item_id,
+                       SUM(cantidad) AS cantidad_asignada
+                FROM vales_material
+                WHERE corp_id=?
+                  AND venta_id=?
+                  AND tipo='CARGA'
+                  AND estado<>'ANULADO'
+                  AND eliminado=0
+                GROUP BY venta_item_id
+             ) v ON v.venta_item_id=si.id
+             WHERE si.sale_id=?
+             ORDER BY si.id",
+            'sii',
+            [$corp, $ventaId, $ventaId]
+        );
+
+        $articulos = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+
+        $stmt = $this->ejecutarSqlVenta(
+            "SELECT
+                v.id, v.tipo, v.origen, v.venta_id,
+                v.venta_item_id, v.producto_id,
+                v.cliente_id, v.colaborador_id,
+                v.vehiculo_id, v.carga_id,
+                v.codigo_embarque, v.descripcion_producto,
+                v.codigo_producto, v.cantidad, v.unidad,
+                v.indicaciones, v.estado, v.fechaAlta,
+                v.fechaRealizado,
+                CONCAT_WS(' ', co.nombre, co.apellidos) AS colaborador,
+                CONCAT_WS(' ', cl.nombre, cl.apellido) AS destinatario,
+                cl.domicilio, cl.colonia, cl.municipio,
+                cl.estado AS estado_cliente,
+                cl.cp AS codigo_postal_cliente,
+                ve.nombre AS vehiculo
+             FROM vales_material v
+             LEFT JOIN colaboradores co
+                ON co.corp_id=v.corp_id
+                AND co.id=v.colaborador_id
+             LEFT JOIN clientes cl
+                ON cl.corp_id=v.corp_id
+                AND cl.id=v.cliente_id
+             LEFT JOIN vales_material carga
+                ON carga.corp_id=v.corp_id
+                AND carga.id=v.carga_id
+             LEFT JOIN vehiculos_costeo ve
+                ON ve.id=COALESCE(
+                    v.vehiculo_id,
+                    carga.vehiculo_id
+                )
+             WHERE v.corp_id=?
+               AND v.venta_id=?
+               AND v.eliminado=0
+             ORDER BY v.id DESC",
+            'si',
+            [$corp, $ventaId]
+        );
+
+        $vales = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+
+        foreach ($vales as &$vale) {
+            $prefijo = $vale['tipo'] === 'CARGA'
+                ? 'VC-' : 'VD-';
+
+            $vale['folio'] = $prefijo .
+                str_pad((string)$vale['id'], 6, '0', STR_PAD_LEFT);
+        }
+
+        unset($vale);
+
+        $stmt = $this->ejecutarSqlVenta(
+            "SELECT id, nombre, apellidos
+             FROM colaboradores
+             WHERE corp_id=?
+               AND eliminado=0
+             ORDER BY nombre, apellidos, id",
+            's',
+            [$corp]
+        );
+
+        $colaboradores = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+
+        $stmt = $this->ejecutarSqlVenta(
+            "SELECT id, nombre, tipo, unidad_capacidad, capacidad
+             FROM vehiculos_costeo
+             WHERE activo=1
+               AND eliminado=0
+             ORDER BY nombre"
+        );
+
+        $vehiculos = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+
+        $json = [
+            'status'=>'ok',
+            'code'=>200,
+            'answer'=>'Información de la nota y vales consultada.',
+            'results'=>[
+                'venta'=>$venta,
+                'articulos'=>$articulos,
+                'vales'=>$vales,
+                'colaboradores'=>$colaboradores,
+                'vehiculos'=>$vehiculos
+            ]
+        ];
+
+    } catch (DomainException $e) {
+        $json = [
+            'status'=>'warning',
+            'code'=>403,
+            'answer'=>$e->getMessage()
+        ];
+    } catch (OutOfBoundsException $e) {
+        $json = [
+            'status'=>'warning',
+            'code'=>404,
+            'answer'=>$e->getMessage()
+        ];
+    } catch (InvalidArgumentException $e) {
+        $json = [
+            'status'=>'warning',
+            'code'=>400,
+            'answer'=>$e->getMessage()
+        ];
+    } catch (Throwable $e) {
+        error_log('getPreparacionValesMaterial: ' . $e->getMessage());
+
+        $json = [
+            'status'=>'error',
+            'code'=>500,
+            'answer'=>'No fue posible consultar los vales.'
+        ];
+    }
+
+    return $json;
+}
+
+
+
+public function guardarValeMaterial(array $data = []): array {
+    $json = [];
+    $bloqueo = null;
+
+    try {
+        if (!$this->conn) {
+            throw new RuntimeException('Sin conexión con MySQL.');
+        }
+
+        $this->exigirAdminClientes();
+
+        $corp = $this->corpClientes();
+
+        $id = filter_var(
+            $data['id'] ?? 0,
+            FILTER_VALIDATE_INT,
+            ['options'=>['min_range'=>0]]
+        );
+
+        if ($id === false) {
+            throw new InvalidArgumentException('ID de vale inválido.');
+        }
+
+        $ventaId = $this->valeId($data, 'venta_id');
+        $itemId = $this->valeId($data, 'venta_item_id');
+        $colaboradorId = $this->valeId($data, 'colaborador_id');
+        $clienteId = $this->valeId($data, 'cliente_id', false);
+        $vehiculoId = $this->valeId($data, 'vehiculo_id', false);
+        $cargaId = $this->valeId($data, 'carga_id', false);
+
+        $tipo = strtoupper(
+            $this->textoVenta($data, 'tipo', 8)
+        );
+
+        $cantidad = $this->valeCantidad4(
+            $data['cantidad'] ?? ''
+        );
+
+        $cantidadSql = number_format(
+            $cantidad / 10000, 4, '.', ''
+        );
+
+        $indicaciones = $this->textoVenta(
+            $data, 'indicaciones', 500
+        );
+
+        $embarque = $this->textoVenta(
+            $data, 'codigo_embarque', 40
+        );
+
+        $solicitud = $id === 0
+            ? strtolower($this->textoVenta($data, 'solicitud_id', 32))
+            : null;
+
+        if (!in_array($tipo, ['CARGA', 'DESCARGA'], true)) {
+            throw new InvalidArgumentException(
+                'Selecciona CARGA o DESCARGA.'
+            );
+        }
+
+        if ($tipo === 'CARGA' && $cargaId !== null) {
+            throw new InvalidArgumentException(
+                'Una carga no debe tener carga_id.'
+            );
+        }
+
+        if ($tipo === 'DESCARGA' &&
+            ($cargaId === null || $vehiculoId !== null)) {
+            throw new InvalidArgumentException(
+                'La descarga necesita una carga de origen y no debe indicar vehículo propio.'
+            );
+        }
+
+        if ($id === 0 &&
+            !preg_match('/^[a-f0-9]{32}$/D', $solicitud)) {
+            throw new InvalidArgumentException(
+                'Identificador de solicitud inválido.'
+            );
+        }
+
+        $bloqueo = $this->valeBloquear($corp);
+
+        // Obtener el artículo desde la venta real.
+        $stmt = $this->ejecutarSqlVenta(
+            "SELECT
+                si.id,
+                si.product_id,
+                si.quantity,
+                COALESCE(
+                    NULLIF(si.manual_name, ''),
+                    p.name
+                ) AS descripcion_producto,
+                COALESCE(
+                    NULLIF(si.manual_code, ''),
+                    p.code
+                ) AS codigo_producto,
+                COALESCE(
+                    NULLIF(si.unit_code, ''),
+                    p.unit
+                ) AS unidad,
+                s.cliente_id
+             FROM sale_items si
+             INNER JOIN sales s
+                ON s.id=si.sale_id
+             LEFT JOIN products p
+                ON p.id=si.product_id
+             WHERE s.corp_id=?
+               AND s.id=?
+               AND si.id=?
+               AND s.sale_kind='NOTA'
+             LIMIT 1",
+            'sii',
+            [$corp, $ventaId, $itemId]
+        );
+
+        $articulo = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$articulo) {
+            throw new OutOfBoundsException(
+                'El artículo no pertenece a esa nota.'
+            );
+        }
+
+        if (!$articulo['cliente_id']) {
+            throw new InvalidArgumentException(
+                'La nota no tiene cliente registrado.'
+            );
+        }
+
+        if (!trim((string)$articulo['descripcion_producto']) ||
+            !trim((string)$articulo['unidad'])) {
+            throw new InvalidArgumentException(
+                'El artículo necesita nombre y unidad.'
+            );
+        }
+
+        // Comprobar que el colaborador pertenezca al corporativo.
+        $stmt = $this->ejecutarSqlVenta(
+            "SELECT id
+             FROM colaboradores
+             WHERE corp_id=?
+               AND id=?
+               AND eliminado=0
+             LIMIT 1",
+            'si',
+            [$corp, $colaboradorId]
+        );
+
+        $colaborador = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$colaborador) {
+            throw new InvalidArgumentException(
+                'El colaborador seleccionado no está disponible.'
+            );
+        }
+
+        // El cliente predeterminado es el de la nota.
+        if ($clienteId === null) {
+            $clienteId = (int)$articulo['cliente_id'];
+        }
+
+        $stmt = $this->ejecutarSqlVenta(
+            "SELECT id
+             FROM clientes
+             WHERE corp_id=?
+               AND id=?
+               AND tipo=1
+               AND eliminado=0
+             LIMIT 1",
+            'si',
+            [$corp, $clienteId]
+        );
+
+        $cliente = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$cliente) {
+            throw new InvalidArgumentException(
+                'El cliente o destinatario no está disponible.'
+            );
+        }
+
+        // El vehículo solo se asigna directamente a una carga.
+        if ($tipo === 'CARGA' && $vehiculoId !== null) {
+            $stmt = $this->ejecutarSqlVenta(
+                "SELECT id
+                 FROM vehiculos_costeo
+                 WHERE id=?
+                   AND activo=1
+                   AND eliminado=0
+                 LIMIT 1",
+                'i',
+                [$vehiculoId]
+            );
+
+            $vehiculo = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if (!$vehiculo) {
+                throw new InvalidArgumentException(
+                    'El vehículo seleccionado no está disponible.'
+                );
+            }
+        }
+
+        // Una descarga hereda el embarque y vehículo de la carga.
+        if ($tipo === 'DESCARGA') {
+            $stmt = $this->ejecutarSqlVenta(
+                "SELECT id, cantidad, codigo_embarque, estado
+                 FROM vales_material
+                 WHERE corp_id=?
+                   AND id=?
+                   AND venta_id=?
+                   AND venta_item_id=?
+                   AND tipo='CARGA'
+                   AND estado<>'ANULADO'
+                   AND eliminado=0
+                 LIMIT 1",
+                'siii',
+                [$corp, $cargaId, $ventaId, $itemId]
+            );
+
+            $carga = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if (!$carga) {
+                throw new InvalidArgumentException(
+                    'La carga de origen no es válida.'
+                );
+            }
+
+            $embarque = (string)($carga['codigo_embarque'] ?? '');
+            $vehiculoId = null;
+        }
+
+        // Al editar, mantener la identidad original del vale.
+        if ($id > 0) {
+            $stmt = $this->ejecutarSqlVenta(
+                "SELECT tipo, venta_id, venta_item_id,
+                        carga_id, estado, vehiculo_id,
+                        codigo_embarque
+                 FROM vales_material
+                 WHERE corp_id=?
+                   AND id=?
+                   AND eliminado=0
+                 LIMIT 1",
+                'si',
+                [$corp, $id]
+            );
+
+            $actual = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if (!$actual) {
+                throw new OutOfBoundsException(
+                    'Vale no encontrado.'
+                );
+            }
+
+            if ($actual['estado'] !== 'PENDIENTE') {
+                throw new InvalidArgumentException(
+                    'Solo puedes editar vales pendientes.'
+                );
+            }
+
+            if ($actual['tipo'] !== $tipo ||
+                (int)$actual['venta_id'] !== $ventaId ||
+                (int)$actual['venta_item_id'] !== $itemId ||
+                (int)($actual['carga_id'] ?? 0) !== (int)($cargaId ?? 0)) {
+                throw new InvalidArgumentException(
+                    'No puedes cambiar el tipo, venta, artículo o carga. Anula y crea otro vale.'
+                );
+            }
+        }
+
+        // Evitar crear dos veces la misma solicitud.
+        if ($id === 0) {
+            $stmt = $this->ejecutarSqlVenta(
+                "SELECT id, venta_id, venta_item_id, tipo,
+                        cantidad, colaborador_id, cliente_id,
+                        vehiculo_id, carga_id, codigo_embarque,
+                        indicaciones, estado
+                 FROM vales_material
+                 WHERE corp_id=?
+                   AND solicitud_id=?
+                 LIMIT 1",
+                'ss',
+                [$corp, $solicitud]
+            );
+
+            $anterior = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if ($anterior) {
+                if ((int)$anterior['venta_id'] !== $ventaId ||
+                    (int)$anterior['venta_item_id'] !== $itemId ||
+                    $anterior['tipo'] !== $tipo ||
+                    (int)$anterior['colaborador_id'] !== $colaboradorId ||
+                    (int)$anterior['cliente_id'] !== $clienteId ||
+                    (int)($anterior['vehiculo_id'] ?? 0) !== (int)($vehiculoId ?? 0) ||
+                    (int)($anterior['carga_id'] ?? 0) !== (int)($cargaId ?? 0) ||
+                    (string)($anterior['codigo_embarque'] ?? '') !== $embarque ||
+                    (string)($anterior['indicaciones'] ?? '') !== $indicaciones ||
+                    $this->valeCantidad4((string)$anterior['cantidad']) !== $cantidad) {
+                    throw new InvalidArgumentException(
+                        'La solicitud ya se utilizó con datos diferentes.'
+                    );
+                }
+
+                $json = [
+                    'status'=>'ok',
+                    'code'=>200,
+                    'answer'=>'Esta solicitud ya estaba registrada.',
+                    'results'=>[
+                        'id'=>(int)$anterior['id'],
+                        'estado'=>$anterior['estado'],
+                        'duplicada'=>true
+                    ]
+                ];
+
+                return $json;
+            }
+        }
+
+        if ($tipo === 'CARGA') {
+            // Sumar todas las cargas vigentes del mismo artículo.
+            $stmt = $this->ejecutarSqlVenta(
+                "SELECT COALESCE(SUM(cantidad), 0) AS suma
+                 FROM vales_material
+                 WHERE corp_id=?
+                   AND venta_id=?
+                   AND venta_item_id=?
+                   AND tipo='CARGA'
+                   AND estado<>'ANULADO'
+                   AND eliminado=0
+                   AND id<>?",
+                'siii',
+                [$corp, $ventaId, $itemId, $id]
+            );
+
+            $sumaTexto = (string)$stmt->get_result()
+                ->fetch_assoc()['suma'];
+
+            $stmt->close();
+
+            $totalCargas = $this->valeCantidad4(
+                $sumaTexto, true
+            );
+
+            $vendido = $this->valeCantidad4(
+                (string)$articulo['quantity']
+            );
+
+            if ($totalCargas + $cantidad > $vendido) {
+                throw new InvalidArgumentException(
+                    'La suma de cargas supera la cantidad vendida.'
+                );
+            }
+
+            if ($id > 0) {
+                $stmt = $this->ejecutarSqlVenta(
+                    "SELECT COALESCE(SUM(cantidad), 0) AS suma
+                     FROM vales_material
+                     WHERE corp_id=?
+                       AND carga_id=?
+                       AND tipo='DESCARGA'
+                       AND estado<>'ANULADO'
+                       AND eliminado=0",
+                    'si',
+                    [$corp, $id]
+                );
+
+                $descargado = (string)$stmt->get_result()
+                    ->fetch_assoc()['suma'];
+
+                $stmt->close();
+
+                $totalDescargas = $this->valeCantidad4(
+                    $descargado, true
+                );
+
+                if ($cantidad < $totalDescargas) {
+                    throw new InvalidArgumentException(
+                        'La carga no puede ser menor que sus descargas asignadas.'
+                    );
+                }
+
+                if ($totalDescargas > 0 &&
+                    ((int)($actual['vehiculo_id'] ?? 0) !== (int)($vehiculoId ?? 0) ||
+                     (string)($actual['codigo_embarque'] ?? '') !== $embarque)) {
+                    throw new InvalidArgumentException(
+                        'Con descargas asignadas no puedes cambiar el vehículo ni el embarque.'
+                    );
+                }
+            }
+
+            // Todas las cargas de un embarque usan el mismo vehículo.
+            if ($embarque !== '') {
+                $stmt = $this->ejecutarSqlVenta(
+                    "SELECT id
+                     FROM vales_material
+                     WHERE corp_id=?
+                       AND venta_id=?
+                       AND tipo='CARGA'
+                       AND codigo_embarque=?
+                       AND estado<>'ANULADO'
+                       AND eliminado=0
+                       AND id<>?
+                       AND NOT (vehiculo_id <=> ?)
+                     LIMIT 1",
+                    'sisii',
+                    [$corp, $ventaId, $embarque, $id, $vehiculoId]
+                );
+
+                $otroVehiculo = $stmt->get_result()->fetch_assoc();
+                $stmt->close();
+
+                if ($otroVehiculo) {
+                    throw new InvalidArgumentException(
+                        'Todas las cargas del embarque deben utilizar el mismo vehículo.'
+                    );
+                }
+            }
+
+        } else {
+            // La suma de descargas no puede superar su carga de origen.
+            $stmt = $this->ejecutarSqlVenta(
+                "SELECT COALESCE(SUM(cantidad), 0) AS suma
+                 FROM vales_material
+                 WHERE corp_id=?
+                   AND carga_id=?
+                   AND tipo='DESCARGA'
+                   AND estado<>'ANULADO'
+                   AND eliminado=0
+                   AND id<>?",
+                'sii',
+                [$corp, $cargaId, $id]
+            );
+
+            $suma = (string)$stmt->get_result()
+                ->fetch_assoc()['suma'];
+
+            $stmt->close();
+
+            if ($this->valeCantidad4($suma, true) + $cantidad >
+                $this->valeCantidad4((string)$carga['cantidad'])) {
+                throw new InvalidArgumentException(
+                    'La suma de descargas supera la cantidad de la carga.'
+                );
+            }
+        }
+
+        if ($id === 0) {
+            $campos = [
+                'corp_id'=>$corp,
+                'solicitud_id'=>$solicitud,
+                'tipo'=>$tipo,
+                'origen'=>'VENTA',
+                'venta_id'=>$ventaId,
+                'venta_item_id'=>$itemId,
+                'producto_id'=>$articulo['product_id'],
+                'cliente_id'=>$clienteId,
+                'colaborador_id'=>$colaboradorId,
+                'vehiculo_id'=>$vehiculoId,
+                'carga_id'=>$cargaId,
+                'codigo_embarque'=>$embarque === '' ? null : $embarque,
+                'descripcion_producto'=>$articulo['descripcion_producto'],
+                'codigo_producto'=>$articulo['codigo_producto'],
+                'cantidad'=>$cantidadSql,
+                'unidad'=>$articulo['unidad'],
+                'indicaciones'=>$indicaciones === '' ? null : $indicaciones,
+                'registrado_por'=>$this->usuarioOperador
+            ];
+
+            $columnas = array_keys($campos);
+
+            $sql = 'INSERT INTO vales_material (`' .
+                implode('`,`', $columnas) . '`) VALUES (' .
+                implode(',', array_fill(0, count($columnas), '?')) .
+                ')';
+
+            $stmt = $this->ejecutarSqlVenta(
+                $sql,
+                str_repeat('s', count($columnas)),
+                array_values($campos)
+            );
+
+            $id = (int)$this->conn->insert_id;
+            $stmt->close();
+
+        } else {
+            $stmt = $this->ejecutarSqlVenta(
+                "UPDATE vales_material
+                 SET cliente_id=?,
+                     colaborador_id=?,
+                     vehiculo_id=?,
+                     codigo_embarque=?,
+                     cantidad=?,
+                     indicaciones=?,
+                     fechaEditado=NOW()
+                 WHERE corp_id=?
+                   AND id=?
+                   AND estado='PENDIENTE'
+                   AND eliminado=0",
+                'sssssssi',
+                [
+                    $clienteId,
+                    $colaboradorId,
+                    $vehiculoId,
+                    $embarque === '' ? null : $embarque,
+                    $cantidadSql,
+                    $indicaciones === '' ? null : $indicaciones,
+                    $corp,
+                    $id
+                ]
+            );
+
+            $stmt->close();
+        }
+
+        $json = [
+            'status'=>'ok',
+            'code'=>200,
+            'answer'=>'Vale guardado correctamente.',
+            'results'=>[
+                'id'=>$id,
+                'duplicada'=>false
+            ]
+        ];
+
+    } catch (DomainException $e) {
+        $json = [
+            'status'=>'warning',
+            'code'=>403,
+            'answer'=>$e->getMessage()
+        ];
+    } catch (OutOfBoundsException $e) {
+        $json = [
+            'status'=>'warning',
+            'code'=>404,
+            'answer'=>$e->getMessage()
+        ];
+    } catch (InvalidArgumentException $e) {
+        $json = [
+            'status'=>'warning',
+            'code'=>400,
+            'answer'=>$e->getMessage()
+        ];
+    } catch (Throwable $e) {
+        error_log('guardarValeMaterial: ' . $e->getMessage());
+
+        $json = [
+            'status'=>'error',
+            'code'=>500,
+            'answer'=>'No fue posible guardar el vale.'
+        ];
+    } finally {
+        $this->valeLiberar($bloqueo);
+    }
+
+    return $json;
+}
+
+
+
+public function confirmarValeMaterial(array $data = []): array {
+    $json = [];
+    $bloqueo = null;
+
+    try {
+        if (!$this->conn) {
+            throw new RuntimeException('Sin conexión con MySQL.');
+        }
+
+        $this->exigirAdminClientes();
+
+        $corp = $this->corpClientes();
+        $id = $this->valeId($data, 'id');
+
+        $bloqueo = $this->valeBloquear($corp);
+
+        $stmt = $this->ejecutarSqlVenta(
+            "SELECT id, tipo, venta_id, venta_item_id,
+                    carga_id, estado, eliminado
+             FROM vales_material
+             WHERE corp_id=?
+               AND id=?
+             LIMIT 1",
+            'si',
+            [$corp, $id]
+        );
+
+        $vale = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$vale ||
+            (int)$vale['eliminado'] === 1 ||
+            $vale['estado'] === 'ANULADO') {
+            throw new OutOfBoundsException(
+                'El vale no está disponible.'
+            );
+        }
+
+        if ($vale['estado'] !== 'REALIZADO') {
+            if ($vale['tipo'] === 'DESCARGA') {
+                $stmt = $this->ejecutarSqlVenta(
+                    "SELECT id
+                     FROM vales_material
+                     WHERE corp_id=?
+                       AND id=?
+                       AND tipo='CARGA'
+                       AND venta_id=?
+                       AND venta_item_id=?
+                       AND estado='REALIZADO'
+                       AND eliminado=0
+                     LIMIT 1",
+                    'siii',
+                    [
+                        $corp,
+                        $vale['carga_id'],
+                        $vale['venta_id'],
+                        $vale['venta_item_id']
+                    ]
+                );
+
+                $cargaConfirmada = $stmt->get_result()->fetch_assoc();
+                $stmt->close();
+
+                if (!$cargaConfirmada) {
+                    throw new InvalidArgumentException(
+                        'Primero debes confirmar la carga del material.'
+                    );
+                }
+            }
+
+            $stmt = $this->ejecutarSqlVenta(
+                "UPDATE vales_material
+                 SET estado='REALIZADO',
+                     realizado_por=?,
+                     fechaRealizado=NOW(),
+                     fechaEditado=NOW()
+                 WHERE corp_id=?
+                   AND id=?
+                   AND estado='PENDIENTE'
+                   AND eliminado=0",
+                'isi',
+                [$this->usuarioOperador, $corp, $id]
+            );
+
+            $afectados = $stmt->affected_rows;
+            $stmt->close();
+
+            if ($afectados !== 1) {
+                throw new RuntimeException(
+                    'No se confirmó la operación.'
+                );
+            }
+        }
+
+        $json = [
+            'status'=>'ok',
+            'code'=>200,
+            'answer'=>$vale['estado'] === 'REALIZADO'
+                ? 'El vale ya estaba confirmado.'
+                : 'Operación confirmada correctamente.',
+            'results'=>[
+                'id'=>$id,
+                'estado'=>'REALIZADO'
+            ]
+        ];
+
+    } catch (DomainException $e) {
+        $json = [
+            'status'=>'warning',
+            'code'=>403,
+            'answer'=>$e->getMessage()
+        ];
+    } catch (OutOfBoundsException $e) {
+        $json = [
+            'status'=>'warning',
+            'code'=>404,
+            'answer'=>$e->getMessage()
+        ];
+    } catch (InvalidArgumentException $e) {
+        $json = [
+            'status'=>'warning',
+            'code'=>400,
+            'answer'=>$e->getMessage()
+        ];
+    } catch (Throwable $e) {
+        error_log('confirmarValeMaterial: ' . $e->getMessage());
+
+        $json = [
+            'status'=>'error',
+            'code'=>500,
+            'answer'=>'No fue posible confirmar el vale.'
+        ];
+    } finally {
+        $this->valeLiberar($bloqueo);
+    }
+
+    return $json;
+}
+
+
+
+public function anularValeMaterial(array $data = []): array {
+    $json = [];
+    $bloqueo = null;
+
+    try {
+        if (!$this->conn) {
+            throw new RuntimeException('Sin conexión con MySQL.');
+        }
+
+        $this->exigirAdminClientes();
+
+        $corp = $this->corpClientes();
+        $id = $this->valeId($data, 'id');
+        $motivo = $this->textoVenta($data, 'motivo', 300);
+
+        if (strlen($motivo) < 5) {
+            throw new InvalidArgumentException(
+                'Indica el motivo de la anulación.'
+            );
+        }
+
+        $bloqueo = $this->valeBloquear($corp);
+
+        $stmt = $this->ejecutarSqlVenta(
+            "SELECT tipo, estado, eliminado
+             FROM vales_material
+             WHERE corp_id=?
+               AND id=?
+             LIMIT 1",
+            'si',
+            [$corp, $id]
+        );
+
+        $vale = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$vale || (int)$vale['eliminado'] === 1) {
+            throw new OutOfBoundsException(
+                'El vale no está disponible.'
+            );
+        }
+
+        if ($vale['estado'] !== 'PENDIENTE') {
+            throw new InvalidArgumentException(
+                'Solo es posible anular vales pendientes.'
+            );
+        }
+
+        if ($vale['tipo'] === 'CARGA') {
+            $stmt = $this->ejecutarSqlVenta(
+                "SELECT id
+                 FROM vales_material
+                 WHERE corp_id=?
+                   AND carga_id=?
+                   AND tipo='DESCARGA'
+                   AND estado<>'ANULADO'
+                   AND eliminado=0
+                 LIMIT 1",
+                'si',
+                [$corp, $id]
+            );
+
+            $descarga = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if ($descarga) {
+                throw new InvalidArgumentException(
+                    'Anula primero las descargas relacionadas con esta carga.'
+                );
+            }
+        }
+
+        $stmt = $this->ejecutarSqlVenta(
+            "UPDATE vales_material
+             SET estado='ANULADO',
+                 anulado_por=?,
+                 fechaAnulado=NOW(),
+                 motivo_anulacion=?,
+                 fechaEditado=NOW()
+             WHERE corp_id=?
+               AND id=?
+               AND estado='PENDIENTE'
+               AND eliminado=0",
+            'issi',
+            [
+                $this->usuarioOperador,
+                $motivo,
+                $corp,
+                $id
+            ]
+        );
+
+        $afectados = $stmt->affected_rows;
+        $stmt->close();
+
+        if ($afectados !== 1) {
+            throw new RuntimeException(
+                'No se pudo anular el vale.'
+            );
+        }
+
+        $json = [
+            'status'=>'ok',
+            'code'=>200,
+            'answer'=>'Vale anulado; se conserva en el historial.',
+            'results'=>[
+                'id'=>$id,
+                'estado'=>'ANULADO'
+            ]
+        ];
+
+    } catch (DomainException $e) {
+        $json = [
+            'status'=>'warning',
+            'code'=>403,
+            'answer'=>$e->getMessage()
+        ];
+    } catch (OutOfBoundsException $e) {
+        $json = [
+            'status'=>'warning',
+            'code'=>404,
+            'answer'=>$e->getMessage()
+        ];
+    } catch (InvalidArgumentException $e) {
+        $json = [
+            'status'=>'warning',
+            'code'=>400,
+            'answer'=>$e->getMessage()
+        ];
+    } catch (Throwable $e) {
+        error_log('anularValeMaterial: ' . $e->getMessage());
+
+        $json = [
+            'status'=>'error',
+            'code'=>500,
+            'answer'=>'No fue posible anular el vale.'
+        ];
+    } finally {
+        $this->valeLiberar($bloqueo);
+    }
+
+    return $json;
+}
+
+
 
 }
 ?>
