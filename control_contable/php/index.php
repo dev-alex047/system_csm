@@ -125,6 +125,14 @@ switch ($action) {
     case "registrarAbonoCuenta":
         $response = $consultas->registrarAbonoCuenta($_POST);
         break;
+    
+    case "getAbonoGlobalCliente":
+        $response = $consultas->getAbonoGlobalCliente($_POST);
+        break;
+
+    case "registrarAbonoGlobalCliente":
+        $response = $consultas->registrarAbonoGlobalCliente($_POST);
+        break;
         
     case "getPersonasCuentas":
         $response = $consultas->getPersonasCuentas($_POST);

@@ -1,4 +1,4 @@
-const MAESTRO_ID_ACTUAL = 1;
+const MAESTRO_ID_ACTUAL = 2;
 const state = {
     activeView: 'home',
     editing: null,

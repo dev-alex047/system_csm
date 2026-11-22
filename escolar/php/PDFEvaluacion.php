@@ -1823,7 +1823,7 @@ public function generarPDFFinalEvaluacion($data)
         $doc->SetLineWidth(0.015);
 
         $totalAlumnos = count($alumnos);
-        $porPagina = 30;
+        $porPagina = 42;
 
         $paginas = max(
             1,
@@ -1836,26 +1836,11 @@ public function generarPDFFinalEvaluacion($data)
         $aprobados = 0;
         $reprobados = 0;
 
-        for (
-            $pagina = 0;
-            $pagina < $paginas;
-            $pagina++
-        ) {
+        for ($pagina = 0; $pagina < $paginas; $pagina++) {
             $doc->AddPage();
 
-            /*
-             * Mismo encabezado oficial
-             * que el reporte por trimestre.
-             */
-            $this->encabezadoRegistro(
-                $doc,
-                $data,
-                true
-            );
+            $this->encabezadoRegistro($doc, $data, true);
 
-            /*
-             * Medidas.
-             */
             $xInicial = 0.90;
             $yInicial = 2.85;
             $anchoTotal = 19.80;
@@ -1865,10 +1850,7 @@ public function generarPDFFinalEvaluacion($data)
             $wPromedio = 2.00;
             $wEstado = 1.00;
 
-            $cantidadPeriodos = max(
-                1,
-                count($periodos)
-            );
+            $cantidadPeriodos = max(1, count($periodos));
 
             $wPeriodosTotal =
                 $anchoTotal -
@@ -1975,22 +1957,17 @@ public function generarPDFFinalEvaluacion($data)
                 true
             );
 
-            $y =
-                $yInicial +
-                $altoCabecera;
+            $y = $yInicial + $altoCabecera;
 
-            $inicio =
-                $pagina *
-                $porPagina;
+            /*$inicio =$pagina * $porPagina;
 
-            /*
-             * Siempre dibujamos 30 renglones.
-             */
-            for (
-                $fila = 0;
-                $fila < $porPagina;
-                $fila++
-            ) {
+            for ($fila = 0; $fila < $porPagina; $fila++) {*/
+            
+            $inicio = $pagina * $porPagina;
+            
+            $filasEnPagina = min($porPagina,max(30, $totalAlumnos - $inicio));
+            
+            for ($fila = 0; $fila < $filasEnPagina; $fila++) {
                 $indiceAlumno =
                     $inicio +
                     $fila;
@@ -2030,7 +2007,9 @@ public function generarPDFFinalEvaluacion($data)
                     $wNo,
                     $altoFila,
                     (string)
-                    ($indiceAlumno + 1),
+                    $alumno !== null
+    ? (string) ($indiceAlumno + 1)
+    : '',
                     1,
                     0,
                     'C',
@@ -2642,12 +2621,8 @@ $doc->SetLineWidth(0.015);
 
 $totalAlumnos = count($alumnos);
 
-$porPagina = 30;
+$porPagina = 42;
 
-/*
- * Siempre generamos por lo menos una página,
- * aunque solamente exista un alumno.
- */
 $paginas = max(
     1,
     (int) ceil(
@@ -2725,10 +2700,7 @@ for (
         $wCriterios /
         $cantidadCriterios;
 
-    /*
-     * Cabecera de tres niveles,
-     * como el formato físico.
-     */
+   
     $h1 = 0.36;
     $h2 = 0.34;
     $h3 = 0.56;
@@ -2823,9 +2795,7 @@ for (
         true
     );
 
-    /*
-     * Criterios dinámicos.
-     */
+ 
     $xCriterio =
         $xAlumno +
         $wAlumno;
@@ -2911,16 +2881,9 @@ for (
         ) > 0;
 
 
-    /*
-     * ==========================
-     * EXAMEN
-     * ==========================
-     */
     if ($esExamen) {
 
-        /*
-         * Primera fila vacía.
-         */
+
         $doc->SetXY(
             $xCriterio,
             $yInicial
@@ -3065,12 +3028,6 @@ for (
             true
         );
 
-
-    /*
-     * ==========================
-     * CONDUCTA
-     * ==========================
-     */
     } elseif ($tipoCaptura === 'conducta') {
 
     $doc->SetXY($xCriterio, $yInicial);
@@ -3200,9 +3157,7 @@ $doc->Cell(
         $wCriterio;
 }
 
-    /*
-     * Promedio final P.
-     */
+ 
     $doc->SetXY(
         $xCriterio,
         $yInicial
@@ -3224,28 +3179,18 @@ $doc->Cell(
         true
     );
 
-    /*
-     * Renglones.
-     *
-     * Aunque solo exista un alumno,
-     * se imprimen los 30 espacios,
-     * igual que el formato físico.
-     */
-    $y =
-        $yInicial +
-        $altoCabecera;
+    $y = $yInicial + $altoCabecera;
 
     $altoFila = 0.47;
 
-    $inicio =
-        $pagina *
-        $porPagina;
+    /*$inicio = $pagina * $porPagina;
 
-    for (
-        $fila = 0;
-        $fila < $porPagina;
-        $fila++
-    ) {
+    for ($fila = 0; $fila < $porPagina; $fila++) {*/
+    $inicio = $pagina * $porPagina;
+            
+    $filasEnPagina = min($porPagina,max(30, $totalAlumnos - $inicio));
+            
+    for ($fila = 0; $fila < $filasEnPagina; $fila++) {
         $indiceAlumno =
             $inicio +
             $fila;
@@ -3281,8 +3226,9 @@ $doc->Cell(
         $doc->Cell(
             $wNo,
             $altoFila,
-            (string)
-            ($indiceAlumno + 1),
+            $alumno !== null
+    ? (string) ($indiceAlumno + 1)
+    : '',
             1,
             0,
             'C',

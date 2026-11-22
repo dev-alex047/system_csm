@@ -3003,6 +3003,790 @@ public function registrarAbonoCuenta($data) {
 
 
 
+    private function carteraAbonoGlobal($clienteId, $bloquear = false) {
+        $corpId = $this->corpClientes();
+
+        $stmt = $this->ejecutarSqlVenta(
+            "SELECT id, nombre, apellido
+             FROM clientes
+             WHERE corp_id = ? AND id = ?
+               AND tipo = '1' AND eliminado = 0
+             LIMIT 1",
+            "si",
+            [$corpId, $clienteId]
+        );
+
+        $cliente = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$cliente) {
+            throw new InvalidArgumentException(
+                "El cliente no existe o no está activo."
+            );
+        }
+
+        $nombre = trim(
+            $cliente["nombre"] . " " . ($cliente["apellido"] ?? "")
+        );
+
+        $sql = "SELECT
+                    r.id,
+                    r.sale_id,
+                    r.client_name,
+                    r.created_at,
+                    r.due_date,
+                    r.total_amount,
+                    r.paid_amount,
+                    r.pending_amount,
+                    COALESCE(
+                        s.created_at, r.created_at
+                    ) AS fecha_origen
+                FROM receivables r
+                LEFT JOIN sales s ON s.id = r.sale_id
+                WHERE r.client_id = ?
+                  AND r.status = 'PENDIENTE'
+                  AND r.pending_amount > 0
+                  AND (
+                      r.sale_id IS NULL
+                      OR s.corp_id = ?
+                  )
+                ORDER BY
+                    CASE
+                        WHEN r.due_date IS NOT NULL
+                            AND r.due_date <> '0000-00-00'
+                            AND r.due_date < CURDATE()
+                        THEN 0
+                        WHEN r.due_date IS NOT NULL
+                            AND r.due_date <> '0000-00-00'
+                        THEN 1
+                        ELSE 2
+                    END,
+                    r.due_date ASC,
+                    COALESCE(
+                        s.created_at, r.created_at
+                    ) ASC,
+                    r.id ASC";
+
+        if ($bloquear) {
+            $sql .= " FOR UPDATE";
+        }
+
+        $stmt = $this->ejecutarSqlVenta(
+            $sql,
+            "is",
+            [$clienteId, $corpId]
+        );
+
+        $cuentas = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+
+        $totalCentavos = 0;
+        $datosFirma = [];
+
+        foreach ($cuentas as $cuenta) {
+            $saldo = $this->centavosVenta(
+                $cuenta["pending_amount"]
+            );
+
+            $pagado = $this->centavosVenta(
+                $cuenta["paid_amount"]
+            );
+
+            $total = $this->centavosVenta(
+                $cuenta["total_amount"]
+            );
+
+            if (
+                $saldo === null ||
+                $pagado === null ||
+                $total === null ||
+                $saldo + $pagado !== $total
+            ) {
+                throw new RuntimeException(
+                    "Hay una cuenta con importes inconsistentes."
+                );
+            }
+
+            $totalCentavos += $saldo;
+
+            $datosFirma[] = [
+                (int)$cuenta["id"],
+                (string)$cuenta["pending_amount"],
+                (string)$cuenta["due_date"],
+                (string)$cuenta["fecha_origen"]
+            ];
+        }
+
+        return [
+            "nombre" => $nombre,
+            "cuentas" => $cuentas,
+            "centavos" => $totalCentavos,
+            "firma" => hash(
+                "sha256",
+                json_encode($datosFirma)
+            )
+        ];
+    }
+
+
+    public function getAbonoGlobalCliente($data = []) {
+        if (!$this->conn) {
+            return [
+                "status" => "error",
+                "code" => 500,
+                "answer" => "No hay conexión con MySQL."
+            ];
+        }
+
+        try {
+            $clienteId = filter_var(
+                $data["cliente_id"] ?? null,
+                FILTER_VALIDATE_INT,
+                ["options" => ["min_range" => 1]]
+            );
+
+            if ($clienteId === false) {
+                throw new InvalidArgumentException(
+                    "Selecciona un cliente válido."
+                );
+            }
+
+            $cartera = $this->carteraAbonoGlobal($clienteId);
+            $filas = [];
+
+            foreach ($cartera["cuentas"] as $cuenta) {
+                $filas[] = [
+                    "id" => (int)$cuenta["id"],
+                    "documento" => $cuenta["sale_id"],
+                    "fecha_origen" => $cuenta["fecha_origen"],
+                    "vencimiento" => $cuenta["due_date"],
+                    "saldo" => $cuenta["pending_amount"]
+                ];
+            }
+
+            return [
+                "status" => "ok",
+                "code" => 200,
+                "answer" => "Cartera consultada correctamente.",
+                "results" => [
+                    "cliente_id" => $clienteId,
+                    "nombre" => $cartera["nombre"],
+                    "saldo_total" => number_format(
+                        $cartera["centavos"] / 100,
+                        2, ".", ""
+                    ),
+                    "firma" => $cartera["firma"],
+                    "cuentas" => $filas
+                ]
+            ];
+
+        } catch (InvalidArgumentException $e) {
+            return [
+                "status" => "warning",
+                "code" => 400,
+                "answer" => $e->getMessage()
+            ];
+
+        } catch (Throwable $e) {
+            return [
+                "status" => "error",
+                "code" => 500,
+                "answer" => "No fue posible consultar la cartera."
+            ];
+        }
+    }
+
+    public function registrarAbonoGlobalCliente($data = []) {
+        if (!$this->conn) {
+            return [
+                "status" => "error",
+                "code" => 500,
+                "answer" => "No hay conexión con MySQL."
+            ];
+        }
+
+        $transaccion = false;
+
+        try {
+            $clienteId = filter_var(
+                $data["cliente_id"] ?? null,
+                FILTER_VALIDATE_INT,
+                ["options" => ["min_range" => 1]]
+            );
+
+            $token = $this->textoVenta(
+                $data, "solicitud_id", 32
+            );
+
+            $firma = $this->textoVenta(
+                $data, "firma", 64
+            );
+
+            $metodo = $this->textoVenta(
+                $data, "metodo", 20
+            );
+
+            $referencia = $this->textoVenta(
+                $data, "referencia", 100
+            );
+
+            $notas = $this->textoVenta(
+                $data, "notas", 450
+            );
+
+            $centavos = $this->centavosVenta(
+                $data["monto"] ?? ""
+            );
+
+            $cajaId = isset($data["caja_id"])
+                ? (int)$data["caja_id"]
+                : 0;
+
+            if (
+                $clienteId === false ||
+                !preg_match('/^[a-f0-9]{32}$/D', $token) ||
+                !preg_match('/^[a-f0-9]{64}$/D', $firma)
+            ) {
+                throw new InvalidArgumentException(
+                    "Identificador de solicitud inválido."
+                );
+            }
+
+            if ($centavos === null || $centavos <= 0) {
+                throw new InvalidArgumentException(
+                    "El abono debe ser mayor que cero."
+                );
+            }
+
+            if (!in_array(
+                $metodo,
+                ["EFECTIVO", "TRANSFERENCIA"],
+                true
+            )) {
+                throw new InvalidArgumentException(
+                    "Método de cobro inválido."
+                );
+            }
+
+            if ($metodo === "EFECTIVO" && $cajaId <= 0) {
+                throw new InvalidArgumentException(
+                    "Selecciona una caja abierta."
+                );
+            }
+
+            if (
+                $metodo === "TRANSFERENCIA" &&
+                $referencia === ""
+            ) {
+                throw new InvalidArgumentException(
+                    "Captura la referencia bancaria."
+                );
+            }
+
+            if (!$this->conn->begin_transaction()) {
+                throw new RuntimeException(
+                    "No se inició la transacción."
+                );
+            }
+
+            $transaccion = true;
+
+            $stmt = $this->ejecutarSqlVenta(
+                "SELECT id, amount, origin,
+                        cash_register_id, reference, note
+                 FROM account_moves
+                 WHERE request_token = ?
+                 LIMIT 1 FOR UPDATE",
+                "s",
+                [$token]
+            );
+
+            $previo = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if ($previo) {
+                $stmt = $this->ejecutarSqlVenta(
+                    "SELECT COUNT(*) AS n
+                     FROM account_settlements a
+                     INNER JOIN receivables r
+                         ON r.id = a.account_id
+                     WHERE a.account_move_id = ?
+                       AND a.account_type = 'COBRAR'
+                       AND r.client_id = ?",
+                    "ii",
+                    [(int)$previo["id"], $clienteId]
+                );
+
+                $coincide = (int)$stmt
+                    ->get_result()
+                    ->fetch_assoc()["n"];
+
+                $stmt->close();
+
+                if (
+                    $coincide === 0 ||
+                    $previo["note"] !== "Abono global de cliente" ||
+                    $this->centavosVenta(
+                        $previo["amount"]
+                    ) !== $centavos ||
+                    $previo["origin"] !== (
+                        $metodo === "EFECTIVO" ? "CAJA" : "BANCO"
+                    ) ||
+                    (
+                        $metodo === "EFECTIVO" &&
+                        (int)$previo["cash_register_id"] !== $cajaId
+                    ) ||
+                    (
+                        $metodo === "TRANSFERENCIA" &&
+                        $previo["reference"] !== $referencia
+                    )
+                ) {
+                    throw new InvalidArgumentException(
+                        "Esta solicitud pertenece a otro cobro."
+                    );
+                }
+
+                $this->conn->rollback();
+                $transaccion = false;
+
+                return [
+                    "status" => "ok",
+                    "code" => 200,
+                    "answer" => "El cobro ya estaba registrado.",
+                    "results" => [
+                        "duplicado" => true,
+                        "movimiento_id" => (int)$previo["id"]
+                    ]
+                ];
+            }
+
+            $cartera = $this->carteraAbonoGlobal(
+                $clienteId,
+                true
+            );
+
+            if (!hash_equals(
+                $cartera["firma"],
+                $firma
+            )) {
+                throw new InvalidArgumentException(
+                    "Los saldos cambiaron. Revisa nuevamente " .
+                    "la distribución del abono."
+                );
+            }
+
+            if (
+                !$cartera["cuentas"] ||
+                $centavos > $cartera["centavos"]
+            ) {
+                throw new InvalidArgumentException(
+                    "El abono supera la deuda disponible."
+                );
+            }
+
+            $idCajaMovimiento = $metodo === "EFECTIVO"
+                ? $cajaId
+                : null;
+
+            if ($idCajaMovimiento !== null) {
+                $stmt = $this->ejecutarSqlVenta(
+                    "SELECT current_balance
+                     FROM cash_registers
+                     WHERE id = ?
+                       AND kind = 'CASH'
+                       AND is_active = 1
+                     FOR UPDATE",
+                    "i",
+                    [$cajaId]
+                );
+
+                $caja = $stmt->get_result()->fetch_assoc();
+                $stmt->close();
+
+                if (!$caja) {
+                    throw new InvalidArgumentException(
+                        "La caja no está disponible."
+                    );
+                }
+
+                $stmt = $this->ejecutarSqlVenta(
+                    "SELECT id FROM cash_shifts
+                     WHERE cash_register_id = ?
+                       AND status = 'ABIERTO'
+                     LIMIT 1 FOR UPDATE",
+                    "i",
+                    [$cajaId]
+                );
+
+                $turno = $stmt->get_result()->fetch_assoc();
+                $stmt->close();
+
+                if (!$turno) {
+                    throw new InvalidArgumentException(
+                        "La caja no tiene turno abierto."
+                    );
+                }
+            }
+
+            $ahora = date("Y-m-d H:i:s");
+
+            $fechaOperacion = $this->fechaOperacion(
+                $data,
+                $idCajaMovimiento
+            );
+
+            $restante = $centavos;
+            $aplicaciones = [];
+
+            foreach ($cartera["cuentas"] as $cuenta) {
+                if ($restante === 0) {
+                    break;
+                }
+
+                $saldo = $this->centavosVenta(
+                    $cuenta["pending_amount"]
+                );
+
+                $aplicar = min($restante, $saldo);
+
+                if (
+                    $fechaOperacion < $cuenta["created_at"]
+                ) {
+                    throw new InvalidArgumentException(
+                        "La fecha del cobro es anterior " .
+                        "al registro de una de las cuentas."
+                    );
+                }
+
+                $aplicaciones[] = [
+                    "id" => (int)$cuenta["id"],
+                    "sale_id" => (int)$cuenta["sale_id"],
+                    "anterior" => $saldo,
+                    "aplicar" => $aplicar,
+                    "pagado" => $this->centavosVenta(
+                        $cuenta["paid_amount"]
+                    )
+                ];
+
+                $restante -= $aplicar;
+            }
+
+            if ($restante !== 0) {
+                throw new RuntimeException(
+                    "No se pudo distribuir el importe."
+                );
+            }
+
+            $monto = number_format(
+                $centavos / 100, 2, ".", ""
+            );
+
+            $folio = "CXCG-" . strtoupper(
+                substr($token, 0, 10)
+            );
+
+            $refMovimiento = $referencia !== ""
+                ? $referencia
+                : $folio;
+
+            $stmt = $this->ejecutarSqlVenta(
+                "INSERT INTO account_moves
+                 (`date`, `type`, `origin`,
+                  cash_register_id, user_reference_name,
+                  reference, amount, user_id,
+                  link_type, link_id, ticket_number,
+                  status, note, notes,
+                  created_at, updated_at,
+                  expense_category, request_token)
+                 VALUES (
+                     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                     'PAGADO', ?, ?, ?, ?, ?, ?
+                 )",
+                "sssisssisisssssss",
+                [
+                    $fechaOperacion,
+                    "ENTRADA",
+                    $metodo === "EFECTIVO"
+                        ? "CAJA"
+                        : "BANCO",
+                    $idCajaMovimiento,
+                    $cartera["nombre"],
+                    $refMovimiento,
+                    $monto,
+                    $this->usuarioOperador,
+                    "CXC",
+                    $aplicaciones[0]["id"],
+                    $folio,
+                    "Abono global de cliente",
+                    $notas,
+                    $ahora,
+                    $ahora,
+                    null,
+                    $token
+                ]
+            );
+
+            $stmt->close();
+
+            $movimientoId = (int)$this->conn->insert_id;
+            $detalle = [];
+
+            foreach ($aplicaciones as $aplicacion) {
+                $abonado = number_format(
+                    $aplicacion["aplicar"] / 100,
+                    2, ".", ""
+                );
+
+                $saldoNuevo = number_format(
+                    (
+                        $aplicacion["anterior"] -
+                        $aplicacion["aplicar"]
+                    ) / 100,
+                    2, ".", ""
+                );
+
+                $pagadoNuevo = number_format(
+                    (
+                        $aplicacion["pagado"] +
+                        $aplicacion["aplicar"]
+                    ) / 100,
+                    2, ".", ""
+                );
+
+                $estadoNuevo = (
+                    $aplicacion["aplicar"] ===
+                    $aplicacion["anterior"]
+                ) ? "PAGADO" : "PENDIENTE";
+
+                $tokenCuenta = substr(
+                    hash(
+                        "sha256",
+                        "CXC-GLOBAL|" . $token . "|" .
+                        $aplicacion["id"]
+                    ),
+                    0,
+                    32
+                );
+
+                $notaGrupo = "[GLOBAL " . $token . "] " .
+                    $notas;
+
+                $stmt = $this->ejecutarSqlVenta(
+                    "INSERT INTO account_settlements
+                     (account_type, account_id,
+                      account_move_id, amount, method,
+                      cash_register_id, reference,
+                      notes, user_id, request_token,
+                      created_at)
+                     VALUES (
+                         'COBRAR',
+                         ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                     )",
+                    "iissississ",
+                    [
+                        $aplicacion["id"],
+                        $movimientoId,
+                        $abonado,
+                        $metodo,
+                        $idCajaMovimiento,
+                        $refMovimiento,
+                        $notaGrupo,
+                        $this->usuarioOperador,
+                        $tokenCuenta,
+                        $fechaOperacion
+                    ]
+                );
+
+                $stmt->close();
+
+                $stmt = $this->ejecutarSqlVenta(
+                    "UPDATE receivables
+                     SET paid_amount = ?,
+                         pending_amount = ?,
+                         status = ?,
+                         updated_at = ?
+                     WHERE id = ?
+                       AND client_id = ?
+                       AND status = 'PENDIENTE'
+                       AND pending_amount = ?",
+                    "ssssiis",
+                    [
+                        $pagadoNuevo,
+                        $saldoNuevo,
+                        $estadoNuevo,
+                        $ahora,
+                        $aplicacion["id"],
+                        $clienteId,
+                        number_format(
+                            $aplicacion["anterior"] / 100,
+                            2, ".", ""
+                        )
+                    ]
+                );
+
+                if ($stmt->affected_rows !== 1) {
+                    throw new RuntimeException(
+                        "Cambió el saldo de un crédito."
+                    );
+                }
+
+                $stmt->close();
+
+                if ($aplicacion["sale_id"] > 0) {
+                    $stmt = $this->ejecutarSqlVenta(
+                        "SELECT pending_amount
+                         FROM sales
+                         WHERE id = ? AND corp_id = ?
+                         FOR UPDATE",
+                        "is",
+                        [
+                            $aplicacion["sale_id"],
+                            $this->corpClientes()
+                        ]
+                    );
+
+                    $venta = $stmt->get_result()->fetch_assoc();
+                    $stmt->close();
+
+                    if (
+                        !$venta ||
+                        $this->centavosVenta(
+                            $venta["pending_amount"]
+                        ) !== $aplicacion["anterior"]
+                    ) {
+                        throw new RuntimeException(
+                            "El saldo de la venta no coincide " .
+                            "con el crédito."
+                        );
+                    }
+
+                    $stmt = $this->ejecutarSqlVenta(
+                        "UPDATE sales
+                         SET pending_amount = ?,
+                             updated_at = ?
+                         WHERE id = ? AND corp_id = ?",
+                        "ssis",
+                        [
+                            $saldoNuevo,
+                            $ahora,
+                            $aplicacion["sale_id"],
+                            $this->corpClientes()
+                        ]
+                    );
+
+                    if ($stmt->affected_rows !== 1) {
+                        throw new RuntimeException(
+                            "No se actualizó la venta."
+                        );
+                    }
+
+                    $stmt->close();
+                }
+
+                $detalle[] = [
+                    "credito_id" => $aplicacion["id"],
+                    "aplicado" => $abonado,
+                    "saldo" => $saldoNuevo,
+                    "estado" => $estadoNuevo
+                ];
+            }
+
+            if ($idCajaMovimiento !== null) {
+                $stmt = $this->ejecutarSqlVenta(
+                    "INSERT INTO cash_flows
+                     (cash_register_id, user_id,
+                      amount, `type`, description,
+                      reference, created_at)
+                     VALUES (?, ?, ?, 'IN', ?, ?, ?)",
+                    "iissss",
+                    [
+                        $cajaId,
+                        $this->usuarioOperador,
+                        $monto,
+                        "Abono global a cliente",
+                        $folio,
+                        $fechaOperacion
+                    ]
+                );
+
+                $stmt->close();
+
+                $stmt = $this->ejecutarSqlVenta(
+                    "UPDATE cash_registers
+                     SET current_balance =
+                             current_balance + ?,
+                         updated_at = ?
+                     WHERE id = ?
+                       AND kind = 'CASH'
+                       AND is_active = 1",
+                    "ssi",
+                    [$monto, $ahora, $cajaId]
+                );
+
+                if ($stmt->affected_rows !== 1) {
+                    throw new RuntimeException(
+                        "No fue posible actualizar la caja."
+                    );
+                }
+
+                $stmt->close();
+            }
+
+            if (!$this->conn->commit()) {
+                throw new RuntimeException(
+                    "No se pudo confirmar el cobro."
+                );
+            }
+
+            $transaccion = false;
+
+            return [
+                "status" => "ok",
+                "code" => 200,
+                "answer" => "Abono global registrado correctamente.",
+                "results" => [
+                    "duplicado" => false,
+                    "movimiento_id" => $movimientoId,
+                    "folio" => $folio,
+                    "aplicaciones" => $detalle,
+                    "saldo_total" => number_format(
+                        (
+                            $cartera["centavos"] -
+                            $centavos
+                        ) / 100,
+                        2, ".", ""
+                    )
+                ]
+            ];
+
+        } catch (InvalidArgumentException $e) {
+            if ($transaccion) {
+                $this->conn->rollback();
+            }
+
+            return [
+                "status" => "warning",
+                "code" => 400,
+                "answer" => $e->getMessage()
+            ];
+
+        } catch (Throwable $e) {
+            if ($transaccion) {
+                $this->conn->rollback();
+            }
+
+            return [
+                "status" => "error",
+                "code" => 500,
+                "answer" => "No se pudo confirmar el abono global. " .
+                    "Reintenta con el mismo identificador " .
+                    "para evitar duplicados."
+            ];
+        }
+    }
+
+
+
     public function getPersonasCuentas($data = []) {
         if (!$this->conn) {
             return [
