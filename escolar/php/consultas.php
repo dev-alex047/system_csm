@@ -3012,9 +3012,6 @@ public function guardarCalificacionesActividades($data) {
     $stmt->close();
 
 
-    /*
-     * Validar maestro sólo si fue enviado.
-     */
     if ($maestro_id > 0) {
 
         $sql = "SELECT id
@@ -3070,11 +3067,6 @@ public function guardarCalificacionesActividades($data) {
         $stmt->close();
     }
 
-
-    /*
-     * Obtener las actividades válidas
-     * del criterio/grupo/periodo.
-     */
     $actividadesValidas = [];
 
     $sql = "SELECT id
@@ -3539,7 +3531,7 @@ public function getCalificaciones($data) {
                     $valido = false;
                 }
             } else {
-                error_log("getCalificaciones asignatura execute: " . $stmt->error);
+
 
                 $json["status"] = "error";
                 $json["answer"] = "No fue posible validar la asignatura";
@@ -3549,7 +3541,7 @@ public function getCalificaciones($data) {
 
             $stmt->close();
         } else {
-            error_log("getCalificaciones asignatura prepare: " . $this->conn->error);
+            
 
             $json["status"] = "error";
             $json["answer"] = "Error en la validación de la asignatura";

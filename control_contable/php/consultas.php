@@ -7596,8 +7596,6 @@ public function guardarValeMaterial(array $data = []): array {
     return $json;
 }
 
-
-
 public function confirmarValeMaterial(array $data = []): array {
     $json = [];
     $bloqueo = null;
@@ -7880,6 +7878,1140 @@ public function anularValeMaterial(array $data = []): array {
     }
 
     return $json;
+}
+
+
+private function datoEnteroTasa(
+    array $data,
+    string $campo,
+    int $defecto,
+    int $minimo,
+    int $maximo
+): int {
+    $valor = $data[$campo] ?? $defecto;
+
+    if (
+        !is_scalar($valor) ||
+        !preg_match('/^\d+$/D', trim((string)$valor))
+    ) {
+        throw new InvalidArgumentException(
+            'Valor inválido: ' . $campo . '.'
+        );
+    }
+
+    $numero = filter_var(
+        trim((string)$valor),
+        FILTER_VALIDATE_INT
+    );
+
+    if (
+        $numero === false ||
+        $numero < $minimo ||
+        $numero > $maximo
+    ) {
+        throw new InvalidArgumentException(
+            'El campo ' . $campo . ' está fuera de rango.'
+        );
+    }
+
+    return (int)$numero;
+}
+
+
+private function datoDecimalTasa(
+    array $data,
+    string $campo,
+    string $defecto,
+    int $escala,
+    float $maximo
+): string {
+    $valor = $data[$campo] ?? $defecto;
+
+    if (!is_scalar($valor)) {
+        throw new InvalidArgumentException(
+            'Valor inválido: ' . $campo . '.'
+        );
+    }
+
+    $texto = trim((string)$valor);
+
+    if (
+        !preg_match(
+            '/^\d{1,11}(?:\.\d{1,' . $escala . '})?$/D',
+            $texto
+        ) ||
+        (float)$texto > $maximo
+    ) {
+        throw new InvalidArgumentException(
+            'Importe o porcentaje inválido: ' . $campo . '.'
+        );
+    }
+
+    return number_format(
+        (float)$texto,
+        $escala,
+        '.',
+        ''
+    );
+}
+
+
+private function datoEnumTasa(
+    array $data,
+    string $campo,
+    ?string $defecto,
+    array $permitidos
+): ?string {
+    $valor = $data[$campo] ?? $defecto;
+
+    if ($valor === null || $valor === '') {
+        return $defecto;
+    }
+
+    if (!is_string($valor)) {
+        throw new InvalidArgumentException(
+            'Valor inválido: ' . $campo . '.'
+        );
+    }
+
+    $valor = strtoupper(trim($valor));
+
+    if (!in_array($valor, $permitidos, true)) {
+        throw new InvalidArgumentException(
+            'Opción inválida: ' . $campo . '.'
+        );
+    }
+
+    return $valor;
+}
+
+
+private function datoFechaTasa(
+    array $data,
+    string $campo
+): ?string {
+    $valor = $data[$campo] ?? '';
+
+    if ($valor === null || $valor === '') {
+        return null;
+    }
+
+    if (!is_string($valor)) {
+        throw new InvalidArgumentException(
+            'Fecha inválida: ' . $campo . '.'
+        );
+    }
+
+    $fecha = DateTime::createFromFormat(
+        '!Y-m-d',
+        trim($valor)
+    );
+
+    if (
+        !$fecha ||
+        $fecha->format('Y-m-d') !== trim($valor)
+    ) {
+        throw new InvalidArgumentException(
+            'Fecha inválida: ' . $campo . '.'
+        );
+    }
+
+    return trim($valor);
+}
+
+
+private function normalizarTasaFinanciamiento(
+    array $data,
+    string $corp
+): array {
+    $v = [];
+
+    $decimales = [
+        'monto_limite_inferior' => ['0', 2, 99999999.99],
+        'monto_limite_superior' => ['0', 2, 99999999.99],
+        'tasa_interes' => ['0', 4, 1000],
+        'tasa_interes_moratorio' => ['0', 4, 1000],
+        'comision_apertura' => ['0', 4, 99999999.99],
+        'porcentaje_capital_inicial' => ['0', 4, 100],
+        'porcentaje_capital_final' => ['0', 4, 100],
+        'porcentaje_pago_inicial' => ['0', 4, 100],
+        'bono_apertura' => ['0', 4, 99999999.99],
+        'bono_pago_puntual' => ['0', 4, 99999999.99],
+        'bono_pago_normal' => ['0', 4, 99999999.99]
+    ];
+
+    foreach ($decimales as $campo => $regla) {
+        $v[$campo] = $this->datoDecimalTasa(
+            $data,
+            $campo,
+            $regla[0],
+            $regla[1],
+            $regla[2]
+        );
+    }
+
+    if (
+        (float)$v['monto_limite_inferior'] <= 0 ||
+        (float)$v['monto_limite_superior'] <
+        (float)$v['monto_limite_inferior']
+    ) {
+        throw new InvalidArgumentException(
+            'El rango de montos no es válido.'
+        );
+    }
+
+    $enteros = [
+        'numero_pagos' => [1, 1, 1000],
+        'numero_dias' => [0, 0, 3650],
+        'cuotas_gracia' => [0, 0, 1000],
+        'renovacion_numero_pagos' => [0, 0, 1000],
+        'ciclos_limite_inferior' => [0, 0, 999999],
+        'ciclos_limite_superior' => [99999, 0, 999999],
+        'semaforo_amarillo_mora' => [3, 0, 1000],
+        'requiere_aval' => [0, 0, 1],
+        'requiere_beneficiario' => [0, 0, 1],
+        'aplica_todos_grupos' => [1, 0, 1],
+        'permite_creditos_activos' => [1, 0, 1],
+        'activo' => [1, 0, 1]
+    ];
+
+    foreach ($enteros as $campo => $regla) {
+        $v[$campo] = $this->datoEnteroTasa(
+            $data,
+            $campo,
+            $regla[0],
+            $regla[1],
+            $regla[2]
+        );
+    }
+
+    if (
+        $v['cuotas_gracia'] >= $v['numero_pagos'] ||
+        $v['renovacion_numero_pagos'] > $v['numero_pagos']
+    ) {
+        throw new InvalidArgumentException(
+            'Revisa el número de pagos, gracia y renovación.'
+        );
+    }
+
+    if (
+        $v['ciclos_limite_superior'] <
+        $v['ciclos_limite_inferior']
+    ) {
+        throw new InvalidArgumentException(
+            'El rango de ciclos no es válido.'
+        );
+    }
+
+    $opciones = [
+        'periodicidad_pago' => [
+            'MENSUAL',
+            [
+                'DIARIO', 'SEMANAL', 'CATORCENAL',
+                'QUINCENAL', 'MENSUAL', 'PERSONALIZADO'
+            ]
+        ],
+        'base_tasa_interes' => [
+            null,
+            ['TOTAL', 'ANUAL', 'MENSUAL', 'POR_PAGO']
+        ],
+        'base_tasa_moratoria' => [
+            null,
+            ['DIARIA', 'MENSUAL', 'ANUAL', 'POR_PAGO']
+        ],
+        'tipo_interes_moratorio' => [
+            'SIMPLE',
+            ['SIMPLE', 'COMPUESTO']
+        ],
+        'tipo_comision_apertura' => [
+            'MONTO',
+            ['MONTO', 'PORCENTAJE']
+        ],
+        'tipo_amortizacion' => [
+            'FLAT',
+            ['FLAT', 'AMERICANA', 'FRANCESA', 'DECRECIENTE']
+        ],
+        'tipo_bono_apertura' => [
+            'MONTO',
+            ['MONTO', 'PORCENTAJE']
+        ],
+        'tipo_bono_puntual' => [
+            'MONTO',
+            ['MONTO', 'PORCENTAJE']
+        ],
+        'tipo_bono_pago_normal' => [
+            'MONTO',
+            ['MONTO', 'PORCENTAJE']
+        ]
+    ];
+
+    foreach ($opciones as $campo => $regla) {
+        $v[$campo] = $this->datoEnumTasa(
+            $data,
+            $campo,
+            $regla[0],
+            $regla[1]
+        );
+    }
+
+    if (
+        $v['periodicidad_pago'] === 'PERSONALIZADO' &&
+        $v['numero_dias'] < 1
+    ) {
+        throw new InvalidArgumentException(
+            'Indica los días de la periodicidad personalizada.'
+        );
+    }
+
+    if (
+        $v['periodicidad_pago'] !== 'PERSONALIZADO' &&
+        $v['numero_dias'] !== 0
+    ) {
+        throw new InvalidArgumentException(
+            'Los días personalizados solo aplican a ' .
+            'periodicidad personalizada.'
+        );
+    }
+
+    if (
+        (float)$v['tasa_interes'] > 0 &&
+        $v['base_tasa_interes'] === null
+    ) {
+        throw new InvalidArgumentException(
+            'Selecciona la base del interés ordinario.'
+        );
+    }
+
+    if (
+        (float)$v['tasa_interes_moratorio'] > 0 &&
+        $v['base_tasa_moratoria'] === null
+    ) {
+        throw new InvalidArgumentException(
+            'Selecciona la base del interés moratorio.'
+        );
+    }
+
+    $tiposImportes = [
+        'comision_apertura' => 'tipo_comision_apertura',
+        'bono_apertura' => 'tipo_bono_apertura',
+        'bono_pago_puntual' => 'tipo_bono_puntual',
+        'bono_pago_normal' => 'tipo_bono_pago_normal'
+    ];
+
+    foreach ($tiposImportes as $importe => $tipo) {
+        if (
+            $v[$tipo] === 'PORCENTAJE' &&
+            (float)$v[$importe] > 100
+        ) {
+            throw new InvalidArgumentException(
+                'El porcentaje de ' . $importe . ' supera el 100%.'
+            );
+        }
+    }
+
+    // Un grupo concreto o todos los grupos.
+    $v['grupo_cliente_id'] = null;
+
+    if ($v['aplica_todos_grupos'] === 0) {
+        $idGrupo = $this->datoEnteroTasa(
+            $data,
+            'grupo_cliente_id',
+            0,
+            1,
+            2147483647
+        );
+
+        $stmt = $this->ejecutarSqlVenta(
+            "SELECT id
+             FROM clientes_grupos
+             WHERE corp_id = ?
+               AND id = ?
+               AND eliminado = 0
+             LIMIT 1",
+            "si",
+            [$corp, $idGrupo]
+        );
+
+        $grupo = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$grupo) {
+            throw new InvalidArgumentException(
+                'El grupo de clientes no existe o fue eliminado.'
+            );
+        }
+
+        $v['grupo_cliente_id'] = $idGrupo;
+    }
+
+    $v['vigente_desde'] = $this->datoFechaTasa(
+        $data,
+        'vigente_desde'
+    );
+
+    $v['vigente_hasta'] = $this->datoFechaTasa(
+        $data,
+        'vigente_hasta'
+    );
+
+    if (
+        $v['vigente_desde'] !== null &&
+        $v['vigente_hasta'] !== null &&
+        $v['vigente_desde'] > $v['vigente_hasta']
+    ) {
+        throw new InvalidArgumentException(
+            'La fecha de vigencia inicial supera la final.'
+        );
+    }
+
+    $v['titulo_contrato'] = $this->textoVenta(
+        $data,
+        'titulo_contrato',
+        255
+    );
+
+    if ($v['titulo_contrato'] === '') {
+        $v['titulo_contrato'] = null;
+    }
+
+    $contrato = $data['contrato_perfil'] ?? '';
+
+    if (
+        !is_string($contrato) ||
+        strlen($contrato) > 100000 ||
+        strpos($contrato, "\0") !== false
+    ) {
+        throw new InvalidArgumentException(
+            'El texto del contrato no es válido o supera 100 KB.'
+        );
+    }
+
+    $v['contrato_perfil'] = trim($contrato) === ''
+        ? null
+        : trim($contrato);
+
+    // Nombre automático si no se recibe uno.
+    $nombre = $this->textoVenta(
+        $data,
+        'nombre',
+        255
+    );
+
+    if ($nombre === '') {
+        $periodos = [
+            'DIARIO' => 'días',
+            'SEMANAL' => 'semanas',
+            'CATORCENAL' => 'catorcenas',
+            'QUINCENAL' => 'quincenas',
+            'MENSUAL' => 'meses'
+        ];
+
+        if ($v['periodicidad_pago'] === 'PERSONALIZADO') {
+            $plazo = $v['numero_pagos'] === 1
+                ? 'a ' . $v['numero_dias'] . ' días'
+                : 'en ' . $v['numero_pagos'] .
+                  ' pagos cada ' . $v['numero_dias'] . ' días';
+        } else {
+            $plazo = 'en ' . $v['numero_pagos'] . ' ' .
+                $periodos[$v['periodicidad_pago']];
+        }
+
+        $interes = (float)$v['tasa_interes'] > 0
+            ? 'al ' .
+              rtrim(rtrim($v['tasa_interes'], '0'), '.') .
+              '% de interés (' . $v['base_tasa_interes'] . ')'
+            : 'sin intereses';
+
+        $nombre =
+            '$' . number_format(
+                (float)$v['monto_limite_inferior'],
+                2, '.', ','
+            ) .
+            ' a $' . number_format(
+                (float)$v['monto_limite_superior'],
+                2, '.', ','
+            ) .
+            ' ' . $plazo .
+            ' ' . $interes .
+            ' | ' .
+            ucfirst(strtolower($v['tipo_amortizacion']));
+
+        if (strlen($nombre) > 255) {
+            throw new InvalidArgumentException(
+                'El nombre generado supera 255 caracteres.'
+            );
+        }
+    }
+
+    $v['nombre'] = $nombre;
+
+    return $v;
+}
+
+
+
+public function getTasasFinanciamiento(array $data = []): array {
+    try {
+        if (!$this->conn) {
+            throw new RuntimeException('Sin conexión.');
+        }
+
+        $this->exigirAdminClientes();
+        $corp = $this->corpClientes();
+
+        $id = $this->datoEnteroTasa(
+            $data, 'id', 0, 0, PHP_INT_MAX
+        );
+
+        // Consulta individual para editar.
+        if ($id > 0) {
+            $stmt = $this->ejecutarSqlVenta(
+                "SELECT *
+                 FROM tasas_financiamiento
+                 WHERE corp_id = ?
+                   AND id = ?
+                   AND eliminado = 0
+                 LIMIT 1",
+                "si",
+                [$corp, $id]
+            );
+
+            $tasa = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if (!$tasa) {
+                throw new OutOfBoundsException(
+                    'La tasa no existe o fue eliminada.'
+                );
+            }
+
+            return [
+                'status' => 'ok',
+                'code' => 200,
+                'answer' => 'Tasa consultada.',
+                'results' => [
+                    'tasa' => $tasa
+                ]
+            ];
+        }
+
+        $buscar = $this->textoVenta(
+            $data, 'buscar', 100
+        );
+
+        $filtroActivo = $this->datoEnumTasa(
+            $data,
+            'filtro_activo',
+            'TODOS',
+            ['TODOS', 'ACTIVOS', 'INACTIVOS']
+        );
+
+        $pagina = $this->datoEnteroTasa(
+            $data, 'pagina', 1, 1, 100000
+        );
+
+        $limite = 12;
+
+        $where = " WHERE corp_id = ?
+                   AND eliminado = 0";
+
+        $tipos = "s";
+        $params = [$corp];
+
+        if ($filtroActivo !== 'TODOS') {
+            $where .= " AND activo = ?";
+            $tipos .= "i";
+            $params[] = $filtroActivo === 'ACTIVOS' ? 1 : 0;
+        }
+
+        if ($buscar !== '') {
+            $patron = '%' . str_replace(
+                ['!', '%', '_'],
+                ['!!', '!%', '!_'],
+                $buscar
+            ) . '%';
+
+            $where .= " AND nombre LIKE ? ESCAPE '!'";
+            $tipos .= "s";
+            $params[] = $patron;
+        }
+
+        $stmt = $this->ejecutarSqlVenta(
+            "SELECT COUNT(*) AS total
+             FROM tasas_financiamiento" . $where,
+            $tipos,
+            $params
+        );
+
+        $total = (int)$stmt->get_result()
+            ->fetch_assoc()['total'];
+
+        $stmt->close();
+
+        $paginas = max(
+            1,
+            (int)ceil($total / $limite)
+        );
+
+        $pagina = min($pagina, $paginas);
+        $offset = ($pagina - 1) * $limite;
+
+        $stmt = $this->ejecutarSqlVenta(
+            "SELECT
+                id,
+                nombre,
+                monto_limite_inferior,
+                monto_limite_superior,
+                numero_pagos,
+                periodicidad_pago,
+                numero_dias,
+                tasa_interes,
+                base_tasa_interes,
+                tipo_amortizacion,
+
+                requiere_aval,
+                requiere_beneficiario,
+                tipo_comision_apertura,
+                comision_apertura,
+                tipo_bono_apertura,
+                bono_apertura,
+                tipo_bono_puntual,
+                bono_pago_puntual,
+                tipo_bono_pago_normal,
+                bono_pago_normal,
+                semaforo_amarillo_mora,
+
+                grupo_cliente_id,
+                aplica_todos_grupos,
+                activo,
+                vigente_desde,
+                vigente_hasta,
+                fecha_alta,
+                fecha_actualizacion
+             FROM tasas_financiamiento" .
+             $where .
+             " ORDER BY id DESC
+               LIMIT ? OFFSET ?",
+            $tipos . "ii",
+            array_merge(
+                $params,
+                [$limite, $offset]
+            )
+        );
+
+        $tasas = $stmt->get_result()
+            ->fetch_all(MYSQLI_ASSOC);
+
+        $stmt->close();
+
+        return [
+            'status' => 'ok',
+            'code' => 200,
+            'answer' => 'Tasas consultadas.',
+            'results' => [
+                'tasas' => $tasas,
+                'total' => $total,
+                'pagina' => $pagina,
+                'paginas' => $paginas
+            ]
+        ];
+
+    } catch (DomainException $e) {
+        return [
+            'status' => 'warning',
+            'code' => 403,
+            'answer' => $e->getMessage()
+        ];
+    } catch (OutOfBoundsException $e) {
+        return [
+            'status' => 'warning',
+            'code' => 404,
+            'answer' => $e->getMessage()
+        ];
+    } catch (InvalidArgumentException $e) {
+        return [
+            'status' => 'warning',
+            'code' => 400,
+            'answer' => $e->getMessage()
+        ];
+    } catch (Throwable $e) {
+        return [
+            'status' => 'error',
+            'code' => 500,
+            'answer' => 'No fue posible consultar las tasas.'
+        ];
+    }
+}
+
+
+
+public function guardarTasaFinanciamiento(
+    array $data = []
+): array {
+    $lockAdquirido = false;
+    $lockNombre = '';
+
+    try {
+        if (!$this->conn) {
+            throw new RuntimeException('Sin conexión.');
+        }
+
+        $this->exigirAdminClientes();
+
+        $corp = $this->corpClientes();
+
+        $id = $this->datoEnteroTasa(
+            $data,
+            'id',
+            0,
+            0,
+            PHP_INT_MAX
+        );
+
+        $valores = $this->normalizarTasaFinanciamiento(
+            $data,
+            $corp
+        );
+
+        $token = '';
+
+        if ($id === 0) {
+            $token = $this->textoVenta(
+                $data,
+                'solicitud_id',
+                32
+            );
+
+            if (!preg_match('/^[a-f0-9]{32}$/D', $token)) {
+                throw new InvalidArgumentException(
+                    'Identificador de solicitud inválido.'
+                );
+            }
+        }
+
+        // Evitar creaciones simultáneas desde la aplicación.
+        $lockNombre = 'csm_tasa_' . sha1($corp);
+
+        $stmt = $this->ejecutarSqlVenta(
+            "SELECT GET_LOCK(?, 5) AS adquirido",
+            "s",
+            [$lockNombre]
+        );
+
+        $adquirido = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (
+            !$adquirido ||
+            (int)$adquirido['adquirido'] !== 1
+        ) {
+            throw new RuntimeException(
+                'No fue posible bloquear el catálogo de tasas.'
+            );
+        }
+
+        $lockAdquirido = true;
+
+        if ($id === 0) {
+            // Una misma solicitud no crea dos tasas.
+            $stmt = $this->ejecutarSqlVenta(
+                "SELECT id
+                 FROM tasas_financiamiento
+                 WHERE corp_id = ?
+                   AND request_token = ?
+                 LIMIT 1",
+                "ss",
+                [$corp, $token]
+            );
+
+            $anterior = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if ($anterior) {
+                return [
+                    'status' => 'warning',
+                    'code' => 409,
+                    'answer' => 'Esta solicitud ya creó una tasa; no se duplicó.',
+                    'results' => [
+                        'id' => (int)$anterior['id'],
+                        'duplicada' => true
+                    ]
+                ];
+            }
+        } else {
+            // Comprobar que la tasa existe y sigue disponible.
+            $stmt = $this->ejecutarSqlVenta(
+                "SELECT fecha_actualizacion
+                 FROM tasas_financiamiento
+                 WHERE corp_id = ?
+                   AND id = ?
+                   AND eliminado = 0
+                 LIMIT 1",
+                "si",
+                [$corp, $id]
+            );
+
+            $anterior = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if (!$anterior) {
+                throw new OutOfBoundsException(
+                    'La tasa no existe o fue eliminada.'
+                );
+            }
+
+            // Evitar guardar un formulario desactualizado.
+            $version = $this->textoVenta(
+                $data,
+                'version',
+                19
+            );
+
+            if (
+                $version === '' ||
+                $version !== (string)$anterior['fecha_actualizacion']
+            ) {
+                return [
+                    'status' => 'warning',
+                    'code' => 409,
+                    'answer' =>
+                        'La tasa cambió o el formulario está ' .
+                        'desactualizado. Vuelve a consultarla.'
+                ];
+            }
+        }
+
+        // No repetir nombres dentro del mismo corporativo.
+        $stmt = $this->ejecutarSqlVenta(
+            "SELECT id
+             FROM tasas_financiamiento
+             WHERE corp_id = ?
+               AND nombre = ?
+               AND eliminado = 0
+               AND id <> ?
+             LIMIT 1",
+            "ssi",
+            [$corp, $valores['nombre'], $id]
+        );
+
+        $nombreExiste = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if ($nombreExiste) {
+            return [
+                'status' => 'warning',
+                'code' => 409,
+                'answer' => 'Ya existe una tasa con ese nombre.'
+            ];
+        }
+
+        $columnas = array_keys($valores);
+        $params = array_values($valores);
+
+        if ($id === 0) {
+            // Crear una sola fila en MyISAM.
+            $cols =
+                '`corp_id`,`request_token`,' .
+                '`creado_por`,`actualizado_por`,`' .
+                implode('`,`', $columnas) . '`';
+
+            $sql = 'INSERT INTO tasas_financiamiento (' .
+                $cols . ') VALUES (' .
+                implode(
+                    ',',
+                    array_fill(
+                        0,
+                        count($columnas) + 4,
+                        '?'
+                    )
+                ) . ')';
+
+            $stmt = $this->ejecutarSqlVenta(
+                $sql,
+                'ssii' . str_repeat('s', count($columnas)),
+                array_merge(
+                    [
+                        $corp,
+                        $token,
+                        $this->usuarioOperador,
+                        $this->usuarioOperador
+                    ],
+                    $params
+                )
+            );
+
+            $stmt->close();
+
+            $id = (int)$this->conn->insert_id;
+
+            $mensaje =
+                'Tasa de financiamiento creada correctamente.';
+
+        } else {
+            // Editar únicamente columnas autorizadas.
+            $asignaciones = [];
+
+            foreach ($columnas as $columna) {
+                $asignaciones[] = '`' . $columna . '`=?';
+            }
+
+            $sql =
+                'UPDATE tasas_financiamiento SET ' .
+                implode(',', $asignaciones) .
+                ', actualizado_por=?, fecha_actualizacion=NOW()
+                 WHERE corp_id=?
+                   AND id=?
+                   AND eliminado=0
+                   AND fecha_actualizacion=?';
+
+            $stmt = $this->ejecutarSqlVenta(
+                $sql,
+                str_repeat('s', count($columnas)) . 'isis',
+                array_merge(
+                    $params,
+                    [
+                        $this->usuarioOperador,
+                        $corp,
+                        $id,
+                        $version
+                    ]
+                )
+            );
+
+            $stmt->close();
+
+            $mensaje =
+                'Tasa de financiamiento actualizada correctamente.';
+        }
+
+        return [
+            'status' => 'ok',
+            'code' => 200,
+            'answer' => $mensaje,
+            'results' => [
+                'id' => $id
+            ]
+        ];
+
+    } catch (DomainException $e) {
+        return [
+            'status' => 'warning',
+            'code' => 403,
+            'answer' => $e->getMessage()
+        ];
+    } catch (OutOfBoundsException $e) {
+        return [
+            'status' => 'warning',
+            'code' => 404,
+            'answer' => $e->getMessage()
+        ];
+    } catch (InvalidArgumentException $e) {
+        return [
+            'status' => 'warning',
+            'code' => 400,
+            'answer' => $e->getMessage()
+        ];
+    } catch (Throwable $e) {
+        if ((int)$e->getCode() === 1062) {
+            return [
+                'status' => 'warning',
+                'code' => 409,
+                'answer' =>
+                    'Identificador o nombre duplicado. ' .
+                    'Consulta el catálogo.'
+            ];
+        }
+
+        return [
+            'status' => 'error',
+            'code' => 500,
+            'answer' => 'No fue posible guardar la tasa.'
+        ];
+
+    } finally {
+        // Liberar el bloqueo incluso si hubo un error.
+        if ($lockAdquirido && $this->conn) {
+            try {
+                $stmt = $this->ejecutarSqlVenta(
+                    "SELECT RELEASE_LOCK(?)",
+                    "s",
+                    [$lockNombre]
+                );
+
+                $stmt->close();
+
+            } catch (Throwable $ignorado) {
+            }
+        }
+    }
+}
+
+
+
+public function cambiarEstadoTasaFinanciamiento(
+    array $data = []
+): array {
+    try {
+        if (!$this->conn) {
+            throw new RuntimeException('Sin conexión.');
+        }
+
+        $this->exigirAdminClientes();
+
+        $id = $this->datoEnteroTasa(
+            $data, 'id', 0, 1, PHP_INT_MAX
+        );
+
+        $activo = $this->datoEnteroTasa(
+            $data, 'activo', -1, 0, 1
+        );
+
+        $stmt = $this->ejecutarSqlVenta(
+            "UPDATE tasas_financiamiento
+             SET activo = ?,
+                 actualizado_por = ?,
+                 fecha_actualizacion = NOW()
+             WHERE corp_id = ?
+               AND id = ?
+               AND eliminado = 0
+               AND activo <> ?",
+            "iisii",
+            [
+                $activo,
+                $this->usuarioOperador,
+                $this->corpClientes(),
+                $id,
+                $activo
+            ]
+        );
+
+        $afectadas = $stmt->affected_rows;
+        $stmt->close();
+
+        if ($afectadas !== 1) {
+            return [
+                'status' => 'warning',
+                'code' => 409,
+                'answer' =>
+                    'La tasa no existe, fue eliminada ' .
+                    'o ya tiene ese estado.'
+            ];
+        }
+
+        return [
+            'status' => 'ok',
+            'code' => 200,
+            'answer' => $activo
+                ? 'Tasa activada.'
+                : 'Tasa desactivada.',
+            'results' => [
+                'id' => $id,
+                'activo' => $activo
+            ]
+        ];
+
+    } catch (DomainException $e) {
+        return [
+            'status' => 'warning',
+            'code' => 403,
+            'answer' => $e->getMessage()
+        ];
+
+    } catch (InvalidArgumentException $e) {
+        return [
+            'status' => 'warning',
+            'code' => 400,
+            'answer' => $e->getMessage()
+        ];
+
+    } catch (Throwable $e) {
+        return [
+            'status' => 'error',
+            'code' => 500,
+            'answer' =>
+                'No fue posible cambiar el estado de la tasa.'
+        ];
+    }
+}
+
+
+
+public function eliminarTasaFinanciamiento(
+    array $data = []
+): array {
+    try {
+        if (!$this->conn) {
+            throw new RuntimeException('Sin conexión.');
+        }
+
+        $this->exigirAdminClientes();
+
+        $id = $this->datoEnteroTasa(
+            $data, 'id', 0, 1, PHP_INT_MAX
+        );
+
+        $stmt = $this->ejecutarSqlVenta(
+            "UPDATE tasas_financiamiento
+             SET eliminado = 1,
+                 activo = 0,
+                 eliminado_por = ?,
+                 fecha_eliminacion = NOW(),
+                 actualizado_por = ?,
+                 fecha_actualizacion = NOW()
+             WHERE corp_id = ?
+               AND id = ?
+               AND eliminado = 0",
+            "iisi",
+            [
+                $this->usuarioOperador,
+                $this->usuarioOperador,
+                $this->corpClientes(),
+                $id
+            ]
+        );
+
+        $afectadas = $stmt->affected_rows;
+        $stmt->close();
+
+        if ($afectadas !== 1) {
+            return [
+                'status' => 'warning',
+                'code' => 404,
+                'answer' => 'La tasa ya no está disponible.'
+            ];
+        }
+
+        return [
+            'status' => 'ok',
+            'code' => 200,
+            'answer' => 'Tasa eliminada lógicamente.',
+            'results' => [
+                'id' => $id,
+                'eliminado' => 1
+            ]
+        ];
+
+    } catch (DomainException $e) {
+        return [
+            'status' => 'warning',
+            'code' => 403,
+            'answer' => $e->getMessage()
+        ];
+
+    } catch (InvalidArgumentException $e) {
+        return [
+            'status' => 'warning',
+            'code' => 400,
+            'answer' => $e->getMessage()
+        ];
+
+    } catch (Throwable $e) {
+        return [
+            'status' => 'error',
+            'code' => 500,
+            'answer' => 'No fue posible eliminar la tasa.'
+        ];
+    }
 }
 
 

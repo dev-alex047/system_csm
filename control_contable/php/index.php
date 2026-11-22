@@ -3,6 +3,7 @@
 date_default_timezone_set('America/Mexico_City');
 //define("DEBUG_NOTA_PDF", true);
 define("DEBUG_NOTA_PDF", false);
+
 header("Content-Type: application/json; charset=utf-8");
 
 ini_set('display_errors', 0);
@@ -164,6 +165,22 @@ switch ($action) {
 
     case "guardarCatalogoCliente":
         $response = $consultas->guardarCatalogoCliente($_POST);
+        break;
+
+        case "getTasasFinanciamiento":
+        $response = $consultas->getTasasFinanciamiento($_POST);
+        break;
+
+    case "guardarTasaFinanciamiento":
+        $response = $consultas->guardarTasaFinanciamiento($_POST);
+        break;
+
+    case "cambiarEstadoTasaFinanciamiento":
+        $response = $consultas->cambiarEstadoTasaFinanciamiento($_POST);
+        break;
+
+    case "eliminarTasaFinanciamiento":
+        $response = $consultas->eliminarTasaFinanciamiento($_POST);
         break;
 
     case "getPaisesEstados":

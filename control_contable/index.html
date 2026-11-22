@@ -20,6 +20,7 @@
     <link href="css/app.css" rel="stylesheet">
     <link href="css/costeo.css" rel="stylesheet">
     <link href="css/colaboradores.css" rel="stylesheet">
+    <link href="css/tasas_financiamiento.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body>
@@ -83,6 +84,12 @@
     <span>Clientes y prospectos</span>
 </button>
 
+<button type="button"
+        class="dropdown-item menu-config-item d-none"
+        id="btnTasasFinanciamiento">
+    <i class="bi bi-cash-coin"></i>
+    <span>Tasas de financiamiento</span>
+</button>
 
 <button type="button"
         class="dropdown-item menu-config-item d-none"
@@ -1833,6 +1840,251 @@ autocomplete="off" required>
 </div>
 
 
+<!-- VALES DE CARGA Y DESCARGA -->
+<div class="modal fade vm-modal" id="vmModal" tabindex="-1"
+     aria-labelledby="vmTitulo" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down">
+        <div class="modal-content">
+            <div class="modal-header vm-encabezado">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="vm-icono">
+                        <i class="bi bi-truck"></i>
+                    </span>
+                    <div>
+                        <h2 class="modal-title h5 fw-bold mb-1" id="vmTitulo">
+                            Carga y descarga
+                        </h2>
+                        <div class="small text-secondary">
+                            <span id="vmNotaFolio">Consultando nota...</span>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close"
+                        data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <div class="modal-body vm-cuerpo">
+                <div id="vmCargando" class="text-center py-5" role="status">
+                    <div class="spinner-border text-success mb-3"></div>
+                    <p class="text-secondary mb-0">
+                        Consultando material y asignaciones...
+                    </p>
+                </div>
+
+                <div id="vmErrorConsulta" class="d-none text-center py-5">
+                    <i class="bi bi-exclamation-triangle fs-2 text-danger"></i>
+                    <h3 class="h6 mt-3">No se pudieron consultar los vales</h3>
+                    <p id="vmErrorTexto" class="text-secondary"></p>
+                    <button type="button" id="vmReintentar"
+                            class="btn btn-outline-success">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Reintentar
+                    </button>
+                </div>
+
+                <div id="vmContenido" class="d-none">
+                    <section class="vm-bloque mb-3">
+                        <div class="d-flex flex-wrap justify-content-between
+                                    align-items-center gap-2 mb-3">
+                            <div>
+                                <small class="text-secondary d-block">
+                                    CLIENTE DE LA NOTA
+                                </small>
+                                <strong id="vmClienteNota">—</strong>
+                            </div>
+                            <span class="vm-conteo" id="vmResumenVales">
+                                0 cargas · 0 descargas
+                            </span>
+                        </div>
+
+                        <h3 class="h6 fw-bold mb-2">
+                            Material vendido y disponible
+                        </h3>
+                        <div id="vmResumenArticulos"
+                             class="vm-grid-articulos"></div>
+                    </section>
+
+                    <!-- LISTADO DE VALES -->
+                    <section id="vmListadoPanel" class="vm-bloque">
+                        <div class="d-flex justify-content-between
+                                    align-items-center gap-3 flex-wrap mb-3">
+                            <div>
+                                <h3 class="h6 fw-bold mb-1">
+                                    Asignaciones de trabajo
+                                </h3>
+                                <p class="small text-secondary mb-0">
+                                    Primero asigna una carga; después puedes
+                                    distribuirla en descargas.
+                                </p>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2">
+                                <button type="button" class="btn btn-success"
+                                        id="vmNuevaCarga">
+                                    <i class="bi bi-plus-lg me-1"></i>Nueva carga
+                                </button>
+                                <button type="button"
+                                        class="btn btn-outline-success"
+                                        id="vmNuevaDescarga">
+                                    <i class="bi bi-box-arrow-down me-1"></i>
+                                    Nueva descarga
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-warning small d-none"
+                             id="vmSinColaboradores">
+                            <i class="bi bi-person-exclamation me-1"></i>
+                            No hay colaboradores activos. Registra uno en
+                            Configuración → Colaboradores.
+                        </div>
+
+                        <div id="vmListaVales" aria-live="polite"></div>
+                    </section>
+
+                    <!-- FORMULARIO -->
+                    <section id="vmFormularioPanel" class="vm-bloque d-none">
+                        <div class="d-flex justify-content-between
+                                    align-items-start gap-2 mb-3">
+                            <div>
+                                <h3 class="h5 fw-bold mb-1" id="vmFormTitulo">
+                                    Nueva carga
+                                </h3>
+                                <p class="text-secondary small mb-0"
+                                   id="vmFormDescripcion"></p>
+                            </div>
+                            <button type="button"
+                                    class="btn btn-outline-secondary btn-sm"
+                                    id="vmVolver">
+                                <i class="bi bi-arrow-left me-1"></i>Volver
+                            </button>
+                        </div>
+
+                        <form id="vmFormulario" novalidate>
+                            <div class="row g-3">
+                                <div class="col-md-6" id="vmCampoArticulo">
+                                    <label for="vmArticulo" class="form-label">
+                                        Artículo de la nota *
+                                    </label>
+                                    <select id="vmArticulo"
+                                            class="form-select"></select>
+                                </div>
+
+                                <div class="col-md-6 d-none" id="vmCampoCarga">
+                                    <label for="vmCarga" class="form-label">
+                                        Carga de origen *
+                                    </label>
+                                    <select id="vmCarga"
+                                            class="form-select"></select>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label for="vmColaborador" class="form-label">
+                                        Colaborador responsable *
+                                    </label>
+                                    <select id="vmColaborador"
+                                            class="form-select" required></select>
+                                </div>
+
+                                <div class="col-md-6" id="vmCampoVehiculo">
+                                    <label for="vmVehiculo" class="form-label">
+                                        Vehículo
+                                    </label>
+                                    <select id="vmVehiculo"
+                                            class="form-select"></select>
+                                    <div class="form-text">
+                                        La capacidad se muestra como referencia;
+                                        no se convierten automáticamente TON y M3.
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6 d-none" id="vmCampoCliente">
+                                    <label for="vmCliente" class="form-label">
+                                        Cliente que recibirá *
+                                    </label>
+                                    <select id="vmCliente"
+                                            class="form-select"></select>
+                                    <div class="form-text d-none" id="vmAvisoCliente">
+                                        Si necesitas otro destinatario, verifica
+                                        que el catálogo de clientes esté disponible.
+                                    </div>
+                                </div>
+
+                                <div class="col-12">
+                                    <div class="vm-disponible">
+                                        <strong id="vmProductoInfo">
+                                            Artículo seleccionado
+                                        </strong>
+                                        <span id="vmDisponibleInfo">
+                                            Disponible: —
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label for="vmCantidad" class="form-label"
+                                           id="vmCantidadLabel">
+                                        Cantidad *
+                                    </label>
+                                    <input id="vmCantidad" class="form-control"
+                                           type="number" min="0.0001"
+                                           step="0.0001" inputmode="decimal"
+                                           placeholder="0.0000" required>
+                                    <div class="form-text">
+                                        La cantidad debe ser mayor que cero
+                                        y no superar lo disponible.
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6" id="vmCampoEmbarque">
+                                    <label for="vmEmbarque" class="form-label">
+                                        Referencia de embarque (opcional)
+                                    </label>
+                                    <input id="vmEmbarque" class="form-control"
+                                           maxlength="40"
+                                           placeholder="Ej. CAM-001">
+                                    <div class="form-text">
+                                        Utiliza la misma referencia para cargas
+                                        que viajan juntas.
+                                    </div>
+                                </div>
+
+                                <div class="col-12">
+                                    <label for="vmIndicaciones" class="form-label">
+                                        Indicaciones para el trabajador
+                                    </label>
+                                    <textarea id="vmIndicaciones"
+                                              class="form-control"
+                                              rows="2" maxlength="500"
+                                              placeholder="Ej. Descargar el cemento al fondo de la obra"></textarea>
+                                </div>
+                            </div>
+
+                            <div class="vm-form-acciones mt-4">
+                                <button type="button"
+                                        class="btn btn-outline-secondary"
+                                        id="vmCancelar">
+                                    Cancelar
+                                </button>
+                                <button type="submit" id="vmGuardar"
+                                        class="btn btn-success px-4">
+                                    <i class="bi bi-check2-circle me-1"></i>
+                                    Guardar vale
+                                </button>
+                            </div>
+                        </form>
+                    </section>
+
+                    <p class="text-secondary small mt-3 mb-0 text-center">
+                        Imprimir un vale no confirma la operación
+                        ni modifica caja o inventario.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
 <!-- ========== LIBRERÍAS JAVASCRIPT ========== -->
 
 <!-- jQuery -->
@@ -1852,6 +2104,7 @@ autocomplete="off" required>
 <script src="js/app.js"></script>
 <script src="js/clientes.js"></script>
 <script src="js/colaboradores.js"></script>
+<script src="js/tasas_financimiento.js"></script>
 
 </body>
 </html>

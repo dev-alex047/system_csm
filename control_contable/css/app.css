@@ -295,3 +295,262 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
 #abonoModoNav .nav-link:not(.active):hover {
     background-color: #e4f0e9;
 }
+
+
+.vm-modal .modal-dialog {
+    max-width: 1180px;
+}
+
+.vm-modal .modal-content {
+    border: 0;
+    border-radius: 18px;
+    overflow: hidden;
+    background: #f5f8f6;
+}
+
+.vm-encabezado {
+    background: #fff;
+    padding: 20px 26px;
+    border-bottom: 1px solid #e2e9e5;
+}
+
+.vm-icono {
+    width: 48px;
+    height: 48px;
+    display: grid;
+    place-items: center;
+    border-radius: 14px;
+    background: #e6f5eb;
+    color: #087548;
+    font-size: 23px;
+    flex-shrink: 0;
+}
+
+.vm-cuerpo {
+    padding: 22px 26px;
+}
+
+.vm-bloque {
+    background: #fff;
+    border: 1px solid #e1e9e4;
+    border-radius: 15px;
+    padding: 22px;
+    box-shadow: 0 4px 12px rgba(18, 66, 44, .025);
+}
+
+.vm-conteo {
+    background: #f0f7f2;
+    color: #236348;
+    border: 1px solid #dceee3;
+    font-size: 12px;
+    padding: 7px 12px;
+    border-radius: 20px;
+    font-weight: 650;
+}
+
+.vm-grid-articulos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 10px;
+}
+
+.vm-articulo {
+    padding: 14px 15px;
+    border: 1px solid #e5ebe7;
+    border-radius: 12px;
+    min-width: 0;
+}
+
+.vm-articulo strong {
+    display: block;
+    font-size: 14px;
+    overflow-wrap: anywhere;
+}
+
+.vm-articulo small {
+    line-height: 1.7;
+}
+
+.vm-barra {
+    height: 5px;
+    border-radius: 8px;
+    background: #eaf1ec;
+    margin-top: 10px;
+    overflow: hidden;
+}
+
+.vm-barra span {
+    height: 100%;
+    display: block;
+    background: #15945d;
+    border-radius: 8px;
+}
+
+.vm-vacio {
+    border: 1px dashed #cbdcd1;
+    border-radius: 14px;
+    padding: 35px 20px;
+    text-align: center;
+    color: #66766c;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.vm-vacio i {
+    font-size: 30px;
+    color: #5c9c7b;
+}
+
+.vm-vacio strong {
+    font-size: 15px;
+    color: #253e32;
+}
+
+.vm-vale {
+    border: 1px solid #e1e8e3;
+    border-radius: 13px;
+    padding: 17px 18px;
+    margin-bottom: 11px;
+    background: #fff;
+}
+
+.vm-vale-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.vm-vale-head strong {
+    display: block;
+    font-size: 14px;
+    overflow-wrap: anywhere;
+}
+
+.vm-vale-detalle {
+    font-size: 13px;
+    color: #5f6b64;
+    margin-top: 10px;
+    overflow-wrap: anywhere;
+}
+
+.vm-indicaciones {
+    font-size: 12px;
+    color: #526258;
+    margin-top: 9px;
+    border-left: 3px solid #d2e5d9;
+    padding-left: 10px;
+}
+
+.vm-estado {
+    display: inline-flex;
+    flex-shrink: 0;
+    border-radius: 20px;
+    padding: 5px 9px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.vm-estado.pendiente {
+    background: #fff6e5;
+    color: #915c00;
+}
+
+.vm-estado.realizado {
+    background: #e4f5ec;
+    color: #116b41;
+}
+
+.vm-estado.anulado {
+    background: #f4f4f4;
+    color: #676767;
+}
+
+.vm-vale-acciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid #edf0ee;
+}
+
+.vm-vale-acciones .btn {
+    font-size: 12px;
+}
+
+.vm-disponible {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 13px 15px;
+    border-radius: 12px;
+    background: #eaf6ef;
+    color: #116e47;
+    border: 1px solid #cce9d8;
+}
+
+.vm-disponible strong {
+    font-size: 14px;
+    overflow-wrap: anywhere;
+}
+
+.vm-disponible span {
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.vm-form-acciones {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding-top: 16px;
+    border-top: 1px solid #edf0ee;
+}
+
+.vm-modal .form-label {
+    font-weight: 650;
+    font-size: 13px;
+}
+
+.vm-modal .form-control:focus,
+.vm-modal .form-select:focus {
+    border-color: #1b9b67;
+    box-shadow: 0 0 0 .2rem rgba(17, 135, 82, .12);
+}
+
+@media (max-width: 991px) {
+    .vm-modal .modal-dialog {
+        max-width: none;
+    }
+
+    .vm-modal .modal-content {
+        border-radius: 0;
+    }
+}
+
+@media (max-width: 575px) {
+    .vm-encabezado {
+        padding: 16px;
+    }
+
+    .vm-cuerpo {
+        padding: 14px;
+    }
+
+    .vm-bloque {
+        padding: 16px;
+    }
+
+    .vm-form-acciones .btn {
+        flex: 1;
+    }
+
+    .vm-vale-acciones .btn {
+        flex: 1 1 auto;
+    }
+}

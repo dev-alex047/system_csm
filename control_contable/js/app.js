@@ -69,9 +69,12 @@ $("#btnCatalogosCosteo").toggleClass("d-none", !window.CSM_ES_ADMIN);
 $("#btnClientes").toggleClass("d-none", !window.CSM_ES_ADMIN);
 $("#btnColaboradores").toggleClass("d-none", !window.CSM_ES_ADMIN);
 
+$("#btnTasasFinanciamiento").toggleClass(
+    "d-none",
+    !window.CSM_ES_ADMIN
+);
+
 window.CSM_NOMBRE_OPERADOR = data.results.nombre || data.results.username || "Usuario";
-
-
 
 const rolesMenu = {1:"ADMIN",2:"USER",3:"SALES"};
 const nombreUsuario = data.results.username || data.results.nombre || "Usuario";
@@ -106,6 +109,7 @@ $("#menuUsuarioActual").text(nombreUsuario + " · " + nombreRol);
         bindCuentas();
         bindCosteo();
         bindColaboradores();
+        bindValesMaterial();
         mostrarInicio();
 
         $("body").removeClass("csm-verificando");
@@ -3583,6 +3587,23 @@ $menu.append($('<li></li>').append(
         .attr("data-id", v.id)
 ));
 
+
+if (esNota && window.CSM_ES_ADMIN) {
+    $menu.append('<li><hr class="dropdown-divider"></li>');
+
+    $menu.append(
+        $('<li></li>').append(
+            $('<button type="button" class="dropdown-item js-vales-venta"></button>')
+                .attr("data-id", v.id)
+                .append(
+                    '<i class="bi bi-truck me-2 text-success"></i>',
+                    document.createTextNode("Vales de carga y descarga")
+                )
+        )
+    );
+}
+
+
     $acciones.append($('<div class="dropdown"></div>').append(
         $('<button class="ventas-accion-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Acciones</button>'),
         $menu
@@ -4058,4 +4079,1253 @@ function activarAutocompleteProducto(fila) {
             return false;
         }
     });
+}
+
+
+//vales material
+
+
+const vmEstado = {
+    version: 0,
+    ventaId: 0,
+    datos: null,
+    clientes: [],
+    tipo: "CARGA",
+    edicion: null,
+    solicitud: null,
+    operando: false
+};
+
+function bindValesMaterial() {
+    $(document).on("click", ".js-vales-venta", function() {
+        const id = Number($(this).attr("data-id"));
+
+        if (!window.CSM_ES_ADMIN ||
+            !Number.isSafeInteger(id) || id < 1) return;
+
+        abrirValesMaterial(id);
+    });
+
+    $("#vmModal").on("hidden.bs.modal", function() {
+        vmEstado.version++;
+        vmEstado.ventaId = 0;
+        vmEstado.datos = null;
+        vmEstado.clientes = [];
+        vmEstado.edicion = null;
+        vmEstado.operando = false;
+    });
+
+    $("#vmReintentar").on("click", function() {
+        if (vmEstado.ventaId) vmConsultar(vmEstado.version);
+    });
+
+    $("#vmNuevaCarga").on("click", function() {
+        vmAbrirFormulario("CARGA");
+    });
+
+    $("#vmNuevaDescarga").on("click", function() {
+        vmAbrirFormulario("DESCARGA");
+    });
+
+    $("#vmVolver, #vmCancelar").on("click", vmVolverListado);
+    $("#vmArticulo, #vmCarga").on("change", vmActualizarDisponible);
+
+    $("#vmFormulario").on("submit", function(e) {
+        e.preventDefault();
+        vmGuardar();
+    });
+
+    $(document).on("click", ".js-vm-editar", function() {
+        vmAbrirFormulario(null, Number($(this).attr("data-id")));
+    });
+
+    $(document).on("click", ".js-vm-confirmar", function() {
+        vmConfirmar(Number($(this).attr("data-id")));
+    });
+
+    $(document).on("click", ".js-vm-anular", function() {
+        vmAnular(Number($(this).attr("data-id")));
+    });
+
+    $(document).on("click", ".js-vm-imprimir", function() {
+        vmImprimir(Number($(this).attr("data-id")));
+    });
+}
+
+function vmEscala(valor) {
+    const t = String(valor ?? "").trim();
+
+    if (!/^\d{1,10}(?:\.\d{1,4})?$/.test(t)) {
+        return null;
+    }
+
+    const partes = t.split(".");
+    const n = Number(partes[0]) * 10000 +
+        Number((partes[1] || "").padEnd(4, "0"));
+
+    return Number.isSafeInteger(n) ? n : null;
+}
+
+function vmFormato(n) {
+    return (n / 10000).toLocaleString("es-MX", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 4
+    });
+}
+
+function vmError(xhr) {
+    const r = xhr && (xhr.responseJSON || xhr);
+
+    return r && r.answer
+        ? r.answer
+        : "No se pudo completar la operación. Intenta nuevamente.";
+}
+
+function abrirValesMaterial(ventaId) {
+    vmEstado.version++;
+    vmEstado.ventaId = ventaId;
+    vmEstado.datos = null;
+    vmEstado.clientes = [];
+    vmEstado.edicion = null;
+    vmEstado.operando = false;
+
+    $("#vmNotaFolio").text("Consultando nota...");
+    $("#vmResumenArticulos, #vmListaVales").empty();
+    $("#vmFormularioPanel").addClass("d-none");
+    $("#vmListadoPanel").removeClass("d-none");
+
+    bootstrap.Modal.getOrCreateInstance(
+        document.getElementById("vmModal")
+    ).show();
+
+    vmConsultar(vmEstado.version);
+    vmConsultarClientes(vmEstado.version);
+}
+
+function vmConsultar(version) {
+    $("#vmContenido, #vmErrorConsulta").addClass("d-none");
+    $("#vmCargando").removeClass("d-none");
+
+    $.ajax({
+        url: "php/index.php",
+        type: "POST",
+        dataType: "json",
+        data: {
+            action: "getPreparacionValesMaterial",
+            venta_id: vmEstado.ventaId
+        }
+    }).done(function(r) {
+        if (version !== vmEstado.version) return;
+
+        if (!r || r.status !== "ok" || !r.results) {
+            vmMostrarError(vmError(r));
+            return;
+        }
+
+        vmEstado.datos = r.results;
+
+        $("#vmNotaFolio").text(
+            r.results.venta.note_folio ||
+            ("Nota #" + vmEstado.ventaId)
+        );
+
+        $("#vmClienteNota").text(
+            r.results.venta.client_name || "Cliente sin nombre"
+        );
+
+        vmPintarResumen();
+        vmPintarListado();
+        vmVolverListado();
+
+        $("#vmCargando, #vmErrorConsulta").addClass("d-none");
+        $("#vmContenido").removeClass("d-none");
+
+    }).fail(function(xhr) {
+        if (version === vmEstado.version) {
+            vmMostrarError(vmError(xhr));
+        }
+    });
+}
+
+function vmMostrarError(mensaje) {
+    $("#vmCargando, #vmContenido").addClass("d-none");
+    $("#vmErrorConsulta").removeClass("d-none");
+    $("#vmErrorTexto").text(mensaje);
+}
+
+function vmConsultarClientes(version) {
+    $.ajax({
+        url: "php/index.php",
+        type: "POST",
+        dataType: "json",
+        data: {
+            action: "getClientes"
+        }
+    }).done(function(r) {
+        if (version !== vmEstado.version) return;
+
+        vmEstado.clientes = r &&
+            r.status === "ok" &&
+            Array.isArray(r.results)
+            ? r.results.filter(function(c) {
+                return Number(c.tipo) === 1;
+            })
+            : [];
+
+        if (!$("#vmFormularioPanel").hasClass("d-none")) {
+            vmRellenarClientes(true);
+        }
+
+    }).fail(function() {
+        if (version !== vmEstado.version) return;
+        vmEstado.clientes = [];
+    });
+}
+
+function vmPintarResumen() {
+    const datos = vmEstado.datos;
+    const $contenedor = $("#vmResumenArticulos").empty();
+
+    (datos.articulos || []).forEach(function(a) {
+        const vendido = vmEscala(a.cantidad_vendida) || 0;
+        const asignado = vmEscala(a.cantidad_asignada) || 0;
+        const disponible = Math.max(0, vendido - asignado);
+
+        const porcentaje = vendido > 0
+            ? Math.max(0, Math.min(100, asignado / vendido * 100))
+            : 0;
+
+        const $card = $('<div class="vm-articulo"></div>');
+
+        $card.append(
+            $("<strong>").text(a.descripcion_producto || "Artículo")
+        );
+
+        $card.append(
+            $("<small class='text-secondary d-block'></small>").text(
+                "Vendido: " + vmFormato(vendido) + " " +
+                (a.unidad || "") +
+                " · En cargas: " + vmFormato(asignado) +
+                " · Disponible: " + vmFormato(disponible)
+            )
+        );
+
+        $card.append(
+            $('<div class="vm-barra"><span></span></div>')
+                .find("span")
+                .css("width", porcentaje + "%")
+                .end()
+        );
+
+        $contenedor.append($card);
+    });
+
+    if (!datos.articulos || !datos.articulos.length) {
+        $contenedor.append(
+            '<div class="text-secondary small">' +
+            'Esta nota no contiene artículos.</div>'
+        );
+    }
+}
+
+function vmFolio(v) {
+    return v.folio || (
+        (v.tipo === "CARGA" ? "VC-" : "VD-") +
+        String(v.id).padStart(6, "0")
+    );
+}
+
+
+
+
+function vmPintarListado() {
+    const datos = vmEstado.datos;
+    const vales = datos.vales || [];
+
+    const cargas = vales.filter(function(v) {
+        return v.tipo === "CARGA" && v.estado !== "ANULADO";
+    });
+
+    const descargas = vales.filter(function(v) {
+        return v.tipo === "DESCARGA" && v.estado !== "ANULADO";
+    });
+
+    const $lista = $("#vmListaVales").empty();
+
+    $("#vmResumenVales").text(
+        cargas.length + " carga(s) · " +
+        descargas.length + " descarga(s)"
+    );
+
+    if (!vales.length) {
+        $lista.append(
+            '<div class="vm-vacio">' +
+                '<i class="bi bi-clipboard2-check"></i>' +
+                '<strong>Aún no hay vales</strong>' +
+                '<span>Comienza creando una carga para asignar ' +
+                'el material a un trabajador.</span>' +
+            '</div>'
+        );
+    }
+
+    ["CARGA", "DESCARGA"].forEach(function(tipo) {
+        const grupo = vales.filter(function(v) {
+            return v.tipo === tipo;
+        });
+
+        if (!grupo.length) return;
+
+        $lista.append(
+            $("<h4 class='h6 fw-bold mt-4 mb-3'></h4>").text(
+                tipo === "CARGA"
+                    ? "Cargas registradas"
+                    : "Descargas registradas"
+            )
+        );
+
+        grupo.forEach(function(v) {
+            const $card = $('<div class="vm-vale"></div>');
+            const $head = $('<div class="vm-vale-head"></div>');
+            const $identidad = $('<div class="min-w-0"></div>');
+
+            $identidad.append(
+                $("<strong>").text(
+                    vmFolio(v) + " · " +
+                    (v.descripcion_producto || "Artículo")
+                )
+            );
+
+            $identidad.append(
+                $("<div class='text-secondary small'></div>").text(
+                    vmFormato(vmEscala(v.cantidad) || 0) +
+                    " " + (v.unidad || "") +
+                    " · " +
+                    (v.colaborador || "Colaborador no disponible")
+                )
+            );
+
+            $head.append($identidad);
+
+            const $estado = $('<span class="vm-estado"></span>')
+                .addClass(
+                    v.estado === "REALIZADO"
+                        ? "realizado"
+                        : v.estado === "ANULADO"
+                            ? "anulado"
+                            : "pendiente"
+                )
+                .text(
+                    v.estado === "REALIZADO"
+                        ? "Realizado"
+                        : v.estado === "ANULADO"
+                            ? "Anulado"
+                            : "Pendiente"
+                );
+
+            $head.append($estado);
+            $card.append($head);
+
+            const detalle = tipo === "CARGA"
+                ? "Vehículo: " + (v.vehiculo || "Sin vehículo") +
+                    (v.codigo_embarque
+                        ? " · Embarque: " + v.codigo_embarque
+                        : "")
+                : "Destinatario: " +
+                    (v.destinatario || "Sin nombre") +
+                    " · Procede de carga #" + v.carga_id;
+
+            $card.append(
+                $("<div class='vm-vale-detalle'></div>").text(detalle)
+            );
+
+            if (v.indicaciones) {
+                $card.append(
+                    $("<div class='vm-indicaciones'></div>")
+                        .text(v.indicaciones)
+                );
+            }
+
+            const $acciones = $('<div class="vm-vale-acciones"></div>');
+
+            if (v.estado !== "ANULADO") {
+                $acciones.append(
+                    vmBotonVale(
+                        "js-vm-imprimir", "printer",
+                        "Imprimir", v.id, "btn-outline-secondary"
+                    )
+                );
+            }
+
+            if (v.estado === "PENDIENTE") {
+                $acciones.append(
+                    vmBotonVale(
+                        "js-vm-editar", "pencil",
+                        "Editar", v.id, "btn-outline-secondary"
+                    )
+                );
+
+                const $confirmar = vmBotonVale(
+                    "js-vm-confirmar",
+                    "check2-circle",
+                    "Confirmar " +
+                        (tipo === "CARGA" ? "carga" : "descarga"),
+                    v.id,
+                    "btn-success"
+                );
+
+                const cargaOrigen = vales.find(function(c) {
+                    return Number(c.id) === Number(v.carga_id);
+                });
+
+                if (tipo === "DESCARGA" &&
+                    (!cargaOrigen ||
+                     cargaOrigen.estado !== "REALIZADO")) {
+                    $confirmar.prop("disabled", true).attr(
+                        "title",
+                        "Confirma primero la carga de origen"
+                    );
+                }
+
+                $acciones.append($confirmar);
+
+                $acciones.append(
+                    vmBotonVale(
+                        "js-vm-anular", "x-circle",
+                        "Anular", v.id, "btn-outline-danger"
+                    )
+                );
+            }
+
+            $card.append($acciones);
+            $lista.append($card);
+        });
+    });
+
+    $("#vmNuevaCarga").prop(
+        "disabled",
+        !(datos.articulos || []).some(function(a) {
+            return (vmEscala(a.cantidad_disponible) || 0) > 0;
+        })
+    );
+
+    $("#vmNuevaDescarga").prop(
+        "disabled",
+        !cargas.some(function(c) {
+            return vmDisponibleDescarga(c, null) > 0;
+        })
+    );
+
+    $("#vmSinColaboradores").toggleClass(
+        "d-none",
+        !!(datos.colaboradores || []).length
+    );
+}
+
+function vmBotonVale(clase, icono, texto, id, estilo) {
+    return $('<button type="button" class="btn btn-sm"></button>')
+        .addClass(estilo + " " + clase)
+        .attr("data-id", id)
+        .append(
+            '<i class="bi bi-' + icono + ' me-1"></i>',
+            document.createTextNode(texto)
+        );
+}
+
+function vmDisponibleDescarga(carga, edicion) {
+    let usado = 0;
+
+    (vmEstado.datos.vales || []).forEach(function(v) {
+        if (v.tipo !== "DESCARGA" ||
+            v.estado === "ANULADO") return;
+
+        if (Number(v.carga_id) !== Number(carga.id)) return;
+
+        if (edicion && Number(v.id) === Number(edicion.id)) {
+            return;
+        }
+
+        usado += vmEscala(v.cantidad) || 0;
+    });
+
+    return Math.max(
+        0,
+        (vmEscala(carga.cantidad) || 0) - usado
+    );
+}
+
+function vmVolverListado() {
+    $("#vmFormularioPanel").addClass("d-none");
+    $("#vmListadoPanel").removeClass("d-none");
+    vmEstado.edicion = null;
+}
+
+
+
+function vmAbrirFormulario(tipo, id = null) {
+    if (!vmEstado.datos || vmEstado.operando) return;
+
+    const datos = vmEstado.datos;
+
+    const edicion = id === null
+        ? null
+        : (datos.vales || []).find(function(v) {
+            return Number(v.id) === id;
+        });
+
+    if (id !== null &&
+        (!edicion || edicion.estado !== "PENDIENTE")) return;
+
+    tipo = edicion ? edicion.tipo : tipo;
+
+    if (!(datos.colaboradores || []).length) {
+        Swal.fire(
+            "Sin colaboradores",
+            "Primero registra un trabajador en Configuración → Colaboradores.",
+            "warning"
+        );
+        return;
+    }
+
+    vmEstado.tipo = tipo;
+    vmEstado.edicion = edicion || null;
+    vmEstado.solicitud = edicion
+        ? null
+        : generarIdSolicitudVenta();
+
+    $("#vmFormulario")[0].reset();
+
+    $("#vmFormTitulo").text(
+        (edicion ? "Editar " : "Nueva ") +
+        (tipo === "CARGA" ? "carga" : "descarga")
+    );
+
+    $("#vmFormDescripcion").text(
+        tipo === "CARGA"
+            ? "Indica quién prepara el material y, si aplica, el vehículo."
+            : "Selecciona la carga de origen y asigna quién entregará el material."
+    );
+
+    $("#vmCampoArticulo, #vmCampoVehiculo, #vmCampoEmbarque")
+        .toggleClass("d-none", tipo !== "CARGA");
+
+    $("#vmCampoCarga, #vmCampoCliente")
+        .toggleClass("d-none", tipo !== "DESCARGA");
+
+    $("#vmCantidadLabel").text(
+        tipo === "CARGA"
+            ? "Cantidad a cargar *"
+            : "Cantidad a descargar *"
+    );
+
+    const $trabajadores = $("#vmColaborador")
+        .empty()
+        .append(
+            '<option value="">Selecciona un colaborador</option>'
+        );
+
+    datos.colaboradores.forEach(function(c) {
+        $trabajadores.append(
+            $("<option>")
+                .val(c.id)
+                .text((c.nombre + " " + c.apellidos).trim())
+        );
+    });
+
+    if (edicion) {
+        $trabajadores.val(String(edicion.colaborador_id));
+    }
+
+    const $vehiculos = $("#vmVehiculo")
+        .empty()
+        .append(
+            '<option value="">Sin vehículo asignado</option>'
+        );
+
+    (datos.vehiculos || []).forEach(function(v) {
+        $vehiculos.append(
+            $("<option>")
+                .val(v.id)
+                .text(
+                    v.nombre + " · " +
+                    v.capacidad + " " + v.unidad_capacidad
+                )
+        );
+    });
+
+    if (edicion && edicion.vehiculo_id) {
+        $vehiculos.val(String(edicion.vehiculo_id));
+    }
+
+    const $articulos = $("#vmArticulo").empty();
+
+    (datos.articulos || []).forEach(function(a) {
+        const permite =
+            (vmEscala(a.cantidad_disponible) || 0) > 0 ||
+            (edicion &&
+             Number(edicion.venta_item_id) === Number(a.venta_item_id));
+
+        if (permite) {
+            $articulos.append(
+                $("<option>")
+                    .val(a.venta_item_id)
+                    .text(
+                        a.descripcion_producto + " · " + a.unidad
+                    )
+            );
+        }
+    });
+
+    if (edicion && tipo === "CARGA") {
+        $articulos.val(String(edicion.venta_item_id));
+    }
+
+    $articulos.prop("disabled", !!edicion);
+
+    const $cargas = $("#vmCarga").empty();
+
+    (datos.vales || []).filter(function(c) {
+        return c.tipo === "CARGA" &&
+            c.estado !== "ANULADO" &&
+            (
+                vmDisponibleDescarga(c, edicion) > 0 ||
+                (edicion &&
+                 Number(edicion.carga_id) === Number(c.id))
+            );
+    }).forEach(function(c) {
+        $cargas.append(
+            $("<option>")
+                .val(c.id)
+                .text(
+                    vmFolio(c) + " · " +
+                    c.descripcion_producto + " · " +
+                    vmFormato(vmDisponibleDescarga(c, edicion)) +
+                    " " + c.unidad + " disponibles"
+                )
+        );
+    });
+
+    if (edicion && tipo === "DESCARGA") {
+        $cargas.val(String(edicion.carga_id));
+    }
+
+    $cargas.prop("disabled", !!edicion);
+
+    $("#vmCantidad").val(
+        edicion ? edicion.cantidad : ""
+    );
+
+    $("#vmEmbarque").val(
+        edicion ? (edicion.codigo_embarque || "") : ""
+    );
+
+    $("#vmIndicaciones").val(
+        edicion ? (edicion.indicaciones || "") : ""
+    );
+
+    vmRellenarClientes(false);
+    vmActualizarDisponible();
+
+    const hayOpciones = tipo === "CARGA"
+        ? $articulos.children().length > 0
+        : $cargas.children().length > 0;
+
+    if (!hayOpciones) {
+        Swal.fire(
+            "Sin material disponible",
+            "No hay cantidades disponibles para este tipo de vale.",
+            "info"
+        );
+        return;
+    }
+
+    $("#vmListadoPanel").addClass("d-none");
+    $("#vmFormularioPanel").removeClass("d-none");
+
+    $("#vmFormularioPanel")[0].scrollIntoView({
+        block: "start",
+        behavior: "smooth"
+    });
+}
+
+function vmRellenarClientes(preservar) {
+    if (!vmEstado.datos) return;
+
+    const $select = $("#vmCliente");
+    const previo = String($select.val() || "");
+    const nota = vmEstado.datos.venta;
+
+    const preferido = vmEstado.edicion
+        ? String(vmEstado.edicion.cliente_id || "")
+        : String(nota.cliente_id || "");
+
+    $select.empty();
+
+    const vistos = new Set();
+
+    if (nota.cliente_id) {
+        $select.append(
+            $("<option>")
+                .val(nota.cliente_id)
+                .text(
+                    nota.client_name + " (cliente de la nota)"
+                )
+        );
+
+        vistos.add(String(nota.cliente_id));
+    }
+
+    vmEstado.clientes.forEach(function(c) {
+        if (vistos.has(String(c.id))) return;
+
+        $select.append(
+            $("<option>")
+                .val(c.id)
+                .text(
+                    (c.nombre + " " + (c.apellido || "")).trim()
+                )
+        );
+
+        vistos.add(String(c.id));
+    });
+
+    $select.val(
+        preservar && vistos.has(previo)
+            ? previo
+            : preferido
+    );
+
+    $("#vmAvisoCliente").toggleClass(
+        "d-none",
+        vmEstado.clientes.length > 0
+    );
+}
+
+function vmActualizarDisponible() {
+    if (!vmEstado.datos) return;
+
+    const edicion = vmEstado.edicion;
+
+    let maximo = 0;
+    let nombre = "";
+    let unidad = "";
+
+    if (vmEstado.tipo === "CARGA") {
+        const id = Number($("#vmArticulo").val());
+
+        const a = (vmEstado.datos.articulos || []).find(
+            function(x) {
+                return Number(x.venta_item_id) === id;
+            }
+        );
+
+        if (a) {
+            maximo = (vmEscala(a.cantidad_disponible) || 0) +
+                (
+                    edicion &&
+                    Number(edicion.venta_item_id) === id
+                        ? (vmEscala(edicion.cantidad) || 0)
+                        : 0
+                );
+
+            nombre = a.descripcion_producto;
+            unidad = a.unidad;
+        }
+
+    } else {
+        const id = Number($("#vmCarga").val());
+
+        const c = (vmEstado.datos.vales || []).find(
+            function(x) {
+                return Number(x.id) === id &&
+                    x.tipo === "CARGA";
+            }
+        );
+
+        if (c) {
+            maximo = vmDisponibleDescarga(c, edicion);
+            nombre = c.descripcion_producto;
+            unidad = c.unidad;
+        }
+    }
+
+    $("#vmProductoInfo").text(
+        nombre
+            ? nombre + " · " + unidad
+            : "Selecciona el material"
+    );
+
+    $("#vmDisponibleInfo").text(
+        "Disponible: " + vmFormato(maximo) + " " + unidad
+    );
+
+    $("#vmCantidad").attr(
+        "max",
+        (maximo / 10000).toFixed(4)
+    );
+}
+
+
+
+function vmGuardar() {
+    if (!vmEstado.datos || vmEstado.operando) return;
+
+    const datos = vmEstado.datos;
+    const edicion = vmEstado.edicion;
+    const tipo = vmEstado.tipo;
+
+    const articuloId = tipo === "CARGA"
+        ? Number($("#vmArticulo").val())
+        : null;
+
+    const cargaId = tipo === "DESCARGA"
+        ? Number($("#vmCarga").val())
+        : null;
+
+    const carga = tipo === "DESCARGA"
+        ? (datos.vales || []).find(function(v) {
+            return Number(v.id) === cargaId &&
+                v.tipo === "CARGA";
+        })
+        : null;
+
+    const itemId = tipo === "CARGA"
+        ? articuloId
+        : carga
+            ? Number(carga.venta_item_id)
+            : 0;
+
+    const colaboradorId = Number($("#vmColaborador").val());
+    const cantidad = vmEscala($("#vmCantidad").val());
+    const maximo = vmEscala(
+        $("#vmCantidad").attr("max")
+    ) || 0;
+
+    if (!Number.isInteger(itemId) ||
+        itemId < 1 ||
+        !Number.isInteger(colaboradorId) ||
+        colaboradorId < 1 ||
+        cantidad === null ||
+        cantidad <= 0 ||
+        cantidad > maximo ||
+        (tipo === "DESCARGA" && !carga)) {
+
+        Swal.fire(
+            "Revisa la asignación",
+            "Selecciona el material, el colaborador y una cantidad válida que no supere lo disponible.",
+            "warning"
+        );
+        return;
+    }
+
+    const payload = {
+        action: "guardarValeMaterial",
+        id: edicion ? edicion.id : 0,
+        solicitud_id: edicion
+            ? ""
+            : vmEstado.solicitud,
+
+        tipo: tipo,
+        venta_id: vmEstado.ventaId,
+        venta_item_id: itemId,
+        colaborador_id: colaboradorId,
+
+        cliente_id: tipo === "DESCARGA"
+            ? $("#vmCliente").val()
+            : "",
+
+        vehiculo_id: tipo === "CARGA"
+            ? $("#vmVehiculo").val()
+            : "",
+
+        carga_id: tipo === "DESCARGA"
+            ? cargaId
+            : "",
+
+        codigo_embarque: tipo === "CARGA"
+            ? $("#vmEmbarque").val().trim()
+            : "",
+
+        cantidad: $("#vmCantidad").val().trim(),
+        indicaciones: $("#vmIndicaciones").val().trim()
+    };
+
+    if (tipo === "DESCARGA" && !payload.cliente_id) {
+        Swal.fire(
+            "Selecciona al destinatario",
+            "Indica qué cliente recibirá el material.",
+            "warning"
+        );
+        return;
+    }
+
+    vmEstado.operando = true;
+
+    $("#vmGuardar")
+        .prop("disabled", true)
+        .text("Guardando...");
+
+    const version = vmEstado.version;
+
+    $.ajax({
+        url: "php/index.php",
+        type: "POST",
+        dataType: "json",
+        data: payload
+    }).done(function(r) {
+        if (version !== vmEstado.version) return;
+
+        if (!r || r.status !== "ok") {
+            Swal.fire(
+                "No se pudo guardar",
+                vmError(r),
+                "warning"
+            );
+            return;
+        }
+
+        vmEstado.solicitud = null;
+        vmConsultar(version);
+
+    }).fail(function(xhr) {
+        if (version !== vmEstado.version) return;
+
+        Swal.fire(
+            "No se pudo guardar",
+            vmError(xhr),
+            "error"
+        );
+
+    }).always(function() {
+        if (version !== vmEstado.version) return;
+
+        vmEstado.operando = false;
+
+        $("#vmGuardar")
+            .prop("disabled", false)
+            .html(
+                '<i class="bi bi-check2-circle me-1"></i>' +
+                'Guardar vale'
+            );
+    });
+}
+
+
+
+function vmBuscarVale(id) {
+    return vmEstado.datos &&
+        (vmEstado.datos.vales || []).find(function(v) {
+            return Number(v.id) === id;
+        });
+}
+
+function vmConfirmar(id) {
+    const v = vmBuscarVale(id);
+
+    if (!v || v.estado !== "PENDIENTE" ||
+        vmEstado.operando) return;
+
+    Swal.fire({
+        title: "¿Confirmar " +
+            (v.tipo === "CARGA" ? "la carga" : "la descarga") +
+            "?",
+        text: "Esta acción marcará " +
+            vmFormato(vmEscala(v.cantidad) || 0) +
+            " " + v.unidad +
+            " como material físicamente " +
+            (v.tipo === "CARGA" ? "cargado." : "entregado."),
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: "Sí, confirmar",
+        cancelButtonText: "Cancelar",
+        confirmButtonColor: "#087548"
+    }).then(function(r) {
+        if (!r.isConfirmed || vmEstado.operando) return;
+
+        vmEstado.operando = true;
+        const version = vmEstado.version;
+
+        $.ajax({
+            url: "php/index.php",
+            type: "POST",
+            dataType: "json",
+            data: {
+                action: "confirmarValeMaterial",
+                id: id
+            }
+        }).done(function(res) {
+            if (version !== vmEstado.version) return;
+
+            if (res.status !== "ok") {
+                return Swal.fire(
+                    "Aviso",
+                    vmError(res),
+                    "warning"
+                );
+            }
+
+            vmConsultar(version);
+
+        }).fail(function(xhr) {
+            if (version !== vmEstado.version) return;
+
+            Swal.fire(
+                "No se pudo confirmar",
+                vmError(xhr),
+                "error"
+            );
+
+        }).always(function() {
+            if (version === vmEstado.version) {
+                vmEstado.operando = false;
+            }
+        });
+    });
+}
+
+function vmAnular(id) {
+    const v = vmBuscarVale(id);
+
+    if (!v || v.estado !== "PENDIENTE" ||
+        vmEstado.operando) return;
+
+    Swal.fire({
+        title: "Anular " + vmFolio(v),
+        text: "El vale seguirá en el historial, pero liberará su cantidad asignada.",
+        input: "text",
+        inputPlaceholder: "Motivo de la anulación",
+        inputAttributes: {
+            maxlength: 300
+        },
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Anular vale",
+        cancelButtonText: "Volver",
+        confirmButtonColor: "#b42318",
+        inputValidator: function(value) {
+            return !value || value.trim().length < 5
+                ? "Escribe un motivo de al menos 5 caracteres."
+                : undefined;
+        }
+    }).then(function(r) {
+        if (!r.isConfirmed || vmEstado.operando) return;
+
+        vmEstado.operando = true;
+        const version = vmEstado.version;
+
+        $.ajax({
+            url: "php/index.php",
+            type: "POST",
+            dataType: "json",
+            data: {
+                action: "anularValeMaterial",
+                id: id,
+                motivo: r.value.trim()
+            }
+        }).done(function(res) {
+            if (version !== vmEstado.version) return;
+
+            if (res.status !== "ok") {
+                return Swal.fire(
+                    "Aviso",
+                    vmError(res),
+                    "warning"
+                );
+            }
+
+            vmConsultar(version);
+
+        }).fail(function(xhr) {
+            if (version !== vmEstado.version) return;
+
+            Swal.fire(
+                "No se pudo anular",
+                vmError(xhr),
+                "error"
+            );
+
+        }).always(function() {
+            if (version === vmEstado.version) {
+                vmEstado.operando = false;
+            }
+        });
+    });
+}
+
+
+
+function vmEscapar(t) {
+    return String(t ?? "").replace(/[&<>"']/g, function(c) {
+        return {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;"
+        }[c];
+    });
+}
+
+function vmImprimir(id) {
+    const v = vmBuscarVale(id);
+
+    if (!v || v.estado === "ANULADO") return;
+
+    const folio = vmFolio(v);
+
+    const carga = v.tipo === "DESCARGA"
+        ? vmBuscarVale(Number(v.carga_id))
+        : null;
+
+    const vehiculo = v.vehiculo ||
+        (carga ? carga.vehiculo : "") ||
+        "Sin vehículo";
+
+    const fecha = v.fechaAlta || "";
+
+    const domicilio = [
+        v.domicilio,
+        v.colonia,
+        v.municipio,
+        v.estado_cliente,
+        v.codigo_postal_cliente
+    ].filter(Boolean).join(", ");
+
+    const campos = [
+        ["Venta", vmEstado.datos.venta.note_folio || vmEstado.ventaId],
+        ["Fecha de emisión", fecha],
+        ["Operación", v.tipo],
+        ["Material", v.descripcion_producto],
+        ["Cantidad", vmFormato(vmEscala(v.cantidad) || 0) + " " + v.unidad],
+        ["Colaborador", v.colaborador || "No disponible"],
+        ["Vehículo", vehiculo],
+        ["Destinatario", v.destinatario || vmEstado.datos.venta.client_name],
+        ["Dirección", domicilio || "No registrada"],
+        ["Indicaciones", v.indicaciones || "—"],
+        ["Estado", v.estado]
+    ];
+
+    const filas = campos.map(function(c) {
+        return '<div class="linea"><span>' +
+            vmEscapar(c[0]) +
+            '</span><b>' +
+            vmEscapar(c[1]) +
+            '</b></div>';
+    }).join("");
+
+    const ventana = window.open(
+        "",
+        "_blank",
+        "width=460,height=740"
+    );
+
+    if (!ventana) {
+        Swal.fire(
+            "Ventana bloqueada",
+            "Permite las ventanas emergentes para imprimir el vale.",
+            "warning"
+        );
+        return;
+    }
+
+    ventana.document.open();
+
+    ventana.document.write(`
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="utf-8">
+            <title>${vmEscapar(folio)}</title>
+            <style>
+                @page {
+                    margin: 3mm;
+                }
+
+                * {
+                    box-sizing: border-box;
+                }
+
+                body {
+                    font-family: Arial, sans-serif;
+                    color: #111;
+                    width: 72mm;
+                    max-width: 100%;
+                    margin: 0 auto;
+                    padding: 3mm;
+                    font-size: 11px;
+                }
+
+                .centro {
+                    text-align: center;
+                }
+
+                .titulo {
+                    font-size: 16px;
+                    font-weight: bold;
+                    margin: 8px 0;
+                }
+
+                .linea {
+                    padding: 6px 0;
+                    border-bottom: 1px dashed #bbb;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 3px;
+                }
+
+                .linea span {
+                    font-size: 10px;
+                    color: #555;
+                }
+
+                .linea b {
+                    overflow-wrap: anywhere;
+                }
+
+                .firma {
+                    margin-top: 30px;
+                    border-top: 1px solid #222;
+                    text-align: center;
+                    padding-top: 6px;
+                }
+
+                button {
+                    display: block;
+                    width: 100%;
+                    margin: 20px 0;
+                    padding: 9px;
+                    background: #087548;
+                    color: white;
+                    border: 0;
+                    border-radius: 4px;
+                    cursor: pointer;
+                }
+
+                @media print {
+                    button {
+                        display: none;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="centro">
+                <b>VALE DE ${vmEscapar(v.tipo)}</b>
+                <div class="titulo">${vmEscapar(folio)}</div>
+                <small>Documento operativo · Sin precios</small>
+            </div>
+
+            ${filas}
+
+            <div class="firma">
+                Firma de quien recibe / entrega
+            </div>
+
+            <button onclick="window.print()">
+                Imprimir vale
+            </button>
+        </body>
+        </html>
+    `);
+
+    ventana.document.close();
 }

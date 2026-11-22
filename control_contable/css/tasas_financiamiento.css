@@ -1,0 +1,521 @@
+
+/* TASAS DE FINANCIAMIENTO */
+
+#tfModal .tf-dialog {
+    max-width: 1180px;
+}
+
+#tfModal .tf-modal {
+    border: 0;
+    border-radius: 20px;
+    overflow: hidden;
+    background: #fff;
+}
+
+#tfModal .modal-header {
+    padding: 24px 28px;
+    background: #fff;
+    border-bottom: 1px solid #e1e9e3;
+}
+
+#tfModal .modal-body {
+    padding: 25px;
+    background: #f5f8f6;
+}
+
+#tfModal .tf-eyebrow {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 11px;
+    font-weight: 800;
+    color: #08704d;
+    letter-spacing: .13em;
+}
+
+#tfModal .btn-success {
+    background: #08704d;
+    border-color: #08704d;
+}
+
+#tfModal .btn-success:hover {
+    background: #065b3e;
+    border-color: #065b3e;
+}
+
+/* BÚSQUEDA */
+
+#tfModal .tf-barra {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px;
+    border: 1px solid #e0e9e3;
+    border-radius: 15px;
+    background: #fff;
+}
+
+#tfModal .tf-buscar {
+    flex: 1;
+    position: relative;
+    min-width: 180px;
+}
+
+#tfModal .tf-buscar i {
+    position: absolute;
+    top: 50%;
+    left: 15px;
+    transform: translateY(-50%);
+    color: #779185;
+}
+
+#tfModal .tf-buscar input {
+    min-height: 44px;
+    padding-left: 43px;
+    border-radius: 10px;
+}
+
+/* TARJETAS DEL CATÁLOGO */
+
+#tfModal .tf-tarjeta {
+    display: grid;
+    grid-template-columns: 140px minmax(0, 1fr);
+    margin-bottom: 15px;
+    background: #fff;
+    border: 1px solid #dfe8e1;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 5px 22px rgba(17, 54, 34, .04);
+    transition: border-color .2s, box-shadow .2s;
+}
+
+#tfModal .tf-tarjeta:hover {
+    border-color: #b3d5c1;
+    box-shadow: 0 7px 25px rgba(17, 54, 34, .08);
+}
+
+/* ACCIONES IZQUIERDAS */
+
+#tfModal .tf-acciones {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px 11px;
+    background: #edf4ef;
+    border-right: 1px solid #e0e9e3;
+}
+
+#tfModal .tf-acciones-titulo {
+    display: block;
+    margin: 7px 0 2px;
+    color: #718477;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .10em;
+    text-align: center;
+}
+
+#tfModal .tf-bono {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 9px 5px;
+    border: 1px solid #dfe8e1;
+    border-radius: 11px;
+    background: #fff;
+}
+
+#tfModal .tf-bono strong {
+    font-size: 13px;
+    font-weight: 750;
+    color: #08704d;
+}
+
+#tfModal .tf-bono small {
+    color: #718477;
+    font-size: 10px;
+    text-align: center;
+}
+
+#tfModal .tf-accion {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    min-height: 57px;
+    padding: 8px;
+    background: #fff;
+    border: 1px solid #d3e4d8;
+    border-radius: 11px;
+    color: #176b4b;
+    font-size: 12px;
+    font-weight: 650;
+    cursor: pointer;
+    transition: background .2s, transform .2s;
+}
+
+#tfModal .tf-accion i {
+    font-size: 18px;
+}
+
+#tfModal .tf-accion:hover {
+    background: #dff0e5;
+    transform: translateY(-1px);
+}
+
+#tfModal .tf-accion.tf-peligro {
+    color: #a52e36;
+    border-color: #efdbdc;
+}
+
+#tfModal .tf-accion.tf-peligro:hover {
+    background: #fdeced;
+}
+
+/* INFORMACIÓN DE LAS TASAS */
+
+#tfModal .tf-informacion {
+    min-width: 0;
+    padding: 22px 25px;
+}
+
+#tfModal .tf-informacion h3 {
+    margin: 12px 0 18px;
+    font-size: 17px;
+    font-weight: 750;
+    line-height: 1.45;
+    color: #204832;
+    overflow-wrap: anywhere;
+}
+
+#tfModal .tf-chips,
+#tfModal .tf-detalles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+#tfModal .tf-detalles {
+    margin-top: 14px;
+}
+
+#tfModal .tf-chip {
+    padding: 6px 11px;
+    background: #edf4ef;
+    color: #547463;
+    border-radius: 30px;
+    font-size: 11px;
+    font-weight: 650;
+}
+
+#tfModal .tf-datos {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 11px;
+}
+
+#tfModal .tf-dato {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+    padding: 12px 14px;
+    background: #f7f9f7;
+    border: 1px solid #eaf0eb;
+    border-radius: 12px;
+}
+
+#tfModal .tf-dato small {
+    font-size: 11px;
+    font-weight: 650;
+    color: #718477;
+}
+
+#tfModal .tf-dato strong {
+    color: #204832;
+    font-size: 13px;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+#tfModal #tfPaginacion {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 17px;
+}
+
+/* FORMULARIO */
+
+#tfModal .tf-titulo-form {
+    margin-bottom: 20px;
+}
+
+#tfModal .tf-titulo-form h3 {
+    margin-bottom: 5px;
+    color: #204832;
+    font-size: 21px;
+    font-weight: 800;
+}
+
+#tfModal .tf-titulo-form p {
+    margin: 0;
+    color: #6d8174;
+    font-size: 13px;
+}
+
+#tfModal .tf-pasos {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 18px;
+    padding: 7px;
+    border-radius: 14px;
+    background: #e7f0e9;
+}
+
+#tfModal .tf-paso {
+    flex: 1;
+    padding: 12px 8px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: #55715f;
+    font-weight: 750;
+    font-size: 13px;
+}
+
+#tfModal .tf-paso.active {
+    color: #fff;
+    background: #08704d;
+    box-shadow: 0 4px 12px rgba(8, 112, 77, .14);
+}
+
+#tfModal .tf-paso:not(.active):hover {
+    background: #dbe9df;
+}
+
+#tfModal .tf-form-section {
+    padding: 25px;
+    background: #fff;
+    border: 1px solid #e0e9e3;
+    border-radius: 17px;
+}
+
+#tfModal .tf-form-heading {
+    padding-bottom: 16px;
+    margin-bottom: 21px;
+    border-bottom: 1px solid #e7ede9;
+}
+
+#tfModal .tf-form-heading h3 {
+    margin-bottom: 5px;
+    color: #204832;
+    font-size: 19px;
+    font-weight: 750;
+}
+
+#tfModal .tf-form-heading p {
+    margin: 0;
+    color: #738578;
+    font-size: 13px;
+}
+
+#tfModal .tf-form-section .form-label {
+    margin-bottom: 7px;
+    font-size: 13px;
+    font-weight: 650;
+    color: #405b49;
+}
+
+#tfModal .tf-form-section .form-control,
+#tfModal .tf-form-section .form-select {
+    min-height: 44px;
+    border-color: #d8e4db;
+    border-radius: 11px;
+}
+
+#tfModal .tf-form-section .form-control:focus,
+#tfModal .tf-form-section .form-select:focus {
+    border-color: #49a277;
+    box-shadow: 0 0 0 3px rgba(8, 112, 77, .11);
+}
+
+#tfModal #tf_nombre {
+    font-weight: 750;
+    color: #08704d;
+    background: #ebf5ee;
+}
+
+#tfModal .tf-form-section .is-invalid {
+    border-color: #dc3545;
+}
+
+/* PASTILLAS DE AMORTIZACIÓN */
+
+#tfModal .tf-segmento {
+    display: flex;
+    gap: 5px;
+    padding: 6px;
+    background: #e8ebea;
+    border-radius: 40px;
+}
+
+#tfModal .tf-segmento button {
+    flex: 1;
+    padding: 12px 9px;
+    border: 0;
+    border-radius: 35px;
+    background: transparent;
+    color: #56685b;
+    font-size: 13px;
+    font-weight: 650;
+    cursor: pointer;
+    transition: background .2s, color .2s;
+}
+
+#tfModal .tf-segmento button.active {
+    color: #fff;
+    background: #202123;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, .12);
+}
+
+#tfModal .tf-segmento button:not(.active):hover {
+    background: #dbe4dd;
+}
+
+#tfModal .tf-note {
+    padding: 13px 15px;
+    border-radius: 12px;
+    background: #f4f8f5;
+    color: #66796c;
+    font-size: 12px;
+    line-height: 1.7;
+}
+
+/* BOTONES INFERIORES */
+
+#tfModal .tf-pie {
+    position: sticky;
+    bottom: -25px;
+    z-index: 3;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 16px;
+    padding: 16px;
+    background: #fff;
+    border: 1px solid #e0e9e3;
+    border-radius: 14px;
+}
+
+/* ESTADOS Y CONTRATO */
+
+#tfModal .tf-vacio {
+    padding: 55px 20px;
+    background: #fff;
+    border: 1px dashed #cbded1;
+    border-radius: 17px;
+    text-align: center;
+    color: #6d8174;
+}
+
+#tfModal .tf-vacio i {
+    display: block;
+    margin-bottom: 14px;
+    font-size: 36px;
+    color: #08704d;
+}
+
+#tfModal .tf-vacio h4 {
+    color: #204832;
+    font-size: 19px;
+}
+
+#tfModal .tf-texto-contrato {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    overflow: auto;
+    max-height: 60vh;
+    padding: 18px;
+    background: #f6f9f7;
+    border-radius: 12px;
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 767px) {
+    #tfModal .modal-header,
+    #tfModal .modal-body {
+        padding: 15px;
+    }
+
+    #tfModal .tf-barra {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    #tfModal .tf-tarjeta {
+        grid-template-columns: 1fr;
+    }
+
+    #tfModal .tf-informacion {
+        padding: 17px;
+    }
+
+    #tfModal .tf-acciones {
+        order: 2;
+        flex-direction: row;
+        flex-wrap: wrap;
+        border-right: 0;
+        border-top: 1px solid #e0e9e3;
+    }
+
+    #tfModal .tf-acciones-titulo,
+    #tfModal .tf-bono {
+        display: none;
+    }
+
+    #tfModal .tf-accion {
+        flex: 1;
+        min-width: 85px;
+        flex-direction: row;
+        gap: 7px;
+    }
+
+    #tfModal .tf-datos {
+        grid-template-columns: 1fr;
+    }
+
+    #tfModal .tf-pasos {
+        flex-wrap: wrap;
+    }
+
+    #tfModal .tf-paso {
+        flex: 1 0 45%;
+    }
+
+    #tfModal .tf-form-section {
+        padding: 17px;
+    }
+
+    #tfModal .tf-segmento {
+        flex-wrap: wrap;
+        border-radius: 15px;
+    }
+
+    #tfModal .tf-segmento button {
+        flex: 1 0 40%;
+    }
+
+    #tfModal .tf-pie {
+        bottom: -15px;
+    }
+}
