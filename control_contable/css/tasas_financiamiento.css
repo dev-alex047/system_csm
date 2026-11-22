@@ -519,3 +519,234 @@
         bottom: -15px;
     }
 }
+
+
+/* =============================================
+   TASAS - CATÁLOGO GET COMPACTO
+   ============================================= */
+
+/* Tarjeta principal */
+#tfModal #tfVistaLista .tf-tarjeta {
+    grid-template-columns: 185px minmax(0, 1fr);
+    margin-bottom: 10px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(17, 54, 34, .035);
+}
+
+/* Columna izquierda */
+#tfModal #tfVistaLista .tf-acciones {
+    gap: 5px;
+    padding: 11px;
+    background: #f0f5f1;
+}
+
+#tfModal #tfVistaLista .tf-acciones-titulo {
+    margin: 5px 0 3px;
+    font-size: 10px;
+    letter-spacing: .07em;
+}
+
+/* Bonos: pequeños y horizontales */
+#tfModal #tfVistaLista .tf-bono {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+    min-height: 35px;
+    padding: 6px 8px;
+    border-radius: 8px;
+}
+
+#tfModal #tfVistaLista .tf-bono small {
+    order: 1;
+    flex: 1;
+    min-width: 0;
+    font-size: 10px;
+    line-height: 1.25;
+    text-align: left;
+}
+
+#tfModal #tfVistaLista .tf-bono strong {
+    order: 2;
+    flex-shrink: 0;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+/* Acciones: botones delgados */
+#tfModal #tfVistaLista .tf-accion {
+    flex-direction: row;
+    min-height: 36px;
+    gap: 7px;
+    padding: 7px 9px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 650;
+}
+
+#tfModal #tfVistaLista .tf-accion i {
+    font-size: 14px;
+}
+
+/* Área principal */
+#tfModal #tfVistaLista .tf-informacion {
+    padding: 13px 17px;
+}
+
+/* Título del financiamiento */
+#tfModal #tfVistaLista .tf-informacion h3 {
+    margin: 9px 0 12px;
+    font-size: 15px;
+    line-height: 1.4;
+    font-weight: 750;
+}
+
+/* Etiquetas pequeñas */
+#tfModal #tfVistaLista .tf-chip {
+    padding: 4px 9px;
+    border-radius: 7px;
+    font-size: 10px;
+    line-height: 1.35;
+}
+
+#tfModal #tfVistaLista .tf-chips,
+#tfModal #tfVistaLista .tf-detalles {
+    gap: 5px;
+}
+
+#tfModal #tfVistaLista .tf-detalles {
+    margin-top: 9px;
+}
+
+/* Datos: formato compacto de etiqueta y valor */
+#tfModal #tfVistaLista .tf-datos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+}
+
+#tfModal #tfVistaLista .tf-dato {
+    display: grid;
+    grid-template-columns: minmax(90px, auto) minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    min-height: 43px;
+    padding: 8px 11px;
+    border-radius: 8px;
+    background: #f7f9f7;
+}
+
+#tfModal #tfVistaLista .tf-dato small {
+    font-size: 10px;
+    line-height: 1.3;
+}
+
+#tfModal #tfVistaLista .tf-dato strong {
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.35;
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+/* Barra superior más delgada */
+#tfModal #tfVistaLista .tf-barra {
+    gap: 9px;
+    padding: 10px 12px;
+    border-radius: 11px;
+}
+
+#tfModal #tfVistaLista .tf-buscar input {
+    min-height: 38px;
+}
+
+#tfModal #tfVistaLista #tfNueva {
+    min-height: 38px;
+    padding: 7px 13px;
+    font-size: 12px;
+}
+
+/* =============================================
+   RESPONSIVE
+   ============================================= */
+
+@media (max-width: 991px) and (min-width: 768px) {
+    #tfModal #tfVistaLista .tf-tarjeta {
+        grid-template-columns: 165px minmax(0, 1fr);
+    }
+
+    #tfModal #tfVistaLista .tf-datos {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 767px) {
+
+    #tfModal #tfVistaLista .tf-tarjeta {
+        grid-template-columns: 1fr;
+    }
+
+    #tfModal #tfVistaLista .tf-informacion {
+        padding: 13px;
+    }
+
+    #tfModal #tfVistaLista .tf-informacion h3 {
+        font-size: 14px;
+    }
+
+    #tfModal #tfVistaLista .tf-datos {
+        grid-template-columns: 1fr;
+    }
+
+    #tfModal #tfVistaLista .tf-dato {
+        grid-template-columns: 105px minmax(0, 1fr);
+    }
+
+    /* Bonos y acciones acomodados en 3 columnas */
+    #tfModal #tfVistaLista .tf-acciones {
+        order: 2;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+        padding: 10px;
+        border-right: 0;
+        border-top: 1px solid #e0e9e3;
+    }
+
+    #tfModal #tfVistaLista .tf-acciones-titulo {
+        display: none;
+    }
+
+    #tfModal #tfVistaLista .tf-bono {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 48px;
+        padding: 6px 3px;
+        gap: 3px;
+    }
+
+    #tfModal #tfVistaLista .tf-bono strong {
+        order: 1;
+        font-size: 11px;
+    }
+
+    #tfModal #tfVistaLista .tf-bono small {
+        order: 2;
+        flex: none;
+        font-size: 9px;
+        text-align: center;
+    }
+
+    #tfModal #tfVistaLista .tf-accion {
+        min-width: 0;
+        min-height: 37px;
+        padding: 6px 3px;
+        gap: 5px;
+        font-size: 10px;
+    }
+
+    #tfModal #tfVistaLista .tf-accion i {
+        font-size: 13px;
+    }
+}
+

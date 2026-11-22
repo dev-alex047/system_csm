@@ -4123,9 +4123,36 @@ function bindValesMaterial() {
         vmAbrirFormulario("CARGA");
     });
 
-    $("#vmNuevaDescarga").on("click", function() {
-        vmAbrirFormulario("DESCARGA");
+    
+$("#vmNuevaDescarga").on("click", function() {
+    if (!vmEstado.datos || vmEstado.operando) return;
+
+    const cargas = (vmEstado.datos.vales || []).filter(function(v) {
+        return v.tipo === "CARGA" &&
+            v.estado !== "ANULADO";
     });
+
+    const hayDisponible = cargas.some(function(c) {
+        return vmDisponibleDescarga(c, null) > 0;
+    });
+
+    if (!hayDisponible) {
+        const aviso = document.getElementById("vmAvisoDescarga");
+
+        if (aviso) {
+            aviso.classList.remove("d-none");
+            aviso.scrollIntoView({
+                behavior: "smooth",
+                block: "center"
+            });
+        }
+
+        return;
+    }
+
+    vmAbrirFormulario("DESCARGA");
+});
+
 
     $("#vmVolver, #vmCancelar").on("click", vmVolverListado);
     $("#vmArticulo, #vmCarga").on("change", vmActualizarDisponible);
@@ -4150,6 +4177,17 @@ function bindValesMaterial() {
     $(document).on("click", ".js-vm-imprimir", function() {
         vmImprimir(Number($(this).attr("data-id")));
     });
+
+
+$("#vmModal").on("hide.bs.modal", function() {
+    const activo = document.activeElement;
+
+    if (activo && this.contains(activo) &&
+        typeof activo.blur === "function") {
+        activo.blur();
+    }
+});
+
 }
 
 function vmEscala(valor) {
@@ -4508,12 +4546,65 @@ function vmPintarListado() {
         })
     );
 
-    $("#vmNuevaDescarga").prop(
-        "disabled",
-        !cargas.some(function(c) {
-            return vmDisponibleDescarga(c, null) > 0;
-        })
+    
+const hayCargaDisponible = cargas.some(function(c) {
+    return vmDisponibleDescarga(c, null) > 0;
+});
+
+const hayMaterialPorCargar = (datos.articulos || []).some(function(a) {
+    return (vmEscala(a.cantidad_disponible) || 0) > 0;
+});
+
+$("#vmNuevaDescarga")
+    .prop("disabled", false)
+    .attr(
+        "title",
+        hayCargaDisponible
+            ? "Asignar una nueva descarga"
+            : "Consultar cómo habilitar otra descarga"
     );
+
+const $aviso = $("#vmAvisoDescarga");
+
+if (!cargas.length) {
+    $aviso
+        .removeClass("d-none")
+        .empty()
+        .append(
+            $("<strong class='d-block mb-1'></strong>")
+                .text("Primero debes crear una carga."),
+            $("<span></span>").text(
+                "La descarga necesita una carga de origen. " +
+                "Selecciona Nueva carga para asignar el material."
+            )
+        );
+
+} else if (!hayCargaDisponible) {
+    let mensaje = "Todas las cantidades cargadas ya están " +
+        "asignadas a descargas. ";
+
+    if (hayMaterialPorCargar) {
+        mensaje += "Puedes crear otra carga con el material " +
+            "disponible de la nota, o editar una carga pendiente " +
+            "para aumentar su cantidad. ";
+    }
+
+    mensaje += "También puedes editar o anular una descarga " +
+        "pendiente para redistribuir su cantidad.";
+
+    $aviso
+        .removeClass("d-none")
+        .empty()
+        .append(
+            $("<strong class='d-block mb-1'></strong>")
+                .text("No queda cantidad disponible para otra descarga."),
+            $("<span></span>").text(mensaje)
+        );
+
+} else {
+    $aviso.addClass("d-none").empty();
+}
+
 
     $("#vmSinColaboradores").toggleClass(
         "d-none",
