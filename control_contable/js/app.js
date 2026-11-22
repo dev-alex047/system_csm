@@ -2360,378 +2360,596 @@ $saldos.append(
 }
 
 
-function abrirAbonoGlobalCliente(clienteId) {
+function abrirAbonoCuenta(id, saldo, clienteId = 0) {
+    id = Number(id);
+    saldo = Number(saldo);
     clienteId = Number(clienteId);
 
-    if (!Number.isSafeInteger(clienteId) || clienteId <= 0 ||
-        state.guardandoAbonoGlobal) {
+    if (
+        !Number.isSafeInteger(id) ||
+        id <= 0 ||
+        !Number.isFinite(saldo) ||
+        saldo <= 0 ||
+        state.guardandoAbono ||
+        state.guardandoAbonoGlobal
+    ) {
         return;
     }
 
-    $.ajax({
-        url: "php/index.php",
-        type: "POST",
-        dataType: "json",
-        data: {
-            action: "getAbonoGlobalCliente",
-            cliente_id: clienteId
-        }
-    }).done(function(respuesta) {
-        if (!respuesta || respuesta.status !== "ok") {
-            Swal.fire(
-                "No se pudo consultar la cartera",
-                respuesta && respuesta.answer || "Intenta nuevamente.",
-                "warning"
-            );
+    const tipo = state.tipoCuentaActual;
+    const identidad = tipo + "-" + id;
+
+    const permiteGlobal = tipo === "COBRAR" &&
+        Number.isSafeInteger(clienteId) &&
+        clienteId > 0;
+
+    if (state.abonoCuentaIdentidad !== identidad) {
+        state.abonoCuentaIdentidad = identidad;
+        state.tokenAbonoCuenta = generarIdSolicitudVenta();
+    }
+
+    if (!state.tokenAbonoCuenta) {
+        state.tokenAbonoCuenta = generarIdSolicitudVenta();
+    }
+
+    const plantilla = document.getElementById("tplAbonoCuenta");
+
+    if (!plantilla || !plantilla.content.firstElementChild) {
+        Swal.fire(
+            "Error",
+            "No se encontró el formulario de abonos.",
+            "error"
+        );
+        return;
+    }
+
+    const contenido = plantilla.content.firstElementChild.cloneNode(true);
+    const $contenido = $(contenido);
+
+    let modo = "INDIVIDUAL";
+    let cartera = null;
+    let consultando = false;
+
+    $contenido.find("#abonoModoNav")
+        .toggleClass("d-none", !permiteGlobal);
+
+    $contenido.find("#abonoDetalleGlobal")
+        .addClass("d-none");
+
+    $contenido.find("#abonoSaldoDisponible")
+        .text(monedaMXN(saldo));
+
+    $contenido.find("#abonoTextoSaldo")
+        .text("Saldo del crédito seleccionado");
+
+    $contenido.find("#abonoNotas")
+        .attr("maxlength", 450);
+
+    function pintarReparto() {
+        const $filas = $contenido.find("#abonoRepartoGlobal");
+        $filas.empty();
+
+        if (!cartera || modo !== "GLOBAL") {
             return;
         }
 
-        const datos = respuesta.results || {};
-        const cuentas = Array.isArray(datos.cuentas) ? datos.cuentas : [];
-        const totalCentavos = Math.round(Number(datos.saldo_total) * 100);
-
-        if (!cuentas.length || !Number.isSafeInteger(totalCentavos) ||
-            totalCentavos <= 0) {
-            Swal.fire(
-                "Sin adeudos",
-                "Este cliente no tiene créditos pendientes.",
-                "info"
-            );
-            return;
-        }
-
-        if (state.clienteAbonoGlobal !== clienteId ||
-            !state.tokenAbonoGlobal) {
-            state.clienteAbonoGlobal = clienteId;
-            state.tokenAbonoGlobal = generarIdSolicitudVenta();
-        }
-
-        const plantilla = document.getElementById("tplAbonoCuenta");
-
-        if (!plantilla || !plantilla.content.firstElementChild) {
-            Swal.fire(
-                "Error",
-                "No se encontró el formulario de abonos.",
-                "error"
-            );
-            return;
-        }
-
-        const contenido = plantilla.content.firstElementChild.cloneNode(true);
-        const $contenido = $(contenido);
-
-        // Desde Deudores no hay un crédito individual seleccionado.
-        // Las dos pastillas se utilizan al abrir un crédito individual.
-        $contenido.find("#abonoModoNav").addClass("d-none");
-        $contenido.find("#abonoModoAviso").addClass("d-none");
-
-        $contenido.find("#abonoTextoSaldo")
-            .text("Saldo pendiente total del cliente");
-
-        $contenido.find("#abonoSaldoDisponible")
-            .text(monedaMXN(Number(datos.saldo_total)));
-
-        $contenido.find("#abonoNotas").attr("maxlength", 450);
-
-        $contenido.prepend(
-            $("<div>")
-                .addClass("fw-semibold mb-3 text-success")
-                .text(String(datos.nombre || "Cliente"))
+        const monto = numeroNotaValido(
+            $contenido.find("#abonoMonto").val(),
+            0.01,
+            99999999.99
         );
 
-        let $detalle = $contenido.find("#abonoDetalleGlobal");
-        let $filas = $contenido.find("#abonoRepartoGlobal");
+        let disponible = monto === null
+            ? 0
+            : Math.round(monto * 100);
 
-        // Si el HTML aún no contiene la tabla, se crea automáticamente.
-        if (!$detalle.length || !$filas.length) {
-            $detalle = $("<div>", {
-                id: "abonoDetalleGlobal",
-                class: "mb-3"
-            });
-
-            $detalle.append(
-                $("<p>")
-                    .addClass("small text-secondary mb-2")
-                    .text(
-                        "El abono se aplica primero a los créditos " +
-                        "vencidos, después por vencimiento y " +
-                        "finalmente por antigüedad."
-                    )
+        (cartera.cuentas || []).forEach(function(cuenta) {
+            const saldoCuenta = Math.round(
+                Number(cuenta.saldo) * 100
             );
 
-            const $tabla = $("<table>")
-                .addClass(
-                    "table table-sm table-hover align-middle small mb-0"
+            const aplicado = Math.min(
+                Math.max(0, disponible),
+                saldoCuenta
+            );
+
+            disponible -= aplicado;
+
+            const saldoFinal = saldoCuenta - aplicado;
+
+            const $fila = $("<tr>");
+
+            $fila.append(
+                $("<td>").text("#" + cuenta.id)
+            );
+
+            $fila.append(
+                $("<td>").text(
+                    String(cuenta.fecha_origen || "—").slice(0, 10) +
+                    " · " +
+                    (cuenta.vencimiento || "Sin vencimiento")
                 )
-                .append(
-                    "<thead><tr>" +
-                    "<th>Crédito</th>" +
-                    "<th>Origen / vencimiento</th>" +
-                    "<th class='text-end'>Abono</th>" +
-                    "<th class='text-end'>Saldo final</th>" +
-                    "</tr></thead>"
-                );
-
-            $filas = $("<tbody>", {
-                id: "abonoRepartoGlobal"
-            });
-
-            $tabla.append($filas);
-
-            $detalle.append(
-                $("<div>")
-                    .addClass("table-responsive")
-                    .css("max-height", "260px")
-                    .append($tabla)
             );
 
-            $contenido.find(".row.g-3").first().before($detalle);
-        } else {
-            $detalle.removeClass("d-none");
-        }
-
-        function pintarDistribucion() {
-            const cantidad = numeroNotaValido(
-                $contenido.find("#abonoMonto").val(),
-                0.01,
-                99999999.99
+            $fila.append(
+                $("<td>")
+                    .addClass("text-end")
+                    .text(monedaMXN(aplicado / 100))
             );
 
-            let disponible = cantidad === null
-                ? 0
-                : Math.round(cantidad * 100);
+            const $saldoFinal = $("<td>")
+                .addClass("text-end fw-semibold")
+                .text(monedaMXN(saldoFinal / 100));
 
-            $filas.empty();
+            if (saldoFinal === 0) {
+                $saldoFinal.addClass("text-success");
+            }
 
-            cuentas.forEach(function(cuenta) {
-                const saldo = Math.round(Number(cuenta.saldo) * 100);
-                const aplicado = Math.min(Math.max(0, disponible), saldo);
+            $fila.append($saldoFinal);
+            $filas.append($fila);
+        });
+    }
 
-                disponible -= aplicado;
-
-                const $fila = $("<tr>");
-
-                $fila.append(
-                    $("<td>").text("#" + cuenta.id)
-                );
-
-                $fila.append(
-                    $("<td>").text(
-                        String(cuenta.fecha_origen || "—").slice(0, 10) +
-                        " / " +
-                        (cuenta.vencimiento || "Sin vencimiento")
-                    )
-                );
-
-                $fila.append(
-                    $("<td>")
-                        .addClass("text-end")
-                        .text(monedaMXN(aplicado / 100))
-                );
-
-                $fila.append(
-                    $("<td>")
-                        .addClass("text-end fw-semibold")
-                        .text(monedaMXN((saldo - aplicado) / 100))
-                );
-
-                $filas.append($fila);
-            });
+    function mostrarModo(nuevoModo) {
+        if (nuevoModo === "GLOBAL" && !cartera) {
+            return;
         }
 
-        Swal.fire({
-            title: "Abono global por cliente",
-            html: contenido,
-            width: "820px",
-            showCancelButton: true,
-            confirmButtonText: "Confirmar cobro global",
-            cancelButtonText: "Cancelar",
-            confirmButtonColor: "#086b47",
+        modo = nuevoModo;
 
-            didOpen: function() {
-                prepararFechasAdmin(Swal.getHtmlContainer());
+        $contenido.find(".js-abono-modo").each(function() {
+            const $boton = $(this);
 
-                $contenido.find("#abonoMetodo").trigger("change");
+            const activo = $boton.attr("data-modo") === modo;
 
-                $contenido.find("#abonoMonto")
-                    .on("input", pintarDistribucion);
+            $boton
+                .toggleClass("active", activo)
+                .attr("aria-selected", activo ? "true" : "false");
+        });
 
-                pintarDistribucion();
+        $contenido.find("#abonoDetalleGlobal")
+            .toggleClass("d-none", modo !== "GLOBAL");
+
+        const saldoActual = modo === "GLOBAL"
+            ? Number(cartera.saldo_total)
+            : saldo;
+
+        $contenido.find("#abonoSaldoDisponible")
+            .text(monedaMXN(saldoActual));
+
+        $contenido.find("#abonoTextoSaldo")
+            .text(
+                modo === "GLOBAL"
+                    ? "Saldo pendiente total del cliente"
+                    : "Saldo del crédito seleccionado"
+            );
+
+        $contenido.find("#abonoMonto").val("");
+
+        $contenido.find("#abonoModoAviso")
+            .addClass("d-none")
+            .removeClass("text-danger text-secondary")
+            .text("");
+
+        const titulo = Swal.getTitle();
+
+        if (titulo) {
+            titulo.textContent = modo === "GLOBAL"
+                ? "Abono global por cliente"
+                : "Registrar cobro";
+        }
+
+        const confirmar = Swal.getConfirmButton();
+
+        if (confirmar) {
+            confirmar.textContent = modo === "GLOBAL"
+                ? "Confirmar abono global"
+                : "Confirmar cobro";
+        }
+
+        const popup = Swal.getPopup();
+
+        if (popup) {
+            popup.style.width = modo === "GLOBAL"
+                ? "820px"
+                : "600px";
+        }
+
+        pintarReparto();
+    }
+
+    Swal.fire({
+        title: tipo === "COBRAR"
+            ? "Registrar cobro"
+            : "Registrar pago",
+
+        html: contenido,
+        width: "600px",
+        showCancelButton: true,
+
+        confirmButtonText: tipo === "COBRAR"
+            ? "Confirmar cobro"
+            : "Confirmar pago",
+
+        cancelButtonText: "Cancelar",
+        confirmButtonColor: "#086b47",
+
+        didOpen: function() {
+            prepararFechasAdmin(Swal.getHtmlContainer());
+
+            $contenido.find("#abonoMetodo").trigger("change");
+
+            $contenido.on("input", "#abonoMonto", function() {
+                pintarReparto();
+            });
+
+            // Cambiar entre cobro individual y global.
+            $contenido.on("click", ".js-abono-modo", function() {
+                const seleccionado = $(this).attr("data-modo");
+
+                if (seleccionado === "INDIVIDUAL") {
+                    mostrarModo("INDIVIDUAL");
+                    return;
+                }
+
+                if (
+                    seleccionado !== "GLOBAL" ||
+                    !permiteGlobal ||
+                    consultando
+                ) {
+                    return;
+                }
+
+                // Si la cartera ya fue consultada, reutilizarla.
+                if (cartera) {
+                    mostrarModo("GLOBAL");
+                    return;
+                }
+
+                consultando = true;
+
+                $contenido.find("#abonoModoAviso")
+                    .removeClass("d-none text-danger")
+                    .addClass("text-secondary")
+                    .text("Consultando los créditos del cliente...");
 
                 $.ajax({
                     url: "php/index.php",
                     type: "POST",
                     dataType: "json",
                     data: {
-                        action: "getCajasVenta"
+                        action: "getAbonoGlobalCliente",
+                        cliente_id: clienteId
                     }
-                }).done(function(cajas) {
-                    if (!Swal.isVisible()) {
+                }).done(function(respuesta) {
+                    if (!document.body.contains(contenido)) {
                         return;
                     }
 
-                    const $select = $contenido.find("#abonoCaja").empty();
-
-                    $select.append(
-                        $("<option>", {
-                            value: "",
-                            text: "Selecciona una caja abierta"
-                        })
-                    );
-
-                    if (cajas && cajas.status === "ok") {
-                        (cajas.results || []).forEach(function(caja) {
-                            $select.append(
-                                $("<option>")
-                                    .val(caja.id)
-                                    .text(caja.name + " · #" + caja.id)
+                    if (
+                        !respuesta ||
+                        respuesta.status !== "ok" ||
+                        !respuesta.results ||
+                        !Array.isArray(respuesta.results.cuentas) ||
+                        !respuesta.results.cuentas.length
+                    ) {
+                        $contenido.find("#abonoModoAviso")
+                            .removeClass("d-none text-secondary")
+                            .addClass("text-danger")
+                            .text(
+                                respuesta && respuesta.answer ||
+                                "No se pudo consultar la cartera."
                             );
-                        });
-                    }
-                }).fail(function() {
-                    if (!Swal.isVisible()) {
                         return;
                     }
 
-                    $contenido.find("#abonoCaja").html(
-                        '<option value="">No se pudieron consultar las cajas</option>'
-                    );
+                    cartera = respuesta.results;
+
+                    const total = Number(cartera.saldo_total);
+
+                    if (!Number.isFinite(total) || total <= 0) {
+                        cartera = null;
+
+                        $contenido.find("#abonoModoAviso")
+                            .removeClass("d-none text-secondary")
+                            .addClass("text-danger")
+                            .text("El cliente no tiene saldo pendiente.");
+
+                        return;
+                    }
+
+                    if (
+                        state.clienteAbonoGlobal !== clienteId ||
+                        !state.tokenAbonoGlobal
+                    ) {
+                        state.clienteAbonoGlobal = clienteId;
+                        state.tokenAbonoGlobal = generarIdSolicitudVenta();
+                    }
+
+                    mostrarModo("GLOBAL");
+
+                }).fail(function(xhr) {
+                    if (!document.body.contains(contenido)) {
+                        return;
+                    }
+
+                    $contenido.find("#abonoModoAviso")
+                        .removeClass("d-none text-secondary")
+                        .addClass("text-danger")
+                        .text(
+                            xhr.responseJSON &&
+                            xhr.responseJSON.answer ||
+                            "No se pudieron consultar los créditos."
+                        );
+
+                }).always(function() {
+                    consultando = false;
                 });
-            },
+            });
 
-            preConfirm: function() {
-                const monto = $contenido.find("#abonoMonto").val();
-
-                const cantidad = numeroNotaValido(
-                    monto,
-                    0.01,
-                    99999999.99
-                );
-
-                const metodo = $contenido.find("#abonoMetodo").val();
-                const cajaId = $contenido.find("#abonoCaja").val();
-
-                const referencia = String(
-                    $contenido.find("#abonoReferencia").val() || ""
-                ).trim();
-
-                if (cantidad === null ||
-                    Math.round(cantidad * 100) > totalCentavos) {
-                    Swal.showValidationMessage(
-                        "El abono debe ser mayor que cero " +
-                        "y no superar la deuda total."
-                    );
-                    return false;
-                }
-
-                if (metodo === "EFECTIVO" && !cajaId) {
-                    Swal.showValidationMessage(
-                        "Selecciona una caja con turno abierto."
-                    );
-                    return false;
-                }
-
-                if (metodo === "TRANSFERENCIA" && !referencia) {
-                    Swal.showValidationMessage(
-                        "Captura la referencia bancaria."
-                    );
-                    return false;
-                }
-
-                return {
-                    action: "registrarAbonoGlobalCliente",
-                    cliente_id: clienteId,
-                    solicitud_id: state.tokenAbonoGlobal,
-                    firma: datos.firma,
-                    monto: monto,
-                    metodo: metodo,
-                    caja_id: metodo === "EFECTIVO" ? cajaId : "",
-                    referencia: metodo === "TRANSFERENCIA"
-                        ? referencia
-                        : "",
-                    notas: String(
-                        $contenido.find("#abonoNotas").val() || ""
-                    ).trim(),
-                    fecha_operacion: window.CSM_ES_ADMIN
-                        ? $contenido.find("#abonoFechaOperacion").val()
-                        : ""
-                };
-            }
-        }).then(function(confirmacion) {
-            if (!confirmacion.isConfirmed ||
-                !confirmacion.value ||
-                state.guardandoAbonoGlobal) {
-                return;
-            }
-
-            state.guardandoAbonoGlobal = true;
-
+            // Consultar cajas con turno abierto.
             $.ajax({
                 url: "php/index.php",
                 type: "POST",
                 dataType: "json",
-                data: confirmacion.value
-            }).done(function(resultado) {
-                if (!resultado || resultado.status !== "ok") {
-                    Swal.fire(
-                        "Aviso",
-                        resultado && resultado.answer ||
-                            "No se pudo registrar el cobro.",
-                        "warning"
-                    );
+                data: {
+                    action: "getCajasVenta"
+                }
+            }).done(function(respuesta) {
+                if (!document.body.contains(contenido)) {
                     return;
                 }
 
-                state.tokenAbonoGlobal = null;
-                state.clienteAbonoGlobal = null;
+                const $caja = $contenido.find("#abonoCaja");
 
-                if (state.moduloActual === "cuentas") {
-                    consultarVistaCuentas();
+                $caja.empty().append(
+                    $("<option>", {
+                        value: "",
+                        text: "Selecciona una caja abierta"
+                    })
+                );
 
-                    if (typeof cargarPillsClientesCuentas === "function") {
-                        cargarPillsClientesCuentas();
-                    }
+                if (!respuesta || respuesta.status !== "ok") {
+                    return;
                 }
 
-                const detalle = resultado.results || {};
-
-                Swal.fire({
-                    icon: "success",
-                    title: detalle.duplicado
-                        ? "Operación ya registrada"
-                        : "Cobro global registrado",
-                    text: detalle.duplicado
-                        ? "Este cobro ya existía y no se duplicó."
-                        : "Créditos abonados: " +
-                          (detalle.aplicaciones || []).length +
-                          " · Saldo restante: " +
-                          monedaMXN(detalle.saldo_total),
-                    confirmButtonColor: "#086b47"
+                (respuesta.results || []).forEach(function(caja) {
+                    $caja.append(
+                        $("<option>")
+                            .val(caja.id)
+                            .text(caja.name + " · #" + caja.id)
+                    );
                 });
 
-            }).fail(function(xhr) {
-                Swal.fire(
-                    "Error",
-                    xhr.responseJSON && xhr.responseJSON.answer ||
-                        "No fue posible confirmar el cobro. " +
-                        "No crees una nueva solicitud sin comprobar " +
-                        "antes si se registró.",
-                    "error"
-                );
-            }).always(function() {
-                state.guardandoAbonoGlobal = false;
-            });
-        });
+            }).fail(function() {
+                if (!document.body.contains(contenido)) {
+                    return;
+                }
 
-    }).fail(function(xhr) {
-        Swal.fire(
-            "Error",
-            xhr.responseJSON && xhr.responseJSON.answer ||
-                "No fue posible consultar la cartera del cliente.",
-            "error"
-        );
+                $contenido.find("#abonoCaja").html(
+                    '<option value="">No se pudieron consultar las cajas</option>'
+                );
+            });
+        },
+
+        preConfirm: function() {
+            if (consultando) {
+                Swal.showValidationMessage(
+                    "Espera a que termine la consulta de cartera."
+                );
+                return false;
+            }
+
+            if (modo === "GLOBAL" && !cartera) {
+                Swal.showValidationMessage(
+                    "Primero debes consultar la deuda del cliente."
+                );
+                return false;
+            }
+
+            const monto = $contenido.find("#abonoMonto").val();
+            const metodo = $contenido.find("#abonoMetodo").val();
+            const cajaId = $contenido.find("#abonoCaja").val();
+
+            const referencia = String(
+                $contenido.find("#abonoReferencia").val() || ""
+            ).trim();
+
+            const notas = String(
+                $contenido.find("#abonoNotas").val() || ""
+            ).trim();
+
+            const cantidad = numeroNotaValido(
+                monto,
+                0.01,
+                99999999.99
+            );
+
+            const limiteCentavos = modo === "GLOBAL"
+                ? Math.round(Number(cartera.saldo_total) * 100)
+                : Math.round(saldo * 100);
+
+            if (
+                cantidad === null ||
+                Math.round(cantidad * 100) > limiteCentavos
+            ) {
+                Swal.showValidationMessage(
+                    "El importe debe ser mayor que cero " +
+                    "y no superar el saldo disponible."
+                );
+                return false;
+            }
+
+            if (!["EFECTIVO", "TRANSFERENCIA"].includes(metodo)) {
+                Swal.showValidationMessage(
+                    "Selecciona un método de cobro válido."
+                );
+                return false;
+            }
+
+            if (metodo === "EFECTIVO" && !cajaId) {
+                Swal.showValidationMessage(
+                    "Selecciona una caja con turno abierto."
+                );
+                return false;
+            }
+
+            if (metodo === "TRANSFERENCIA" && !referencia) {
+                Swal.showValidationMessage(
+                    "Captura la referencia bancaria."
+                );
+                return false;
+            }
+
+            const global = modo === "GLOBAL";
+
+            const datos = {
+                action: global
+                    ? "registrarAbonoGlobalCliente"
+                    : "registrarAbonoCuenta",
+
+                solicitud_id: global
+                    ? state.tokenAbonoGlobal
+                    : state.tokenAbonoCuenta,
+
+                monto: monto,
+                metodo: metodo,
+
+                caja_id: metodo === "EFECTIVO"
+                    ? cajaId
+                    : "",
+
+                referencia: metodo === "TRANSFERENCIA"
+                    ? referencia
+                    : "",
+
+                notas: notas,
+
+                fecha_operacion: window.CSM_ES_ADMIN
+                    ? $contenido.find("#abonoFechaOperacion").val()
+                    : ""
+            };
+
+            if (global) {
+                datos.cliente_id = clienteId;
+                datos.firma = cartera.firma;
+            } else {
+                datos.tipo = tipo;
+                datos.id = id;
+            }
+
+            return datos;
+        }
+    }).then(function(confirmacion) {
+        if (
+            !confirmacion.isConfirmed ||
+            !confirmacion.value ||
+            state.guardandoAbono ||
+            state.guardandoAbonoGlobal
+        ) {
+            return;
+        }
+
+        const datos = confirmacion.value;
+
+        const global = datos.action ===
+            "registrarAbonoGlobalCliente";
+
+        if (global) {
+            state.guardandoAbonoGlobal = true;
+        } else {
+            state.guardandoAbono = true;
+        }
+
+        $.ajax({
+            url: "php/index.php",
+            type: "POST",
+            dataType: "json",
+            data: datos
+        }).done(function(respuesta) {
+            if (!respuesta || respuesta.status !== "ok") {
+                Swal.fire(
+                    "No se registró el movimiento",
+                    respuesta && respuesta.answer ||
+                        "No fue posible confirmar el cobro.",
+                    "warning"
+                );
+                return;
+            }
+
+            if (global) {
+                state.tokenAbonoGlobal = null;
+                state.clienteAbonoGlobal = null;
+            } else {
+                state.tokenAbonoCuenta = null;
+                state.abonoCuentaIdentidad = "";
+            }
+
+            if (
+                state.moduloActual === "cuentas" &&
+                state.tipoCuentaActual === tipo
+            ) {
+                consultarVistaCuentas();
+
+                if (
+                    typeof cargarPillsClientesCuentas === "function"
+                ) {
+                    cargarPillsClientesCuentas();
+                }
+            }
+
+            const duplicado = !!(
+                respuesta.results &&
+                respuesta.results.duplicado
+            );
+
+            const resultado = respuesta.results || {};
+
+            const saldoFinal = global
+                ? resultado.saldo_total
+                : resultado.saldo;
+
+            Swal.fire({
+                icon: "success",
+
+                title: duplicado
+                    ? "Operación ya registrada"
+                    : global
+                        ? "Abono global registrado"
+                        : tipo === "COBRAR"
+                            ? "Cobro registrado"
+                            : "Pago registrado",
+
+                text: duplicado
+                    ? "Este movimiento ya estaba registrado " +
+                      "y no se duplicó."
+                    : "Saldo pendiente: " + monedaMXN(saldoFinal),
+
+                confirmButtonColor: "#086b47"
+            });
+
+        }).fail(function(xhr) {
+            Swal.fire({
+                icon: "error",
+                title: "No se pudo confirmar",
+                text: xhr.responseJSON &&
+                    xhr.responseJSON.answer ||
+                    "No se pudo comprobar el resultado. " +
+                    "Conserva el identificador de la solicitud " +
+                    "y verifica el movimiento antes de reintentarlo.",
+                confirmButtonColor: "#086b47"
+            });
+
+        }).always(function() {
+            if (global) {
+                state.guardandoAbonoGlobal = false;
+            } else {
+                state.guardandoAbono = false;
+            }
+        });
     });
 }
+
 
 
 function abrirAbonoGlobalCliente(clienteId) {
