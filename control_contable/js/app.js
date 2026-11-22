@@ -67,7 +67,7 @@ $(document).ready(function() {
 window.CSM_ES_ADMIN = Number(data.results.role_id) === 1;
 $("#btnCatalogosCosteo").toggleClass("d-none", !window.CSM_ES_ADMIN);
 $("#btnClientes").toggleClass("d-none", !window.CSM_ES_ADMIN);
-
+$("#btnColaboradores").toggleClass("d-none", !window.CSM_ES_ADMIN);
 
 window.CSM_NOMBRE_OPERADOR = data.results.nombre || data.results.username || "Usuario";
 
@@ -105,6 +105,7 @@ $("#menuUsuarioActual").text(nombreUsuario + " · " + nombreRol);
         bindCajaEgresos();
         bindCuentas();
         bindCosteo();
+        bindColaboradores();
         mostrarInicio();
 
         $("body").removeClass("csm-verificando");

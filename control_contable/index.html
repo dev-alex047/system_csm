@@ -19,6 +19,7 @@
     <!-- Estilos propios -->
     <link href="css/app.css" rel="stylesheet">
     <link href="css/costeo.css" rel="stylesheet">
+    <link href="css/colaboradores.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body>
@@ -80,6 +81,14 @@
         id="btnClientes">
     <i class="bi bi-people-fill"></i>
     <span>Clientes y prospectos</span>
+</button>
+
+
+<button type="button"
+        class="dropdown-item menu-config-item d-none"
+        id="btnColaboradores">
+    <i class="bi bi-person-badge"></i>
+    <span>Colaboradores</span>
 </button>
 
 
@@ -1422,6 +1431,346 @@ autocomplete="off" required>
     </div>
 </div>
 
+
+<!-- ADMINISTRACIÓN DE COLABORADORES -->
+<div class="modal fade co-modal" id="coModal" tabindex="-1"
+     aria-labelledby="coTituloModal" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title fw-bold" id="coTituloModal">
+                        <i class="bi bi-person-badge text-success me-2"></i>
+                        Colaboradores
+                    </h2>
+                    <p class="text-secondary mb-0">
+                        Directorio y administración del personal.
+                    </p>
+                </div>
+                <button type="button" class="btn-close"
+                        data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="container-fluid co-contenedor">
+
+                    <!-- DIRECTORIO -->
+                    <div id="coListadoPanel">
+                        <div class="co-card mb-4">
+                            <div class="d-flex justify-content-between
+                                        align-items-center flex-wrap gap-3">
+                                <div>
+                                    <span class="co-etiqueta">GESTIÓN DE PERSONAL</span>
+                                    <h3 class="fw-bold mb-1">Equipo de trabajo</h3>
+                                    <p class="text-secondary mb-0">
+                                        Consulta y administra tus colaboradores.
+                                    </p>
+                                </div>
+                                <button type="button" id="coNuevo"
+                                        class="btn btn-success px-4">
+                                    <i class="bi bi-plus-lg me-2"></i>
+                                    Agregar colaborador
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="co-card">
+                            <form id="coFormBuscar" class="row g-3 align-items-end mb-4">
+                                <div class="col-lg-9">
+                                    <label for="coBuscar" class="form-label fw-semibold">
+                                        Buscar colaborador
+                                    </label>
+                                    <input id="coBuscar" class="form-control"
+                                           maxlength="100"
+                                           placeholder="Nombre, correo, teléfono, área o cargo">
+                                </div>
+                                <div class="col-lg-2">
+                                    <button type="submit" class="btn btn-success w-100">
+                                        <i class="bi bi-search me-1"></i>Buscar
+                                    </button>
+                                </div>
+                                <div class="col-lg-1">
+                                    <button id="coLimpiarBusqueda" type="button"
+                                            class="btn btn-outline-secondary w-100"
+                                            title="Limpiar búsqueda">
+                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                    </button>
+                                </div>
+                            </form>
+
+                            <div class="d-flex justify-content-between
+                                        align-items-center mb-3">
+                                <h4 class="h6 fw-bold mb-0">Personal registrado</h4>
+                                <small id="coResumen" class="text-secondary"
+                                       aria-live="polite"></small>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle co-tabla">
+                                    <thead>
+                                        <tr>
+                                            <th>COLABORADOR</th>
+                                            <th>CONTACTO</th>
+                                            <th>ÁREA Y CARGO</th>
+                                            <th>JORNADA</th>
+                                            <th>INGRESO</th>
+                                            <th>ACCIONES</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="coTabla"></tbody>
+                                </table>
+                            </div>
+
+                            <div id="coPaginacion"
+                                 class="d-flex justify-content-center gap-3 mt-4"></div>
+                        </div>
+                    </div>
+
+                    <!-- FORMULARIO -->
+                    <div id="coFormularioPanel" class="d-none">
+                        <div class="d-flex align-items-center gap-3 mb-4">
+                            <button type="button" id="coVolver"
+                                    class="btn btn-outline-secondary"
+                                    aria-label="Volver al directorio">
+                                <i class="bi bi-arrow-left"></i>
+                            </button>
+                            <div>
+                                <h3 id="coTituloFormulario" class="fw-bold mb-1">
+                                    Agregar colaborador
+                                </h3>
+                                <p class="text-secondary mb-0">
+                                    Los campos con * son obligatorios.
+                                </p>
+                            </div>
+                        </div>
+
+                        <form id="coForm">
+                            <input type="hidden" id="coEmpleadoId" name="id" value="0">
+
+                            <section class="co-card mb-3">
+                                <h4 class="co-seccion-titulo">
+                                    <i class="bi bi-person-vcard"></i>Datos personales
+                                </h4>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Nombre *</label>
+                                        <input name="nombre" class="form-control"
+                                               maxlength="100" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Apellidos *</label>
+                                        <input name="apellidos" class="form-control"
+                                               maxlength="150" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">CURP</label>
+                                        <input name="curp" class="form-control"
+                                               maxlength="18" placeholder="18 caracteres">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">RFC</label>
+                                        <input name="rfc" class="form-control"
+                                               maxlength="13" placeholder="12 o 13 caracteres">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">NSS</label>
+                                        <input name="nss" class="form-control"
+                                               maxlength="11" inputmode="numeric"
+                                               placeholder="11 dígitos">
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section class="co-card mb-3">
+                                <h4 class="co-seccion-titulo">
+                                    <i class="bi bi-envelope"></i>Contacto
+                                </h4>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Correo personal</label>
+                                        <input type="email" name="correo"
+                                               class="form-control" maxlength="190">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Correo empresarial</label>
+                                        <input type="email" name="correo_empresarial"
+                                               class="form-control" maxlength="190">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Teléfono</label>
+                                        <input type="tel" name="telefono"
+                                               class="form-control" maxlength="30">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Celular</label>
+                                        <input type="tel" name="movil"
+                                               class="form-control" maxlength="30">
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section class="co-card mb-3">
+                                <h4 class="co-seccion-titulo">
+                                    <i class="bi bi-briefcase"></i>Información laboral
+                                </h4>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Área</label>
+                                        <input name="area" class="form-control"
+                                               maxlength="100" placeholder="Ej. Ventas">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Cargo</label>
+                                        <input name="cargo" class="form-control"
+                                               maxlength="100" placeholder="Ej. Vendedor">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Fecha de ingreso</label>
+                                        <input type="date" name="fecha_ingreso"
+                                               class="form-control">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Horas por semana</label>
+                                        <input type="number" name="horas_semanales"
+                                               class="form-control"
+                                               min="0" max="168" step="0.01">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Sindicalizado</label>
+                                        <select name="sindicalizado" class="form-select">
+                                            <option value="0">No</option>
+                                            <option value="1">Sí</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Tipo de pago *</label>
+                                        <select name="tipo_pago" class="form-select" required>
+                                            <option value="">Selecciona una opción</option>
+                                            <option value="SEMANAL">Semanal</option>
+                                            <option value="QUINCENAL">Quincenal</option>
+                                            <option value="MENSUAL">Mensual</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Salario mensual ($)</label>
+                                        <input type="number" name="salario_mensual"
+                                               class="form-control" min="0" step="0.01"
+                                               placeholder="0.00">
+                                        <small class="text-secondary">
+                                            Importe mensual de referencia.
+                                        </small>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section class="co-card mb-3">
+                                <div class="d-flex justify-content-between
+                                            align-items-center gap-2 flex-wrap mb-3">
+                                    <div>
+                                        <h4 class="co-seccion-titulo mb-1">
+                                            <i class="bi bi-calendar-week"></i>
+                                            Días de trabajo *
+                                        </h4>
+                                        <small class="text-secondary">
+                                            Selecciona los días habituales de trabajo.
+                                        </small>
+                                    </div>
+                                    <span id="coDiasContador" class="co-chip"
+                                          aria-live="polite">0 de 7 días seleccionados</span>
+                                </div>
+
+                                <div class="co-grid-dias">
+                                    <input class="btn-check" type="checkbox"
+                                           name="dias_trabajo" id="coDia1" value="1">
+                                    <label class="co-dia-card" for="coDia1">Lunes</label>
+
+                                    <input class="btn-check" type="checkbox"
+                                           name="dias_trabajo" id="coDia2" value="2">
+                                    <label class="co-dia-card" for="coDia2">Martes</label>
+
+                                    <input class="btn-check" type="checkbox"
+                                           name="dias_trabajo" id="coDia3" value="3">
+                                    <label class="co-dia-card" for="coDia3">Miércoles</label>
+
+                                    <input class="btn-check" type="checkbox"
+                                           name="dias_trabajo" id="coDia4" value="4">
+                                    <label class="co-dia-card" for="coDia4">Jueves</label>
+
+                                    <input class="btn-check" type="checkbox"
+                                           name="dias_trabajo" id="coDia5" value="5">
+                                    <label class="co-dia-card" for="coDia5">Viernes</label>
+
+                                    <input class="btn-check" type="checkbox"
+                                           name="dias_trabajo" id="coDia6" value="6">
+                                    <label class="co-dia-card" for="coDia6">Sábado</label>
+
+                                    <input class="btn-check" type="checkbox"
+                                           name="dias_trabajo" id="coDia7" value="7">
+                                    <label class="co-dia-card" for="coDia7">Domingo</label>
+                                </div>
+                            </section>
+
+                            <section class="co-card mb-3">
+                                <h4 class="co-seccion-titulo">
+                                    <i class="bi bi-geo-alt"></i>Domicilio
+                                </h4>
+                                <div class="row g-3">
+                                    <div class="col-md-8">
+                                        <label class="form-label">Dirección</label>
+                                        <input name="direccion" class="form-control"
+                                               maxlength="255" placeholder="Calle y número">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Colonia</label>
+                                        <input name="colonia" class="form-control"
+                                               maxlength="150">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Municipio o ciudad</label>
+                                        <input name="municipio" class="form-control"
+                                               maxlength="120">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Código postal</label>
+                                        <input name="codigo_postal" class="form-control"
+                                               maxlength="10">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Estado</label>
+                                        <input name="estado" class="form-control"
+                                               maxlength="100">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">País</label>
+                                        <input name="pais" class="form-control"
+                                               maxlength="100" value="México">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Observaciones</label>
+                                        <textarea name="observaciones" class="form-control"
+                                                  maxlength="3000" rows="3"></textarea>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <div class="co-barra-acciones">
+                                <button type="button" id="coCancelar"
+                                        class="btn btn-outline-secondary">Cancelar</button>
+                                <button type="submit" id="coGuardar"
+                                        class="btn btn-success px-4">
+                                    <i class="bi bi-check2-circle me-2"></i>
+                                    Guardar colaborador
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 <!-- ========== LIBRERÍAS JAVASCRIPT ========== -->
 
 <!-- jQuery -->
@@ -1440,6 +1789,7 @@ autocomplete="off" required>
 <script src="js/costeo.js"></script>
 <script src="js/app.js"></script>
 <script src="js/clientes.js"></script>
+<script src="js/colaboradores.js"></script>
 
 </body>
 </html>
