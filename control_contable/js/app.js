@@ -372,7 +372,8 @@ function renderVentaConNota() {
     alternarCamposPagoNota();
     actualizarTotalesVentaNota();
     getCajasVenta();
-    iniciarSelectorNotaClientes();
+    //iniciarSelectorNotaClientes();
+    iniciarSelectorNotaClientesLibre();
 }
 
 function agregarItemVentaNota() {
@@ -480,7 +481,7 @@ function validarVentaNota() {
 
     if (venta.folio.trim().length > 50) return errorVentaNota("El folio puede tener hasta 50 caracteres.","#notaFolio");
     
-    if (!Number.isSafeInteger(Number(venta.cliente_id)) ||
+    /*if (!Number.isSafeInteger(Number(venta.cliente_id)) ||
         Number(venta.cliente_id) <= 0) {
         return errorVentaNota(
             "Debes seleccionar un cliente registrado del catálogo.",
@@ -493,7 +494,30 @@ function validarVentaNota() {
             "Selecciona un cliente registrado.",
             "#notaCliente"
         );
-    }
+    }*/
+
+    const nombreCliente = String(venta.cliente || "").trim();
+
+if (nombreCliente.length > 100) {
+    return errorVentaNota(
+        "El nombre del cliente puede tener hasta 100 caracteres.",
+        "#notaCliente"
+    );
+}
+
+const requiereCliente = venta.forma_pago === "CREDITO" ||
+    venta.forma_pago === "PARCIALIDADES";
+
+if (requiereCliente && !nombreCliente) {
+    return errorVentaNota(
+        "Para una venta con saldo pendiente, escribe o selecciona el nombre del cliente.",
+        "#notaCliente"
+    );
+}
+
+if (!nombreCliente) {
+    venta.cliente_id = null;
+}
 
     if (!venta.vendedor.trim()) return errorVentaNota("Captura el nombre del vendedor.","#notaVendedor");
     if (!venta.items.length) return errorVentaNota("Agrega al menos un artículo.");
@@ -557,7 +581,25 @@ $resumen.append(
 );
 
 
-    $resumen.append($('<p></p>').text("Cliente: "+venta.cliente.trim()+" · Vendedor: "+venta.vendedor.trim()));
+    //$resumen.append($('<p></p>').text("Cliente: "+venta.cliente.trim()+" · Vendedor: "+venta.vendedor.trim()));
+
+    const nombreCliente = String(venta.cliente || "").trim();
+
+$resumen.append(
+    $('<p></p>').text(
+        "Cliente: " + (nombreCliente || "Público general") +
+        " · Vendedor: " + venta.vendedor.trim()
+    )
+);
+
+if (nombreCliente && !venta.cliente_id) {
+    $resumen.append(
+        $('<div class="small text-secondary mb-3"></div>').text(
+            "Si el cliente no existe, se registrará automáticamente al guardar la venta."
+        )
+    );
+}
+
     $resumen.append($('<p></p>').text("Folio: "+(venta.folio.trim() || "Automático al guardar")+" · Pago: "+venta.forma_pago));
 
     const $lista = $('<div class="border rounded-3 p-3 mb-3"></div>');

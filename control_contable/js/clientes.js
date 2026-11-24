@@ -654,6 +654,101 @@ $(document).on("click", ".js-cl-lugar", function() {
     $("#clLugares").empty().addClass("d-none");
 });
 
+function iniciarSelectorNotaClientesLibre() {
+    const $campo = $("#notaCliente");
+
+    if (!$campo.length) return;
+
+    $campo.removeAttr("required aria-required").attr({
+        placeholder: "Busca un cliente o escribe su nombre...",
+        autocomplete: "off",
+        maxlength: 100
+    });
+
+    $campo.off("input.notaClienteLibre")
+        .on("input.notaClienteLibre", function() {
+            state.ventaNota.cliente_id = null;
+            state.ventaNota.cliente = this.value;
+            $(this).removeClass("is-invalid");
+        });
+
+    $.ajax({
+        url: "php/index.php",
+        type: "POST",
+        dataType: "json",
+        data: {
+            action: "getClientes"
+        }
+    }).done(function(r) {
+        if (!document.body.contains($campo[0])) return;
+
+        if (!r || r.status !== "ok") {
+            return;
+        }
+
+        const clientes = (
+            Array.isArray(r.results) ? r.results : []
+        ).filter(function(c) {
+            return Number(c.tipo) === 1;
+        });
+
+        $campo.autocomplete({
+            minLength: 0,
+
+            source: function(p, devolver) {
+                const buscar = String(p.term || "")
+                    .trim().toLocaleLowerCase("es");
+
+                const encontrados = clientes.filter(function(c) {
+                    return [
+                        c.nombre,
+                        c.apellido,
+                        c.alias,
+                        c.numero,
+                        c.movil
+                    ].join(" ")
+                        .toLocaleLowerCase("es")
+                        .includes(buscar);
+                });
+
+                devolver(encontrados.slice(0, 12).map(function(c) {
+                    const nombre = [c.nombre, c.apellido]
+                        .filter(Boolean).join(" ").trim();
+
+                    return {
+                        label: nombre,
+                        value: nombre,
+                        cliente: c
+                    };
+                }));
+            },
+
+            select: function(e, ui) {
+                const c = ui.item.cliente;
+
+                state.ventaNota.cliente_id = Number(c.id);
+                state.ventaNota.cliente = ui.item.value;
+
+                $campo.val(ui.item.value);
+                $campo.removeClass("is-invalid");
+
+                return false;
+            }
+        });
+
+        $campo.off("focus.notaClienteLibre")
+            .on("focus.notaClienteLibre", function() {
+                $(this).autocomplete("search", this.value);
+            });
+
+    }).fail(function(xhr) {
+        console.warn(
+            "No fue posible consultar el catálogo de clientes.",
+            xhr.status
+        );
+    });
+}
+
 
 
 function iniciarSelectorNotaClientes() {
