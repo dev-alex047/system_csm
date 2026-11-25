@@ -4704,10 +4704,14 @@ private function enteroCosteo($valor, int $decimales): int {
 
 
 /* COSTEO · consultas de corporativo y operaciones comerciales */
-private function corpCosteo(): string {
+private function corpCosteo_old(): string {
     if (!isset($_SESSION['csm_corp_id']) || trim((string)$_SESSION['csm_corp_id']) === '') {
         throw new DomainException('La sesión no tiene corporativo asignado. Inicia sesión nuevamente.');
     }
+    return $this->corpClientes();
+}
+
+private function corpCosteo(): string {
     return $this->corpClientes();
 }
 
@@ -6310,7 +6314,7 @@ public function cambiarEstadoCatalogoCosteo(array $data): array {
 
 
 
-    private function corpClientes(): string {
+    private function corpClientes_old(): string {
         $corp = isset($_SESSION['csm_corp_id'])
             ? trim((string)$_SESSION['csm_corp_id']) : '1';
 
@@ -6320,6 +6324,16 @@ public function cambiarEstadoCatalogoCosteo(array $data): array {
 
         return $corp;
     }
+
+    private function corpClientes(): string {
+    $corp = trim((string)($_SESSION['csm_corp_id'] ?? ''));
+
+    if ($corp === '' || strlen($corp) > 150) {
+        throw new RuntimeException('Corporativo no válido.');
+    }
+
+    return $corp;
+}
 
     private function exigirAdminClientes(): void {
         $stmt = $this->ejecutarSqlVenta(

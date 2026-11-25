@@ -4,6 +4,8 @@ ini_set('session.use_strict_mode', '1');
 ini_set('session.use_only_cookies', '1');
 ini_set('session.use_trans_sid', '0');
 ini_set('session.gc_maxlifetime', '1800');
+define('CSM_CORP_ID', '1');
+
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
     $base = rtrim(str_replace('\\', '/', dirname(dirname($_SERVER['SCRIPT_NAME']))), '/');
@@ -16,10 +18,22 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 
-function csmSesionActiva() {
+/*function csmSesionActiva() {
     return !empty($_SESSION['csm_user_id']) &&
         !empty($_SESSION['csm_actividad']) &&
         time() - (int)$_SESSION['csm_actividad'] <= 1800;
+}*/
+
+function csmSesionActiva(): bool {
+    $activa = !empty($_SESSION['csm_user_id']) &&
+        !empty($_SESSION['csm_actividad']) &&
+        time() - (int)$_SESSION['csm_actividad'] <= 1800;
+
+    if ($activa) {
+        $_SESSION['csm_corp_id'] = CSM_CORP_ID;
+    }
+
+    return $activa;
 }
 
 function csmTokenValido() {

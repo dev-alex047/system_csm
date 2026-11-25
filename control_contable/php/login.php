@@ -36,6 +36,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
                 $json['results'] = [
                     'autenticado' => true,
                     'id' => (int)$_SESSION['csm_user_id'],
+                    'corp_id' => (string)$_SESSION['csm_corp_id'],
                     'nombre' => (string)$_SESSION['csm_nombre'],
                     'username' => (string)$_SESSION['csm_username'],
                     'role_id' => (int)$_SESSION['csm_role_id'],
@@ -44,6 +45,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
             } else {
                 unset(
                     $_SESSION['csm_user_id'],
+                    $_SESSION['csm_corp_id'],
                     $_SESSION['csm_nombre'],
                     $_SESSION['csm_username'],
                     $_SESSION['csm_role_id'],
@@ -194,11 +196,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
                 }
 
                 $_SESSION['csm_user_id'] = $id;
-                $_SESSION['csm_username'] = (string)$usuario['username'];
-                $_SESSION['csm_nombre'] = (string)$usuario['name'];
-                $_SESSION['csm_role_id'] = (int)$usuario['role_id'];
-                $_SESSION['csm_actividad'] = time();
-                $_SESSION['csm_csrf'] = bin2hex(random_bytes(32));
+$_SESSION['csm_corp_id'] = CSM_CORP_ID;
+$_SESSION['csm_username'] = (string)$usuario['username'];
+$_SESSION['csm_nombre'] = (string)$usuario['name'];
+$_SESSION['csm_role_id'] = (int)$usuario['role_id'];
+$_SESSION['csm_actividad'] = time();
+$_SESSION['csm_csrf'] = bin2hex(random_bytes(32));
                 unset($_SESSION['csm_login_csrf']);
 
                 $json['status'] = 'ok';
