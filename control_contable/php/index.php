@@ -58,6 +58,10 @@ switch ($action) {
         $response = $consultas->getCatalogosCosteo($_POST);
         break;
 
+    case "operarCosteoComercial":
+        $response = $consultas->operarCosteoComercial($_POST);
+        break;
+
     case "guardarCatalogoCosteo":
         $response = $consultas->guardarCatalogoCosteo($_POST);
         break;

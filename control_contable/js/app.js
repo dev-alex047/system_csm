@@ -9,7 +9,7 @@ ventas: {
         {id:"listado",nombre:"Listado",icono:"list-ul",descripcion:"Consulta tus ventas registradas, notas y comprobantes."},
         {id:"nota",nombre:"Ventas con nota",icono:"receipt",descripcion:"Registra notas foleadas, clientes, artículos y formas de pago."},
         {id:"rapida",nombre:"Venta rápida",icono:"cart3",descripcion:"Registra ventas de mostrador sin datos de cliente."},
-        {id:"cotizador",nombre:"Cotizador",icono:"calculator",descripcion:"Calcula precios de materiales con transporte y gastos incluidos."}
+        {id:"cotizador",nombre:"Cotizador",icono:"calculator",descripcion:"Administra materiales especiales, precios, fletes y cotizaciones de entrega."}
     ]
 },
 
@@ -303,14 +303,28 @@ if (modulo === "ventas" && submodulo === "cotizador") {
 //if (modulo === "cuentas" && submodulo === "cobrar") { renderCuentas("COBRAR"); return; }
 //if (modulo === "cuentas" && submodulo === "pagar") { renderCuentas("PAGAR"); return; }
 
-
-
-/* VENTAS CON NOTA */
 function crearBorradorVentaNota() {
     
-    return {solicitud_id: generarIdSolicitudVenta(),
-caja_id: "",
-        folio:"",cliente:"",cliente_id: null,direccion:"",telefono:"",vendedor:"",observaciones:"",forma_pago:"EFECTIVO",referencia:"",abono:"",metodo_abono:"EFECTIVO",referencia_abono:"",items:[],siguienteId:1};
+    return {
+        solicitud_id: generarIdSolicitudVenta(),
+        caja_id: "",
+        fecha_operacion: "",
+        hora_operacion: "",
+        folio: "",
+        cliente: "",
+        cliente_id: null,
+        direccion: "",
+        telefono: "",
+        vendedor: "",
+        observaciones: "",
+        forma_pago: "EFECTIVO",
+        referencia: "",
+        abono: "",
+        metodo_abono: "EFECTIVO",
+        referencia_abono: "",
+        items: [],
+        siguienteId: 1
+    };
 }
 
 function bindVentaNota() {
@@ -564,8 +578,23 @@ function revisarVentaNota() {
 
     const venta = state.ventaNota;
 
-const fechaSeleccionada = window.CSM_ES_ADMIN
+const fecha = window.CSM_ES_ADMIN
     ? String($("#notaFechaOperacion").val() || "").trim()
+    : "";
+
+const hora = window.CSM_ES_ADMIN
+    ? String($("#notaHoraOperacion").val() || "").trim()
+    : "";
+
+if (!fecha && hora) {
+    return errorVentaNota(
+        "Selecciona la fecha de la venta.",
+        "#notaFechaOperacion"
+    );
+}
+
+const fechaSeleccionada = fecha
+    ? fecha + (hora ? "T" + hora : "")
     : "";
 
     const importes = obtenerImportesVentaNota();
@@ -574,9 +603,12 @@ const fechaSeleccionada = window.CSM_ES_ADMIN
 $resumen.append(
     $("<p class='fw-semibold text-success'></p>").text(
         "Fecha de venta: " +
-        (fechaSeleccionada
-            ? fechaSeleccionada.replace("T", " ")
-            : "Automática al guardar")
+        (
+            fecha
+                ? fecha.split("-").reverse().join("/") +
+                    (hora ? " " + hora : " · Hora automática")
+                : "Automática al guardar"
+        )
     )
 );
 
@@ -3853,26 +3885,38 @@ function cerrarSesion() {
     });
 }
 
-
 function prepararFechasAdmin(contenedor) {
     const $raiz = contenedor ? $(contenedor) : $("#contenidoModulo");
     const admin = window.CSM_ES_ADMIN === true;
+
     const fecha = new Date();
     const dos = n => String(n).padStart(2, "0");
-    const ahora = fecha.getFullYear() + "-" + dos(fecha.getMonth() + 1) + "-" +
-        dos(fecha.getDate()) + "T" + dos(fecha.getHours()) + ":" + dos(fecha.getMinutes());
+
+    const hoy = fecha.getFullYear() + "-" +
+        dos(fecha.getMonth() + 1) + "-" +
+        dos(fecha.getDate());
+
+    const ahora = hoy + "T" +
+        dos(fecha.getHours()) + ":" +
+        dos(fecha.getMinutes());
 
     $raiz.find(".fecha-admin").toggleClass("d-none", !admin);
     $raiz.find(".fecha-automatica").toggleClass("d-none", admin);
 
+    // CAMPOS CON FECHA Y HORA
     $raiz.find(".fecha-admin input[type='datetime-local']").each(function() {
         this.max = ahora;
-        //this.placeholder = "Automática al dejar vacío";
     });
 
-    $raiz.find("#egresoResponsable").val(window.CSM_NOMBRE_OPERADOR || "Usuario");
-}
+    // CAMPOS CON FECHA INDEPENDIENTE
+    $raiz.find(".fecha-admin input[type='date']").each(function() {
+        this.max = hoy;
+    });
 
+    $raiz.find("#egresoResponsable").val(
+        window.CSM_NOMBRE_OPERADOR || "Usuario"
+    );
+}
 
 function obtenerItemUnidad($fila) {
     const id = Number($fila.attr("data-item-id"));

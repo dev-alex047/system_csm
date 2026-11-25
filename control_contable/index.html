@@ -333,12 +333,48 @@
                     </div>
                     
 <div class="col-md-4">
-    <label class="form-label" for="notaFechaOperacion">Fecha y hora</label>
-    <div class="form-control nota-solo-lectura fecha-automatica">Automática al guardar</div>
-    <div class="fecha-admin d-none">
-        <input type="datetime-local" id="notaFechaOperacion" class="form-control">
-        <div class="form-text">Administrador: puedes registrar una venta anterior.</div>
+
+    <div class="fecha-automatica">
+        <label class="form-label">Fecha y hora</label>
+
+        <div class="form-control nota-solo-lectura">
+            Automática al guardar
+        </div>
     </div>
+
+    <div class="fecha-admin d-none">
+        <div class="row g-2">
+
+            <div class="col-12 col-xxl-7">
+                <label for="notaFechaOperacion" class="form-label">
+                    Fecha de venta
+                </label>
+
+<input type="date"
+    id="notaFechaOperacion"
+    data-campo-nota="fecha_operacion"
+    class="form-control">
+            </div>
+
+            <div class="col-12 col-xxl-5">
+                <label for="notaHoraOperacion" class="form-label">
+                    Hora
+                </label>
+
+                <input type="time"
+    id="notaHoraOperacion"
+    data-campo-nota="hora_operacion"
+    class="form-control">
+            </div>
+
+        </div>
+
+        <div class="form-text">
+            Fecha y hora opcionales.
+            Si no indicas la hora, será automática.
+        </div>
+    </div>
+
 </div>
 
                     <div class="col-md-6">

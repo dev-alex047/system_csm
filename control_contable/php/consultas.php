@@ -21,6 +21,7 @@ class consultas{
         }
         
         $this->conn->set_charset("utf8mb4");
+        $this->conn->query("SET SESSION collation_connection = 'utf8mb4_general_ci'");
 
         return true;
     }
@@ -349,15 +350,31 @@ private function textoVenta($datos, $campo, $maximo) {
     return $valor;
 }
 
-private function fechaOperacion($datos, $cajaId = null) {
+private function fechaOperacion($datos, $cajaId = null, $permitirSoloFecha = false) {
     $ahora = date("Y-m-d H:i:s");
     $valor = isset($datos["fecha_operacion"]) ? $datos["fecha_operacion"] : "";
 
     if ($valor === "" || $valor === null) return $ahora;
 
-    if (!is_string($valor) ||
-        !preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/D', $valor)) {
-        throw new InvalidArgumentException("Formato de fecha inválido.");
+    if (!is_string($valor)) {
+        throw new InvalidArgumentException(
+            "Formato de fecha inválido."
+        );
+    }
+
+    $valor = trim($valor);
+
+    // ASIGNAR HORA AUTOMÁTICA CUANDO SOLO SE ENVÍA LA FECHA
+    if ($permitirSoloFecha &&
+        preg_match('/^\d{4}-\d{2}-\d{2}$/D', $valor)) {
+
+        $valor .= "T" . substr($ahora, 11, 5);
+    }
+
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/D', $valor)) {
+        throw new InvalidArgumentException(
+            "Formato de fecha inválido."
+        );
     }
 
     $stmt = $this->ejecutarSqlVenta(
@@ -968,7 +985,7 @@ if ($requiereCliente && $clienteId === null && $cliente === '') {
 if ($modoFecha === "MANUAL") {
     $fechaEsperada = str_replace("T", " ", $fechaSolicitada);
 
-    if (substr((string)$anterior["created_at"], 0, 16) !== $fechaEsperada) {
+    if (substr((string)$anterior["created_at"], 0, strlen($fechaEsperada)) !== $fechaEsperada) {
         throw new InvalidArgumentException(
             "Esta nota ya fue registrada con una fecha diferente. " .
             "No se modificó la venta existente."
@@ -985,7 +1002,8 @@ if ($modoFecha === "MANUAL") {
                 $fecha = date('Y-m-d H:i:s');
                 $idCajaVenta = $pagadoCentavos > 0 && $metodoCobro === 'EFECTIVO' ? $cajaId : null;
                 //$fechaOperacion = $this->fechaOperacion($venta, $idCajaVenta);
-                $fechaOperacion = $this->fechaOperacion($venta);
+                //$fechaOperacion = $this->fechaOperacion($venta);
+                $fechaOperacion = $this->fechaOperacion($venta, null, true);
 
 // Fecha del movimiento de efectivo: corresponde al turno actual.
 $fechaCobro = $idCajaVenta !== null ? $fecha : $fechaOperacion;
@@ -1088,11 +1106,11 @@ $fechaGuardada = isset($filaFecha["created_at"])
     : "";
 
 if ($modoFecha === "MANUAL") {
-    $fechaEsperada = str_replace("T", " ", $fechaSolicitada);
+    $fechaEsperada = substr($fechaOperacion, 0, 16);
 
     if (substr($fechaGuardada, 0, 16) !== $fechaEsperada) {
         throw new RuntimeException(
-            "La fecha almacenada no coincide con la fecha seleccionada."
+            "La fecha almacenada no coincide con la fecha de operación."
         );
     }
 }
@@ -1246,18 +1264,18 @@ $etapa = "registrar_cobro";
                     'status'=>'ok',
                     'answer'=>'Venta registrada correctamente.',
                     'results'=>[
-    'id' => $idVenta,
-    'folio' => $folio,
-    'total' => $total,
-    'recibido' => $pagado,
-    'saldo' => $saldo,
-    'forma_pago' => $forma,
-    'cliente_id' => $clienteId,
-    'cliente' => $cliente,
-    'cliente_nuevo' => $clienteNuevo,
-    'cliente_convertido' => $clienteConvertido,
-    'duplicada' => false
-],
+                        'id' => $idVenta,
+                        'folio' => $folio,
+                        'total' => $total,
+                        'recibido' => $pagado,
+                        'saldo' => $saldo,
+                        'forma_pago' => $forma,
+                        'cliente_id' => $clienteId,
+                        'cliente' => $cliente,
+                        'cliente_nuevo' => $clienteNuevo,
+                        'cliente_convertido' => $clienteConvertido,
+                        'duplicada' => false
+                    ],
                     'code'=>200
                 ];
             }
@@ -1302,8 +1320,11 @@ $stmt = $this->ejecutarSqlVenta(
     $repetida &&
     (
         $modoFecha !== "MANUAL" ||
-        substr((string)$repetida["created_at"], 0, 16) ===
-        str_replace("T", " ", $fechaSolicitada)
+        substr(
+            (string)$repetida["created_at"],
+            0,
+            strlen($fechaSolicitada)
+        ) === str_replace("T", " ", $fechaSolicitada)
     )
 ) {
                         $json = [
@@ -1586,7 +1607,7 @@ if ($modoFecha === "AUTOMATICA" && $fechaSolicitada !== "") {
 if ($modoFecha === "MANUAL") {
     $fechaEsperada = str_replace("T", " ", $fechaSolicitada);
 
-    if (substr((string)$anterior["created_at"], 0, 16) !== $fechaEsperada) {
+    if (substr((string)$anterior["created_at"], 0, strlen($fechaEsperada)) !== $fechaEsperada) {
         throw new InvalidArgumentException(
             "Esta solicitud ya tiene una venta registrada con otra fecha. " .
             "No se modificó el registro existente."
@@ -4679,6 +4700,284 @@ private function enteroCosteo($valor, int $decimales): int {
         (int)str_pad($partes[1] ?? '', $decimales, '0');
 }
 
+
+
+
+/* COSTEO · consultas de corporativo y operaciones comerciales */
+private function corpCosteo(): string {
+    if (!isset($_SESSION['csm_corp_id']) || trim((string)$_SESSION['csm_corp_id']) === '') {
+        throw new DomainException('La sesión no tiene corporativo asignado. Inicia sesión nuevamente.');
+    }
+    return $this->corpClientes();
+}
+
+private function filasCosteo(string $sql, array $valores = []): array {
+    $stmt = $this->ejecutarSqlVenta($sql, str_repeat('s', count($valores)), $valores);
+    $filas = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+    return $filas;
+}
+
+private function filaCosteo(string $sql, array $valores = []): ?array {
+    return $this->filasCosteo($sql, $valores)[0] ?? null;
+}
+
+private function idCosteo(array $d, string $campo, bool $aceptaCero = false): int {
+    $id = filter_var($d[$campo] ?? null, FILTER_VALIDATE_INT,
+        ['options'=>['min_range'=>$aceptaCero ? 0 : 1,'max_range'=>4294967295]]);
+    if ($id === false || $id === null) throw new InvalidArgumentException('Selecciona un valor válido: '.$campo.'.');
+    return $id;
+}
+
+private function precioVigenteCosteo(string $corp, int $material, int $presentacion, int $lista, int $destino): ?array {
+    return $this->filaCosteo('SELECT h.* FROM materiales_precios_historial h
+        JOIN materiales_costeo m ON m.corp_id=h.corp_id AND m.id=h.material_id
+        JOIN materiales_presentaciones p ON p.corp_id=h.corp_id AND p.id=h.presentacion_id AND p.material_id=m.id
+        JOIN listas_precios_costeo l ON l.corp_id=h.corp_id AND l.id=h.lista_id
+        WHERE h.corp_id=? AND h.material_id=? AND h.presentacion_id=? AND h.lista_id=? AND h.destino_id=?
+            AND h.activo=1 AND h.eliminado=0 AND h.fecha_vigencia<=NOW()
+            AND m.activo=1 AND m.eliminado=0 AND p.activo=1 AND p.eliminado=0 AND p.permite_venta=1 AND l.activo=1 AND l.eliminado=0
+            AND p.factor_numerador=h.factor_numerador AND p.factor_denominador=h.factor_denominador
+        ORDER BY h.fecha_vigencia DESC,h.id DESC LIMIT 1',[$corp,$material,$presentacion,$lista,$destino]);
+}
+
+public function operarCosteoComercial(array $data): array {
+    try {
+        if (!$this->conn) throw new RuntimeException('Conexión no disponible.');
+        $corp = $this->corpCosteo();
+        $this->exigirAdminClientes();
+        $d = json_decode($data['datos'] ?? '{}',true,32,JSON_THROW_ON_ERROR);
+        if (!is_array($d)) throw new InvalidArgumentException('Datos inválidos.');
+        $op = $data['operacion'] ?? '';
+        $mxn = static fn($c) => number_format($c / 100,2,'.','');
+        $answer = 'Consulta realizada.';
+        $results = [];
+
+        switch ($op) {
+            case 'consultar':
+                $results['precios'] = $this->filasCosteo("SELECT h.*,m.nombre AS material,p.nombre AS presentacion,l.nombre AS lista,COALESCE(z.nombre,'Patio') AS destino
+                    FROM materiales_precios_historial h
+                    JOIN materiales_costeo m ON m.corp_id=h.corp_id AND m.id=h.material_id
+                    JOIN materiales_presentaciones p ON p.corp_id=h.corp_id AND p.id=h.presentacion_id AND p.material_id=m.id
+                    JOIN listas_precios_costeo l ON l.corp_id=h.corp_id AND l.id=h.lista_id
+                    LEFT JOIN destinos_costeo z ON z.corp_id=h.corp_id AND z.id=h.destino_id
+                    WHERE h.corp_id=? AND h.activo=1 AND h.eliminado=0 AND h.fecha_vigencia<=NOW()
+                    AND m.activo=1 AND m.eliminado=0 AND p.activo=1 AND p.eliminado=0 AND p.permite_venta=1 AND l.activo=1 AND l.eliminado=0
+                    AND (h.destino_id=0 OR (z.activo=1 AND z.eliminado=0))
+                    AND NOT EXISTS (SELECT 1 FROM materiales_precios_historial n WHERE n.corp_id=h.corp_id AND n.material_id=h.material_id AND n.presentacion_id=h.presentacion_id AND n.lista_id=h.lista_id AND n.destino_id=h.destino_id
+                        AND n.activo=1 AND n.eliminado=0 AND n.fecha_vigencia<=NOW() AND (n.fecha_vigencia>h.fecha_vigencia OR (n.fecha_vigencia=h.fecha_vigencia AND n.id>h.id)))
+                    ORDER BY m.nombre,p.nombre,l.nombre,destino",[$corp]);
+                $results['fletes'] = $this->filasCosteo("SELECT t.*,z.nombre AS destino FROM destinos_tarifas_costeo t
+                    JOIN destinos_costeo z ON z.corp_id=t.corp_id AND z.id=t.destino_id
+                    WHERE t.corp_id=? AND t.activo=1 AND t.eliminado=0 AND t.fecha_vigencia<=NOW() AND z.activo=1 AND z.eliminado=0
+                    AND NOT EXISTS (SELECT 1 FROM destinos_tarifas_costeo n WHERE n.corp_id=t.corp_id AND n.destino_id=t.destino_id AND n.grupo_flete=t.grupo_flete AND n.presentacion=t.presentacion
+                        AND n.activo=1 AND n.eliminado=0 AND n.fecha_vigencia<=NOW() AND (n.fecha_vigencia>t.fecha_vigencia OR (n.fecha_vigencia=t.fecha_vigencia AND n.id>t.id)))
+                    ORDER BY z.nombre,t.grupo_flete,t.presentacion",[$corp]);
+                break;
+
+            case 'historial_precio':
+            case 'historial_flete':
+                $precio = $op === 'historial_precio';
+                $tabla = $precio ? 'materiales_precios_historial' : 'destinos_tarifas_costeo';
+                $id = $this->idCosteo($d,'id');
+                $r = $this->filaCosteo("SELECT * FROM {$tabla} WHERE corp_id=? AND id=?",[$corp,$id]);
+                if (!$r) throw new InvalidArgumentException('Registro no disponible.');
+                $claves = $precio ? ['material_id','presentacion_id','lista_id','destino_id'] : ['destino_id','grupo_flete','presentacion'];
+                $filtro = implode(' AND ',array_map(static fn($k)=>"{$k}=?",$claves));
+                $valores = [$corp];
+                foreach ($claves as $k) $valores[] = $r[$k];
+                $results = $this->filasCosteo("SELECT * FROM {$tabla} WHERE corp_id=? AND {$filtro} ORDER BY fecha_vigencia DESC,id DESC LIMIT 300",$valores);
+                break;
+
+            case 'publicar_precio':
+                $material = $this->idCosteo($d,'material_id');
+                $presentacion = $this->idCosteo($d,'presentacion_id');
+                $lista = $this->idCosteo($d,'lista_id');
+                $destino = $this->idCosteo($d,'destino_id',true);
+                $r = $this->filaCosteo('SELECT m.costo_unitario,p.factor_numerador,p.factor_denominador FROM materiales_costeo m
+                    JOIN materiales_presentaciones p ON p.corp_id=m.corp_id AND p.material_id=m.id AND p.id=?
+                    JOIN listas_precios_costeo l ON l.corp_id=m.corp_id AND l.id=? AND l.activo=1 AND l.eliminado=0
+                    WHERE m.corp_id=? AND m.id=? AND m.activo=1 AND m.eliminado=0 AND p.activo=1 AND p.eliminado=0 AND p.permite_venta=1',[$presentacion,$lista,$corp,$material]);
+                if (!$r || (float)$r['costo_unitario'] <= 0 || (int)$r['factor_denominador'] <= 0 || (int)$r['factor_numerador'] <= 0) throw new InvalidArgumentException('Configura el costo y una presentación válida.');
+                if ($destino && !$this->filaCosteo('SELECT id FROM destinos_costeo WHERE corp_id=? AND id=? AND activo=1 AND eliminado=0',[$corp,$destino])) throw new InvalidArgumentException('Destino no disponible.');
+                $recargo = $this->enteroCosteo($d['recargo_pct'] ?? '0',4) / 10000;
+                $adicional = $this->enteroCosteo($d['adicional'] ?? '0',2) / 100;
+                if ($recargo > 200) throw new InvalidArgumentException('El incremento no puede superar 200%.');
+                $costo = (float)$r['costo_unitario'] * (int)$r['factor_numerador'] / (int)$r['factor_denominador'];
+                $calculado = $costo * (1 + $recargo / 100) + $adicional;
+                $manual = isset($d['precio_manual']) && $d['precio_manual'] !== '';
+                $final = $manual ? $this->enteroCosteo($d['precio_manual'],2) / 100 : round($calculado,2,PHP_ROUND_HALF_UP);
+                if ($final <= 0 || $final > 1000000 || $calculado > 1000000) throw new InvalidArgumentException('Precio fuera de rango.');
+                $obs = $this->textoVenta($d,'observaciones',255);
+                $stmt = $this->ejecutarSqlVenta('INSERT INTO materiales_precios_historial
+                    (corp_id,material_id,presentacion_id,lista_id,destino_id,costo_unitario,factor_numerador,factor_denominador,recargo_pct,adicional,precio_calculado,precio,precio_manual,usuario_id,observaciones)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',str_repeat('s',15),[$corp,$material,$presentacion,$lista,$destino,$r['costo_unitario'],$r['factor_numerador'],$r['factor_denominador'],number_format($recargo,4,'.',''),number_format($adicional,2,'.',''),number_format($calculado,8,'.',''),number_format($final,2,'.',''),(int)$manual,$this->usuarioOperador,$obs]);
+                $results = ['id'=>(int)$this->conn->insert_id,'precio'=>number_format($final,2,'.','')];
+                $stmt->close();
+                $answer = 'Precio publicado. Se conservó el historial.';
+                break;
+
+            case 'publicar_flete':
+                $destino = $this->idCosteo($d,'destino_id');
+                if (!$this->filaCosteo('SELECT id FROM destinos_costeo WHERE corp_id=? AND id=? AND activo=1 AND eliminado=0',[$corp,$destino])) throw new InvalidArgumentException('Destino no disponible.');
+                $grupo = $d['grupo_flete'] ?? '';
+                $presentacion = $d['presentacion'] ?? '';
+                $unidad = $d['unidad_cobro'] ?? '';
+                if (!in_array($grupo,['PETREO','BLOCK','BLOCK_PESADO','TABIQUE_LIGERO','LADRILLO','CEMENTO','OTRO'],true) || !is_string($presentacion) || !preg_match('/^[A-Z0-9_]{1,25}$/D',$presentacion) || !in_array($unidad,['VIAJE','M3','MILLAR','TON','PZA','ENTREGA'],true)) throw new InvalidArgumentException('Selecciona grupo, presentación y unidad de cobro válidos.');
+                if ($presentacion !== 'TODAS' && !$this->filaCosteo('SELECT p.id FROM materiales_presentaciones p JOIN materiales_costeo m ON m.corp_id=p.corp_id AND m.id=p.material_id WHERE p.corp_id=? AND p.codigo=? AND m.grupo_flete=? AND p.activo=1 AND p.eliminado=0 AND p.permite_venta=1 AND m.activo=1 AND m.eliminado=0 LIMIT 1',[$corp,$presentacion,$grupo])) throw new InvalidArgumentException('No existe esa presentación para el grupo seleccionado.');
+                if (!is_array($d['conceptos'] ?? null) || count($d['conceptos']) < 1 || count($d['conceptos']) > 30) throw new InvalidArgumentException('Agrega de 1 a 30 conceptos.');
+                $conceptos = []; $total = 0;
+                foreach ($d['conceptos'] as $g) {
+                    if (!is_array($g)) throw new InvalidArgumentException('Concepto inválido.');
+                    $nombre = $this->textoVenta($g,'concepto',100);
+                    $cantidad = $this->enteroCosteo($g['cantidad'] ?? '',2);
+                    $precio = $this->enteroCosteo($g['precio'] ?? '',2);
+                    if ($nombre === '' || $cantidad < 1 || $cantidad > 100000 || $precio > 100000000) throw new InvalidArgumentException('Revisa el concepto, cantidad y precio.');
+                    $importe = intdiv($cantidad*$precio+50,100);
+                    $total += $importe;
+                    $conceptos[] = ['concepto'=>$nombre,'cantidad'=>$mxn($cantidad),'precio'=>$mxn($precio),'importe'=>$mxn($importe)];
+                }
+                if ($total > 100000000) throw new InvalidArgumentException('Tarifa fuera de rango.');
+                $obs = $this->textoVenta($d,'observaciones',255);
+                if ($total === 0 && $obs === '') throw new InvalidArgumentException('Justifica expresamente una tarifa gratuita.');
+                $stmt = $this->ejecutarSqlVenta('INSERT INTO destinos_tarifas_costeo (corp_id,destino_id,grupo_flete,presentacion,unidad_cobro,conceptos,importe,observaciones,usuario_id) VALUES (?,?,?,?,?,?,?,?,?)',str_repeat('s',9),[$corp,$destino,$grupo,$presentacion,$unidad,json_encode($conceptos,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),$mxn($total),$obs,$this->usuarioOperador]);
+                $results = ['id'=>(int)$this->conn->insert_id,'importe'=>$mxn($total)];
+                $stmt->close();
+                $answer = 'Tarifa publicada.';
+                break;
+
+            case 'generar_presentaciones':
+                $material = $this->idCosteo($d,'material_id');
+                $m = $this->filaCosteo('SELECT unidad,grupo_flete FROM materiales_costeo WHERE corp_id=? AND id=? AND activo=1 AND eliminado=0',[$corp,$material]);
+                if (!$m) throw new InvalidArgumentException('Material no disponible.');
+                if ($m['grupo_flete'] === 'PETREO' && $m['unidad'] === 'M3') {
+                    $pres = [['BOTE','Bote',1,45,0,0,1],['M3','Metro cúbico',1,1,0,0,0]];
+                    for ($i=2;$i<=7;$i++) $pres[] = ['VOLTEO_'.$i,'Volteo de '.$i.' m³',$i,1,(int)($i===7),1,1];
+                    $pres[] = ['TORTON_14','Torton de 14 m³',14,1,1,1,1];
+                    $pres[] = ['GONDOLA_30','Góndola de 30 m³',30,1,1,1,1];
+                } elseif (in_array($m['grupo_flete'],['BLOCK','BLOCK_PESADO','TABIQUE_LIGERO','LADRILLO'],true) && $m['unidad'] === 'PZA') {
+                    $pres = [['PZA','Pieza',1,1,1,0,1],['MILLAR','Millar',1000,1,1,0,0]];
+                } elseif ($m['grupo_flete'] === 'CEMENTO' && $m['unidad'] === 'KG') {
+                    $kg = $this->idCosteo($d,'kg_bulto');
+                    if (!in_array($kg,[25,50],true)) throw new InvalidArgumentException('Selecciona bulto de 25 o 50 kg.');
+                    $pres = [['KG','Kilogramo',1,1,0,0,0],['BULTO_'.$kg,'Bulto de '.$kg.' kg',$kg,1,1,0,1],['TON','Tonelada',1000,1,1,0,0]];
+                } else throw new InvalidArgumentException('Configura manualmente las presentaciones de este grupo.');
+                $valores = []; $partes = [];
+                foreach ($pres as $p) {
+                    $partes[] = '(?,?,?,?,?,?,?,?,?,?)';
+                    array_push($valores,$corp,$material,$p[0],$p[1],$p[2],$p[3],$p[4],1,$p[5],$p[6]);
+                }
+                $stmt = $this->ejecutarSqlVenta('INSERT INTO materiales_presentaciones (corp_id,material_id,codigo,nombre,factor_numerador,factor_denominador,permite_entrada,permite_venta,permite_mezcla,cantidad_entera) VALUES '.implode(',',$partes).' ON DUPLICATE KEY UPDATE id=materiales_presentaciones.id',str_repeat('s',count($valores)),$valores);
+                $stmt->close();
+                $answer = 'Presentaciones generadas sin sobrescribir las existentes.';
+                break;
+
+            case 'cotizar':
+                $results = $this->calcularComercialCosteo($corp,$d);
+                $answer = 'Cotización comercial calculada.';
+                break;
+
+            default:
+                throw new InvalidArgumentException('Operación comercial inválida.');
+        }
+        return ['status'=>'ok','answer'=>$answer,'results'=>$results,'code'=>200];
+    } catch (DomainException $e) {
+        return ['status'=>'warning','answer'=>$e->getMessage(),'code'=>403];
+    } catch (InvalidArgumentException | JsonException $e) {
+        return ['status'=>'warning','answer'=>$e instanceof JsonException ? 'JSON inválido.' : $e->getMessage(),'code'=>400];
+    } catch (Throwable $e) {
+        error_log('Costeo comercial: '.$e->getMessage());
+        return ['status'=>'error','answer'=>'No fue posible procesar la operación comercial.','code'=>500];
+    }
+}
+
+private function calcularComercialCosteo(string $corp, array $d): array {
+    $material = $this->idCosteo($d,'material_id');
+    $presentacion = $this->idCosteo($d,'presentacion_id');
+    $lista = $this->idCosteo($d,'lista_id');
+    $destino = $this->idCosteo($d,'destino_id',true);
+    $vehiculo = $this->idCosteo($d,'vehiculo_id',true);
+    $cantidad100 = $this->enteroCosteo($d['cantidad'] ?? '',2);
+    $cantidad = $cantidad100 / 100;
+    if ($cantidad <= 0 || $cantidad > 100000) throw new InvalidArgumentException('Cantidad fuera de rango.');
+    $p = $this->filaCosteo('SELECT p.*,m.nombre AS material,m.unidad,m.grupo_flete,m.peso_unitario_kg FROM materiales_presentaciones p JOIN materiales_costeo m ON m.corp_id=p.corp_id AND m.id=p.material_id WHERE p.corp_id=? AND p.id=? AND p.material_id=? AND p.activo=1 AND p.eliminado=0 AND p.permite_venta=1 AND m.activo=1 AND m.eliminado=0',[$corp,$presentacion,$material]);
+    if (!$p || (int)$p['factor_denominador'] <= 0 || (int)$p['factor_numerador'] <= 0) throw new InvalidArgumentException('Presentación no disponible.');
+    if (!$this->filaCosteo('SELECT id FROM listas_precios_costeo WHERE corp_id=? AND id=? AND activo=1 AND eliminado=0',[$corp,$lista])) throw new InvalidArgumentException('Lista no disponible.');
+    if ($destino && !$this->filaCosteo('SELECT id FROM destinos_costeo WHERE corp_id=? AND id=? AND activo=1 AND eliminado=0',[$corp,$destino])) throw new InvalidArgumentException('Comunidad no disponible.');
+    $factor = (int)$p['factor_numerador'] / (int)$p['factor_denominador'];
+    $base = $cantidad*$factor;
+    if ((int)$p['cantidad_entera'] && $cantidad100%100) throw new InvalidArgumentException('Esta presentación requiere cantidades enteras.');
+    if ($p['unidad'] === 'PZA' && ($cantidad100*(int)$p['factor_numerador'])%(100*(int)$p['factor_denominador'])) throw new InvalidArgumentException('La cantidad debe representar piezas enteras.');
+    $componentes = $d['componentes'] ?? [];
+    if (!is_array($componentes) || count($componentes)>10) throw new InvalidArgumentException('Carga mixta inválida.');
+    $detalle = []; $subtotal = 0; $directo = false; $peso = 0.0; $pesoCompleto = true;
+    $mxn = static fn($c)=>number_format($c/100,2,'.','');
+    if ($componentes) {
+        if (!(int)$p['permite_mezcla'] || $p['unidad'] !== 'M3' || $p['grupo_flete'] !== 'PETREO' || $cantidad100%100 || count($componentes)<2) throw new InvalidArgumentException('Selecciona una carga entera que admita mezcla de pétreos.');
+        $suma = 0; $vistos = [];
+        foreach ($componentes as $c) {
+            if (!is_array($c)) throw new InvalidArgumentException('Componente inválido.');
+            $id = $this->idCosteo($c,'material_id');
+            $vol100 = $this->enteroCosteo($c['cantidad'] ?? '',2);
+            if ($vol100 <= 0 || isset($vistos[$id])) throw new InvalidArgumentException('Cada componente requiere volumen positivo y material distinto.');
+            $vistos[$id] = true; $suma += $vol100;
+            $m = $this->filaCosteo("SELECT m.nombre,m.peso_unitario_kg,p.id FROM materiales_costeo m JOIN materiales_presentaciones p ON p.corp_id=m.corp_id AND p.material_id=m.id AND p.codigo='M3' AND p.factor_numerador=1 AND p.factor_denominador=1 AND p.activo=1 AND p.eliminado=0 AND p.permite_venta=1 WHERE m.corp_id=? AND m.id=? AND m.grupo_flete='PETREO' AND m.unidad='M3' AND m.activo=1 AND m.eliminado=0",[$corp,$id]);
+            $h = $m ? $this->precioVigenteCosteo($corp,$id,(int)$m['id'],$lista,0) : null;
+            if (!$h) throw new InvalidArgumentException('Falta precio de patio por m³ para un componente.');
+            $precio = $this->enteroCosteo($h['precio'],2);
+            $importe = intdiv($vol100*$precio+50,100)*(int)$cantidad;
+            $subtotal += $importe;
+            $detalle[] = ['material_id'=>$id,'material'=>$m['nombre'],'precio_id'=>(int)$h['id'],'cantidad'=>($vol100/100)*$cantidad,'unidad'=>'M3','precio'=>$h['precio'],'importe'=>$mxn($importe)];
+            if ((float)$m['peso_unitario_kg']>0) $peso += (float)$m['peso_unitario_kg']*($vol100/100)*$cantidad; else $pesoCompleto=false;
+        }
+        if (!isset($vistos[$material]) || $suma*(int)$p['factor_denominador'] !== 100*(int)$p['factor_numerador']) throw new InvalidArgumentException('Incluye el material principal y completa exactamente el volumen de una carga.');
+    } else {
+        $h = $destino ? $this->precioVigenteCosteo($corp,$material,$presentacion,$lista,$destino) : null;
+        $directo = $h !== null;
+        $h ??= $this->precioVigenteCosteo($corp,$material,$presentacion,$lista,0);
+        if (!$h) throw new InvalidArgumentException('No hay precio vigente para esta presentación y lista.');
+        $subtotal = intdiv($cantidad100*$this->enteroCosteo($h['precio'],2)+50,100);
+        $detalle[] = ['material_id'=>$material,'material'=>$p['material'],'precio_id'=>(int)$h['id'],'cantidad'=>$cantidad,'unidad'=>$p['codigo'],'precio'=>$h['precio'],'importe'=>$mxn($subtotal)];
+        if ((float)$p['peso_unitario_kg']>0) $peso=(float)$p['peso_unitario_kg']*$base; else $pesoCompleto=false;
+    }
+    $flete = 0; $tarifa = null; $viajes = null; $avisos = [];
+    if ($destino && !$directo) {
+        $tarifa = $this->filaCosteo("SELECT * FROM destinos_tarifas_costeo WHERE corp_id=? AND destino_id=? AND grupo_flete=? AND presentacion IN (?, 'TODAS') AND activo=1 AND eliminado=0 AND fecha_vigencia<=NOW() ORDER BY (presentacion=?) DESC,fecha_vigencia DESC,id DESC LIMIT 1",[$corp,$destino,$p['grupo_flete'],$p['codigo'],$p['codigo']]);
+        if (!$tarifa) throw new InvalidArgumentException('No hay tarifa de entrega configurada para esta comunidad y material.');
+        if ($tarifa['unidad_cobro'] === 'VIAJE' && !$vehiculo) throw new InvalidArgumentException('Selecciona el vehículo para calcular los viajes.');
+    }
+    if ($destino && $vehiculo) {
+        $v = $this->filaCosteo('SELECT unidad_capacidad,capacidad,carga_util_kg FROM vehiculos_costeo WHERE corp_id=? AND id=? AND activo=1 AND eliminado=0',[$corp,$vehiculo]);
+        if (!$v || $v['unidad_capacidad'] !== $p['unidad'] || (float)$v['capacidad'] <= 0) throw new InvalidArgumentException('El vehículo debe tener capacidad en la unidad base del material.');
+        $cap = (float)$v['capacidad'];
+        if ((int)$p['permite_mezcla']) {
+            if ($factor > $cap+1e-9) throw new InvalidArgumentException('La presentación supera la capacidad del vehículo.');
+            $viajes = (int)$cantidad;
+        } else $viajes = max(1,(int)ceil($base/$cap-1e-9));
+        if ($viajes>500) throw new InvalidArgumentException('Divide la operación en menos de 500 viajes.');
+        if ($pesoCompleto && (float)$v['carga_util_kg']>0) {
+            $pesoViaje = (int)$p['permite_mezcla'] ? $peso/$viajes : $peso/$base*min($base,$cap);
+            if ($pesoViaje > (float)$v['carga_util_kg']+1e-9) throw new InvalidArgumentException('La carga prevista supera el peso útil del vehículo.');
+        } else $avisos[] = 'Capacidad por peso pendiente de verificar; el precio no autoriza el despacho.';
+    } elseif ($destino) $avisos[] = 'Vehículo y capacidad pendientes de asignar.';
+    if ($tarifa) {
+        $multiplicador = match ($tarifa['unidad_cobro']) {
+            'VIAJE' => $viajes,
+            'ENTREGA' => 1,
+            'M3' => $p['unidad']==='M3' ? $base : null,
+            'PZA' => $p['unidad']==='PZA' ? $base : null,
+            'MILLAR' => $p['unidad']==='PZA' ? $base/1000 : null,
+            'TON' => $p['unidad']==='KG' ? $base/1000 : ($p['unidad']==='TON' ? $base : null),
+            default => null
+        };
+        if ($multiplicador === null || $multiplicador<=0) throw new InvalidArgumentException('Unidad de cobro de flete incompatible con la presentación.');
+        $flete = (int)round($this->enteroCosteo($tarifa['importe'],2)*$multiplicador,0,PHP_ROUND_HALF_UP);
+    }
+    if ($subtotal<=0 || $subtotal+$flete>9999999999) throw new InvalidArgumentException('Total fuera de rango.');
+    return ['material'=>$p['material'],'presentacion'=>$p['nombre'],'cantidad'=>$cantidad,'cantidad_base'=>$base,'unidad_base'=>$p['unidad'],'viajes'=>$viajes,'precio_destino'=>$directo,'tarifa_id'=>$tarifa ? (int)$tarifa['id'] : null,'subtotal'=>$mxn($subtotal),'flete'=>$mxn($flete),'total'=>$mxn($subtotal+$flete),'componentes'=>$detalle,'avisos'=>$avisos];
+}
+
+
 public function getCatalogosCosteo(array $data = []): array {
     $json = [];
 
@@ -4686,6 +4985,7 @@ public function getCatalogosCosteo(array $data = []): array {
         if (!$this->conn) {
             throw new RuntimeException('Conexión no disponible.');
         }
+        $corp = $this->corpCosteo();
 
         $stmt = $this->ejecutarSqlVenta(
             'SELECT role_id FROM users WHERE id=? AND is_active=1 LIMIT 1',
@@ -4708,17 +5008,17 @@ $filtroTarifa = $incluirEliminados ? '' :
     ' AND t.eliminado=0 AND m.activo=1 AND m.eliminado=0 AND l.activo=1 AND l.eliminado=0';
 
 $sqls = [
-    'materiales' => "SELECT id,codigo,nombre,unidad,costo_unitario,activo,eliminado
-        FROM materiales_costeo WHERE activo=1 {$filtro} ORDER BY nombre",
+    'materiales' => "SELECT id,producto_id,codigo,nombre,unidad,costo_unitario,grupo_flete,peso_unitario_kg,activo,eliminado
+        FROM materiales_costeo WHERE corp_id=? AND activo=1 {$filtro} ORDER BY nombre",
 
     'listas' => "SELECT id,nombre,activo,eliminado
-        FROM listas_precios_costeo WHERE activo=1 {$filtro} ORDER BY nombre",
+        FROM listas_precios_costeo WHERE corp_id=? AND activo=1 {$filtro} ORDER BY nombre",
 
     'vehiculos' => "SELECT id,nombre,tipo,unidad_capacidad,capacidad,
         rendimiento_km_litro,costo_fijo_viaje,vin,tipo_transporte,
         configuracion_vehicular,peso_bruto_kg,carga_util_kg,
         tanque_litros,combustible,activo,eliminado
-        FROM vehiculos_costeo WHERE activo=1 {$filtro} ORDER BY nombre",
+        FROM vehiculos_costeo WHERE corp_id=? AND activo=1 {$filtro} ORDER BY nombre",
 
     'destinos' => "SELECT
     id, nombre, distancia_ida_km, casetas_por_viaje,
@@ -4726,24 +5026,28 @@ $sqls = [
     municipio, estado, codigo_postal, referencias,
     latitud, longitud, activo, eliminado
     FROM destinos_costeo
-    WHERE activo=1 {$filtro}
+    WHERE corp_id=? AND activo=1 {$filtro}
     ORDER BY nombre",
 
     'tarifas' => "SELECT t.material_id,t.lista_id,t.recargo_pct,t.activo,t.eliminado,
         COALESCE(m.nombre,'Material no disponible') AS material_nombre,
         COALESCE(l.nombre,'Lista no disponible') AS lista_nombre
         FROM tarifas_material_costeo t
-        LEFT JOIN materiales_costeo m ON m.id=t.material_id
-        LEFT JOIN listas_precios_costeo l ON l.id=t.lista_id
-        WHERE t.activo=1 {$filtroTarifa}
-        ORDER BY material_nombre,lista_nombre"
+        LEFT JOIN materiales_costeo m ON m.corp_id=t.corp_id AND m.id=t.material_id
+        LEFT JOIN listas_precios_costeo l ON l.corp_id=t.corp_id AND l.id=t.lista_id
+        WHERE t.corp_id=? AND t.activo=1 {$filtroTarifa}
+        ORDER BY material_nombre,lista_nombre",
+    'presentaciones' => "SELECT p.*,m.nombre AS material_nombre FROM materiales_presentaciones p
+        JOIN materiales_costeo m ON m.corp_id=p.corp_id AND m.id=p.material_id
+        WHERE p.corp_id=? AND p.activo=1 AND p.eliminado=0 AND m.activo=1 AND m.eliminado=0
+        ORDER BY m.nombre,p.factor_numerador/p.factor_denominador,p.id"
 ];
 
 
         $resultados = [];
 
         foreach ($sqls as $clave => $sql) {
-            $stmt = $this->ejecutarSqlVenta($sql);
+            $stmt = $this->ejecutarSqlVenta($sql, "s", [$corp]);
             $resultados[$clave] = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             $stmt->close();
         }
@@ -4763,6 +5067,7 @@ $sqls = [
         ];
 
     } catch (Throwable $e) {
+        error_log($e->getMessage());
         
 
         $json = [
@@ -4778,12 +5083,12 @@ $sqls = [
 
 public function cotizarMaterial(array $data, bool $guardar = false): array {
     $json = [];
-    $transaccion = false;
 
     try {
         if (!$this->conn) {
             throw new RuntimeException('Conexión no disponible.');
         }
+        $corp = $this->corpCosteo();
 
         if (!isset($data['datos']) || !is_string($data['datos'])) {
             throw new InvalidArgumentException('Faltan los datos de la cotización.');
@@ -4898,15 +5203,12 @@ public function cotizarMaterial(array $data, bool $guardar = false): array {
 
         // 4. EVITAR SOLICITUDES DUPLICADAS
         if ($guardar) {
-            $this->conn->begin_transaction();
-            $transaccion = true;
-
             $stmt = $this->ejecutarSqlVenta(
                 'SELECT id,huella,precio_unitario,total_venta,utilidad
                  FROM cotizaciones_costeo
-                 WHERE solicitud_id=? LIMIT 1 FOR UPDATE',
-                's',
-                [$solicitud]
+                 WHERE corp_id=? AND solicitud_id=? LIMIT 1',
+                'ss',
+                [$corp,$solicitud]
             );
 
             $anterior = $stmt->get_result()->fetch_assoc();
@@ -4948,27 +5250,27 @@ $stmt = $this->ejecutarSqlVenta(
         l.nombre AS lista,t.recargo_pct
     FROM materiales_costeo m
     INNER JOIN tarifas_material_costeo t
-        ON t.material_id=m.id
+        ON t.corp_id=m.corp_id AND t.material_id=m.id
         AND t.lista_id=?
         AND t.activo=1 AND t.eliminado=0
     INNER JOIN listas_precios_costeo l
-        ON l.id=t.lista_id
+        ON l.corp_id=m.corp_id AND l.id=t.lista_id
         AND l.activo=1 AND l.eliminado=0
     INNER JOIN vehiculos_costeo v
-        ON v.id=?
+        ON v.corp_id=m.corp_id AND v.id=?
         AND v.activo=1 AND v.eliminado=0
     INNER JOIN destinos_costeo z
-        ON z.id=?
+        ON z.corp_id=m.corp_id AND z.id=?
         AND z.activo=1 AND z.eliminado=0
-    WHERE m.id=?
+    WHERE m.corp_id=? AND m.id=?
         AND m.activo=1 AND m.eliminado=0
     LIMIT 1",
-    "iiii",
+    "iiisi",
     [
         $ids['lista_id'],
         $ids['vehiculo_id'],
         $ids['destino_id'],
-        $ids['material_id']
+        $corp,$ids['material_id']
     ]
 );
 
@@ -5006,10 +5308,10 @@ if ($cat['tipo'] === 'PROPIO' &&
 
             // 6. CALCULAR CANTIDAD DE VIAJES
             $cap = $this->enteroCosteo($cat['capacidad'], 2);
-            $costo4 = $this->enteroCosteo($cat['costo_unitario'], 4);
+            $costo8 = $this->enteroCosteo($cat['costo_unitario'], 8);
             $recargo100 = $this->enteroCosteo($cat['recargo_pct'], 2);
 
-            if ($cap <= 0 || $costo4 > 1000000000 || $recargo100 > 20000) {
+            if ($cap <= 0 || $costo8 > 10000000000000 || $recargo100 > 20000) {
                 throw new InvalidArgumentException(
                     'Revisa capacidad, costo del material o porcentaje de utilidad.'
                 );
@@ -5024,7 +5326,7 @@ if ($cat['tipo'] === 'PROPIO' &&
             }
 
             // Importe del material en centavos.
-            $costoMaterial = intdiv($costo4 * $cantidad + 5000, 10000);
+            $costoMaterial = (int)round(($costo8 / 100000000) * $cantidad, 0, PHP_ROUND_HALF_UP);
 
             // 7. CALCULAR GASTOS LOGÍSTICOS
             $costoFijo = $this->enteroCosteo($cat['costo_fijo_viaje'], 2);
@@ -5155,7 +5457,11 @@ if ($cat['tipo'] === 'PROPIO' &&
 
             // 9. GUARDAR SOLO CUANDO SE SOLICITE
             if ($guardar) {
+                if ($this->enteroCosteo($d['total_esperado'] ?? '',2) !== $ventaTotal) {
+                    throw new InvalidArgumentException('El total cambió. Calcula nuevamente antes de guardar.');
+                }
                 $valores = [
+                    $corp, json_encode($resultado, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
                     $solicitud,
                     $huella,
                     $ids['material_id'],
@@ -5182,7 +5488,7 @@ if ($cat['tipo'] === 'PROPIO' &&
                 ];
 
                 $columnas = [
-                    'solicitud_id','huella','material_id',
+                    'corp_id','detalle_json','solicitud_id','huella','material_id',
                     'vehiculo_id','destino_id','lista_id','cliente',
                     'nombre_material','nombre_vehiculo','nombre_destino',
                     'nombre_lista','unidad','cantidad','viajes',
@@ -5195,24 +5501,25 @@ if ($cat['tipo'] === 'PROPIO' &&
                 $sql = 'INSERT INTO cotizaciones_costeo (`' .
                     implode('`,`', $columnas) . '`) VALUES (' .
                     implode(',', array_fill(0, count($columnas), '?')) .
-                    ') ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)';
+                    ')';
 
-                $stmt = $this->ejecutarSqlVenta(
-                    $sql,
-                    str_repeat('s', count($valores)),
-                    $valores
-                );
-
-                $nuevo = $stmt->affected_rows === 1;
-                $cotizacionId = (int)$this->conn->insert_id;
-                $stmt->close();
+                try {
+                    $stmt = $this->ejecutarSqlVenta($sql,str_repeat('s',count($valores)),$valores);
+                    $cotizacionId = (int)$this->conn->insert_id;
+                    $stmt->close();
+                    $nuevo = true;
+                } catch (Throwable $e) {
+        error_log($e->getMessage());
+                    if ((int)$e->getCode() !== 1062) throw $e;
+                    $nuevo = false;
+                }
 
                 if (!$nuevo) {
                     $stmt = $this->ejecutarSqlVenta(
                         'SELECT id,huella,precio_unitario,total_venta,utilidad
-                         FROM cotizaciones_costeo WHERE id=? LIMIT 1',
-                        'i',
-                        [$cotizacionId]
+                         FROM cotizaciones_costeo WHERE corp_id=? AND solicitud_id=? LIMIT 1',
+                        'ss',
+                        [$corp,$solicitud]
                     );
 
                     $anterior = $stmt->get_result()->fetch_assoc();
@@ -5226,43 +5533,13 @@ if ($cat['tipo'] === 'PROPIO' &&
                     }
 
                     $resultado = [
-                        'id' => $cotizacionId,
+                        'id' => (int)$anterior['id'],
                         'precio_unitario' => $anterior['precio_unitario'],
                         'total_venta' => $anterior['total_venta'],
                         'utilidad' => $anterior['utilidad'],
                         'duplicada' => true
                     ];
                 } else {
-                    $stmt = $this->conn->prepare(
-                        'INSERT INTO cotizaciones_costos
-                         (cotizacion_id,concepto,importe)
-                         VALUES (?,?,?)'
-                    );
-
-                    if (!$stmt) {
-                        throw new RuntimeException($this->conn->error);
-                    }
-
-                    $concepto = '';
-                    $importe = '0.00';
-
-                    $stmt->bind_param(
-                        'iss',
-                        $cotizacionId,
-                        $concepto,
-                        $importe
-                    );
-
-                    foreach ($costos as $nombre => $valor) {
-                        if ($valor === 0) continue;
-
-                        $concepto = $nombre;
-                        $importe = $mxn($valor);
-                        $stmt->execute();
-                    }
-
-                    $stmt->close();
-
                     $resultado['id'] = $cotizacionId;
                     $resultado['duplicada'] = false;
                 }
@@ -5278,13 +5555,9 @@ if ($cat['tipo'] === 'PROPIO' &&
             ];
         }
 
-        if ($transaccion) {
-            $this->conn->commit();
-            $transaccion = false;
-        }
+
 
     } catch (DomainException $e) {
-        if ($transaccion) $this->conn->rollback();
 
         $json = [
             'status' => 'warning',
@@ -5293,7 +5566,6 @@ if ($cat['tipo'] === 'PROPIO' &&
         ];
 
     } catch (InvalidArgumentException | JsonException $e) {
-        if ($transaccion) $this->conn->rollback();
 
         $json = [
             'status' => 'warning',
@@ -5304,7 +5576,7 @@ if ($cat['tipo'] === 'PROPIO' &&
         ];
 
     } catch (Throwable $e) {
-        if ($transaccion) $this->conn->rollback();
+        error_log($e->getMessage());
 
         
 
@@ -5326,6 +5598,7 @@ public function guardarCatalogoCosteo(array $data): array {
         if (!$this->conn) {
             throw new RuntimeException('Conexión no disponible.');
         }
+        $corp = $this->corpCosteo();
 
         // PERMISOS DE ADMINISTRACIÓN
         $stmt = $this->ejecutarSqlVenta(
@@ -5349,7 +5622,8 @@ public function guardarCatalogoCosteo(array $data): array {
             'material' => 'materiales_costeo',
             'vehiculo' => 'vehiculos_costeo',
             'destino' => 'destinos_costeo',
-            'lista' => 'listas_precios_costeo'
+            'lista' => 'listas_precios_costeo',
+            'presentacion' => 'materiales_presentaciones'
         ];
 
         if (!is_string($tipo) ||
@@ -5404,7 +5678,7 @@ public function guardarCatalogoCosteo(array $data): array {
                 $codigo = strtoupper($leer('codigo', 50));
                 $nombre = $leer('nombre');
                 $unidad = strtoupper($leer('unidad', 12));
-                $costo = $this->enteroCosteo($data['costo_unitario'] ?? '', 4);
+                $costo = $this->enteroCosteo($data['costo_unitario'] ?? '', 8);
 
                 if (!preg_match('/^[A-Z0-9_-]{2,50}$/D', $codigo) ||
                     !preg_match('/^[A-Z0-9_]{1,12}$/D', $unidad)) {
@@ -5413,9 +5687,26 @@ public function guardarCatalogoCosteo(array $data): array {
                     );
                 }
 
-                $campos = ['codigo','nombre','unidad','costo_unitario'];
+                $grupo = strtoupper($leer('grupo_flete',25));
+                if (!in_array($grupo,['PETREO','BLOCK','BLOCK_PESADO','TABIQUE_LIGERO','LADRILLO','CEMENTO','OTRO'],true)) {
+                    throw new InvalidArgumentException('Grupo de flete inválido.');
+                }
+                if (($grupo === 'PETREO' && $unidad !== 'M3') || (in_array($grupo,['BLOCK','BLOCK_PESADO','TABIQUE_LIGERO','LADRILLO'],true) && $unidad !== 'PZA') || ($grupo === 'CEMENTO' && $unidad !== 'KG')) {
+                    throw new InvalidArgumentException('Usa M3 para pétreos, PZA para blocks y KG para cementos.');
+                }
+                $producto = trim((string)($data['producto_id'] ?? ''));
+                $productoId = $producto === '' ? null : filter_var($producto,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
+                if ($productoId === false || ($productoId && !$this->filaCosteo('SELECT id FROM products WHERE id=?',[$productoId]))) {
+                    throw new InvalidArgumentException('El producto relacionado no existe.');
+                }
+                $peso = trim((string)($data['peso_unitario_kg'] ?? ''));
+                $peso = $peso === '' ? null : $decimal($this->enteroCosteo($peso,4),4);
+                if ($id && $this->filaCosteo('SELECT p.id FROM materiales_presentaciones p JOIN materiales_costeo m ON m.corp_id=p.corp_id AND m.id=p.material_id WHERE m.corp_id=? AND m.id=? AND m.unidad<>? LIMIT 1',[$corp,$id,$unidad])) {
+                    throw new InvalidArgumentException('No cambies la unidad base de un material con presentaciones.');
+                }
+                $campos = ['codigo','nombre','unidad','costo_unitario','grupo_flete','producto_id','peso_unitario_kg'];
                 $valores = [
-                    $codigo,$nombre,$unidad,$decimal($costo, 4)
+                    $codigo,$nombre,$unidad,$decimal($costo, 8),$grupo,$productoId,$peso
                 ];
                 break;
 
@@ -5662,6 +5953,29 @@ if ($pesoBruto !== null && $cargaUtil !== null &&
                 $valores = [$leer('nombre', 100)];
                 break;
 
+            case 'presentacion':
+                $materialId = $this->idCosteo($data,'material_id');
+                $m = $this->filaCosteo('SELECT unidad,grupo_flete FROM materiales_costeo WHERE corp_id=? AND id=? AND activo=1 AND eliminado=0',[$corp,$materialId]);
+                if (!$m) throw new InvalidArgumentException('Material no disponible.');
+                $codigo = strtoupper($leer('codigo',25));
+                $nombre = $leer('nombre',100);
+                if (!preg_match('/^[A-Z0-9_]{1,25}$/D',$codigo)) throw new InvalidArgumentException('Código de presentación inválido.');
+                $num = $this->idCosteo($data,'factor_numerador');
+                $den = $this->idCosteo($data,'factor_denominador');
+                if ($num > 1000000 || $den > 1000000) throw new InvalidArgumentException('Factor fuera de rango.');
+                $campos = ['material_id','codigo','nombre','factor_numerador','factor_denominador','permite_entrada','permite_venta','permite_mezcla','cantidad_entera'];
+                $valores = [$materialId,$codigo,$nombre,$num,$den];
+                foreach (array_slice($campos,5) as $flag) {
+                    if (!in_array((string)($data[$flag] ?? ''),['0','1'],true)) throw new InvalidArgumentException('Indicador inválido.');
+                    $valores[] = (int)$data[$flag];
+                }
+                if ($valores[7] && ($m['unidad'] !== 'M3' || $m['grupo_flete'] !== 'PETREO' || $den !== 1 || $num < 2 || !$valores[8])) throw new InvalidArgumentException('La mezcla requiere una carga entera de pétreos.');
+                if ($id && $this->filaCosteo('SELECT id FROM materiales_precios_historial WHERE corp_id=? AND presentacion_id=? LIMIT 1',[$corp,$id])) {
+                    $anterior = $this->filaCosteo('SELECT material_id,codigo,factor_numerador,factor_denominador FROM materiales_presentaciones WHERE corp_id=? AND id=?',[$corp,$id]);
+                    if (!$anterior || (int)$anterior['material_id'] !== $materialId || $anterior['codigo'] !== $codigo || (int)$anterior['factor_numerador'] !== $num || (int)$anterior['factor_denominador'] !== $den) throw new InvalidArgumentException('La equivalencia publicada no se modifica: crea otra presentación.');
+                }
+                break;
+
             case 'tarifa':
                 $materialId = filter_var(
                     $data['material_id'] ?? null,
@@ -5693,11 +6007,11 @@ if ($pesoBruto !== null && $cargaUtil !== null &&
                 $stmt = $this->ejecutarSqlVenta(
                     'SELECT m.id
                      FROM materiales_costeo m
-                     JOIN listas_precios_costeo l ON l.id=?
-                     WHERE m.id=? AND m.activo=1 AND m.eliminado=0
+                     JOIN listas_precios_costeo l ON l.corp_id=m.corp_id AND l.id=?
+                     WHERE m.corp_id=? AND m.id=? AND m.activo=1 AND m.eliminado=0
                      AND l.activo=1 AND l.eliminado=0 LIMIT 1',
-                    'ii',
-                    [$listaId, $materialId]
+                    'isi',
+                    [$listaId,$corp,$materialId]
                 );
 
                 $existen = $stmt->get_result()->fetch_assoc();
@@ -5712,9 +6026,9 @@ if ($pesoBruto !== null && $cargaUtil !== null &&
 
 $stmt = $this->ejecutarSqlVenta(
     "SELECT eliminado FROM tarifas_material_costeo
-     WHERE material_id=? AND lista_id=? LIMIT 1",
-    "ii",
-    [$materialId, $listaId]
+     WHERE corp_id=? AND material_id=? AND lista_id=? LIMIT 1",
+    "sii",
+    [$corp,$materialId,$listaId]
 );
 
 $tarifaExistente = $stmt->get_result()->fetch_assoc();
@@ -5728,15 +6042,15 @@ if ($tarifaExistente && (int)$tarifaExistente['eliminado'] === 1) {
 
 
                 $sql = 'INSERT INTO tarifas_material_costeo
-                    (material_id,lista_id,recargo_pct,activo)
-                    VALUES (?,?,?,1)
+                    (corp_id,material_id,lista_id,recargo_pct,activo)
+                    VALUES (?,?,?,?,1)
                     ON DUPLICATE KEY UPDATE
                     recargo_pct=VALUES(recargo_pct),activo=1';
 
                 $stmt = $this->ejecutarSqlVenta(
                     $sql,
-                    'iis',
-                    [$materialId, $listaId, $decimal($recargo, 2)]
+                    'siis',
+                    [$corp,$materialId,$listaId,$decimal($recargo,2)]
                 );
 
                 $stmt->close();
@@ -5758,9 +6072,9 @@ if ($tarifaExistente && (int)$tarifaExistente['eliminado'] === 1) {
 
             if ($id > 0) {
                 $stmt = $this->ejecutarSqlVenta(
-                    "SELECT id FROM {$tabla} WHERE id = ? AND eliminado = 0 LIMIT 1",
-                    'i',
-                    [$id]
+                    "SELECT id FROM {$tabla} WHERE corp_id=? AND id = ? AND eliminado = 0 LIMIT 1",
+                    'si',
+                    [$corp,$id]
                 );
 
                 $existe = $stmt->get_result()->fetch_assoc();
@@ -5777,9 +6091,12 @@ if ($tarifaExistente && (int)$tarifaExistente['eliminado'] === 1) {
                     $campos
                 ));
 
-                $sql = "UPDATE {$tabla} SET {$asignaciones} WHERE id = ? AND eliminado = 0";
+                $sql = "UPDATE {$tabla} SET {$asignaciones} WHERE corp_id=? AND id = ? AND eliminado = 0";
+                $valores[] = $corp;
                 $valores[] = $id;
             } else {
+                $campos[] = 'corp_id';
+                $valores[] = $corp;
                 $columnas = '`' . implode('`,`', $campos) . '`,`activo`';
 
                 $sql = "INSERT INTO {$tabla} ({$columnas}) VALUES (" .
@@ -5824,6 +6141,7 @@ if ($tarifaExistente && (int)$tarifaExistente['eliminado'] === 1) {
         ];
 
     } catch (mysqli_sql_exception $e) {
+        error_log($e->getMessage());
         
 
         $json = [
@@ -5835,6 +6153,7 @@ if ($tarifaExistente && (int)$tarifaExistente['eliminado'] === 1) {
         ];
 
     } catch (Throwable $e) {
+        error_log($e->getMessage());
         
 
         $json = [
@@ -5849,12 +6168,12 @@ if ($tarifaExistente && (int)$tarifaExistente['eliminado'] === 1) {
 
 public function cambiarEstadoCatalogoCosteo(array $data): array {
     $json = [];
-    $transaccion = false;
 
     try {
         if (!$this->conn) {
             throw new RuntimeException('Conexión no disponible.');
         }
+        $corp = $this->corpCosteo();
 
         $stmt = $this->ejecutarSqlVenta(
             "SELECT role_id FROM users
@@ -5874,7 +6193,8 @@ public function cambiarEstadoCatalogoCosteo(array $data): array {
             'vehiculo' => 'vehiculos_costeo',
             'destino' => 'destinos_costeo',
             'lista' => 'listas_precios_costeo',
-            'tarifa' => 'tarifas_material_costeo'
+            'tarifa' => 'tarifas_material_costeo',
+            'presentacion' => 'materiales_presentaciones'
         ];
 
         $tipo = $data['tipo'] ?? '';
@@ -5926,12 +6246,13 @@ public function cambiarEstadoCatalogoCosteo(array $data): array {
             $valores = [$id];
         }
 
-        $this->conn->begin_transaction();
-        $transaccion = true;
+        $condicion = 'corp_id=? AND ' . $condicion;
+        $tipos = 's' . $tipos;
+        array_unshift($valores,$corp);
 
         $stmt = $this->ejecutarSqlVenta(
             "SELECT eliminado FROM {$tabla}
-             WHERE {$condicion} LIMIT 1 FOR UPDATE",
+             WHERE {$condicion} LIMIT 1",
             $tipos,
             $valores
         );
@@ -5955,9 +6276,7 @@ public function cambiarEstadoCatalogoCosteo(array $data): array {
             $stmt->close();
         }
 
-        $this->conn->commit();
-        $transaccion = false;
-
+    
         $json['status'] = 'ok';
         $json['answer'] = $eliminado
             ? 'Registro eliminado correctamente.'
@@ -5970,15 +6289,13 @@ public function cambiarEstadoCatalogoCosteo(array $data): array {
         $json['code'] = 200;
 
     } catch (DomainException $e) {
-        if ($transaccion) $this->conn->rollback();
         $json = ['status'=>'warning','answer'=>$e->getMessage(),'code'=>403];
 
     } catch (InvalidArgumentException $e) {
-        if ($transaccion) $this->conn->rollback();
         $json = ['status'=>'warning','answer'=>$e->getMessage(),'code'=>400];
 
     } catch (Throwable $e) {
-        if ($transaccion) $this->conn->rollback();
+        error_log($e->getMessage());
        
         $json = [
             'status'=>'error',
@@ -5989,6 +6306,9 @@ public function cambiarEstadoCatalogoCosteo(array $data): array {
 
     return $json;
 }
+
+
+
 
     private function corpClientes(): string {
         $corp = isset($_SESSION['csm_corp_id'])

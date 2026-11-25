@@ -1113,3 +1113,45 @@
         padding: 11px 12px;
     }
 }
+
+/* COSTEO COMERCIAL · agregar al final de css/costeo.css */
+.csc-nav { display:flex; flex-wrap:wrap; gap:8px; border-bottom:1px solid #e1e9e3; padding-bottom:12px; }
+.csc-nav .btn { border-radius:8px; font-size:.84rem; font-weight:600; padding:7px 12px; }
+.csc-layout { display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,1fr); gap:16px; align-items:start; }
+.csc-card { background:#fff; border:1px solid #dfe9e2; border-radius:14px; padding:20px; min-width:0; }
+.csc-heading { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
+.csc-heading > i { flex:0 0 38px; height:38px; display:grid; place-items:center; background:#e7f3ec; color:#086b47; border-radius:11px; font-size:1.1rem; }
+.csc-heading h2 { font-size:1.02rem; font-weight:700; margin:0 0 3px; color:#23372b; }
+.csc-heading p { font-size:.79rem; color:#64756b; margin:0; }
+.csc-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.csc-field { min-width:0; }
+.csc-field .form-label, .csc-concepto .form-label, .csc-componente .form-label { font-size:.77rem; font-weight:600; color:#34483a; margin:0 0 5px; }
+.csc-card .form-control,.csc-card .form-select { min-height:38px; border-color:#dce7df; border-radius:8px; font-size:.85rem; padding-block:7px; }
+.csc-card .form-control:focus,.csc-card .form-select:focus { border-color:#429a73; box-shadow:0 0 0 3px rgba(8,107,71,.09); }
+.csc-card .btn { border-radius:8px; font-weight:600; }
+.csc-pres-tools { margin:12px 0; }
+.csc-estimate { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; background:#edf6f0; border-radius:10px; padding:13px; margin-top:12px; }
+.csc-estimate small,.csc-total small { display:block; font-size:.7rem; font-weight:600; color:#527060; }
+.csc-estimate strong { display:block; color:#086b47; font-size:1.05rem; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.csc-estimate-single { grid-template-columns:1fr; }
+.csc-estimate-single strong { font-size:1.5rem; }
+.csc-table .table { font-size:.78rem; --bs-table-bg:transparent; }
+.csc-table th { color:#65776b; font-size:.71rem; font-weight:700; white-space:nowrap; }
+.csc-table td { padding:9px 6px; border-color:#edf1ee; }
+.csc-table td small { font-size:.72rem; }
+.csc-concepto,.csc-componente { display:grid; align-items:end; gap:7px; padding:8px 0; border-bottom:1px solid #eef2ef; }
+.csc-concepto { grid-template-columns:minmax(100px,1.6fr) minmax(55px,.6fr) minmax(75px,.9fr) minmax(65px,.8fr) auto; }
+.csc-componente { grid-template-columns:minmax(0,2fr) minmax(0,1fr) auto; }
+.csc-importe { align-self:end; padding-bottom:5px; text-align:right; }
+.csc-importe small,.csc-importe strong { display:block; font-size:.72rem; }
+.csc-importe strong { color:#086b47; font-variant-numeric:tabular-nums; }
+.csc-capacity { height:10px; background:#e9efe9; border-radius:20px; overflow:hidden; margin-top:12px; }
+.csc-capacity-fill { height:100%; width:0; background:#278755; transition:width .18s ease; }
+.csc-capacity-fill.csc-exceso { background:#ba3e36; }
+.csc-resumen { position:sticky; top:16px; }
+.csc-result-row { display:flex; justify-content:space-between; align-items:center; gap:12px; border-bottom:1px solid #e9efeb; padding:10px 0; color:#35483d; font-size:.86rem; }
+.csc-result-row small { color:#6a796e; font-size:.75rem; }
+.csc-total { background:#e7f3ec; border-radius:10px; padding:16px; margin-top:14px; }
+.csc-total strong { display:block; color:#086b47; font-size:1.85rem; font-weight:750; font-variant-numeric:tabular-nums; }
+@media(max-width:1100px) { .csc-layout { grid-template-columns:1fr; } .csc-resumen { position:static; } }
+@media(max-width:560px) { .csc-card { padding:14px; } .csc-fields { grid-template-columns:1fr; } .csc-estimate { grid-template-columns:1fr; } .csc-concepto { grid-template-columns:1fr 1fr; } .csc-concepto > div:first-child { grid-column:1/-1; } .csc-importe { text-align:left; } }

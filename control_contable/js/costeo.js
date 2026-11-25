@@ -928,7 +928,7 @@ function cambiarEstadoCosteo(indice) {
     });
 }
 
-function renderCotizadorCosteo() {
+function renderCotizadorCosteoAnterior() {
     if (!window.CSM_ES_ADMIN) {
         return $("#contenidoModulo").html(
             '<div class="alert alert-warning">Esta sección es exclusiva de administración.</div>'
@@ -1138,12 +1138,14 @@ function calcularCotizacionCosteo(e) {
         if (!(clave in d)) d[clave] = "0.00";
     });
 
+    const huellaFormulario = JSON.stringify(Array.from(new FormData(form).entries()));
     const $btn = $("#ccCalcular").prop("disabled", true).text("Calculando...");
 
     cotizacionVigente = null;
     $("#ccGuardarCotizacion").prop("disabled", true);
 
     api({action: "cotizarMaterial", datos: JSON.stringify(d)}).done(function(r) {
+        if (!form.isConnected || JSON.stringify(Array.from(new FormData(form).entries())) !== huellaFormulario) return;
         if (r.status !== "ok") {
             return Swal.fire("Revisa el cálculo", r.answer || "No fue posible cotizar.", "warning");
         }
@@ -1223,7 +1225,8 @@ function guardarCotizacionCosteo() {
 
     const registro = {
         ...cotizacionVigente.datos,
-        solicitud_id: cotizacionVigente.solicitud_id
+        solicitud_id: cotizacionVigente.solicitud_id,
+        total_esperado: String(cotizacionVigente.resultado.total_venta)
     };
 
     Swal.fire({
@@ -1259,6 +1262,279 @@ function guardarCotizacionCosteo() {
         });
     });
 }
+
+
+/* COSTEO COMERCIAL · nuevas pestañas y simuladores */
+const ccGrupos = [
+    ["PETREO","Pétreos"],["BLOCK","Block ligero"],["BLOCK_PESADO","Block pesado"],
+    ["TABIQUE_LIGERO","Tabique ligero"],["LADRILLO","Ladrillo"],["CEMENTO","Cemento, mortero y cal"],["OTRO","Otro"]
+];
+const ccUnidadesCobro = [["VIAJE","Por viaje"],["M3","Por m³"],["MILLAR","Por millar"],["TON","Por tonelada"],["PZA","Por pieza"],["ENTREGA","Por entrega"]];
+esquemas.material = {
+    titulo:"Materiales",coleccion:"materiales",
+    columnas:[["codigo","Código"],["nombre","Material"],["grupo_flete","Grupo"],["unidad","Unidad base"],["costo_unitario","Costo base"]],
+    campos:[campo("codigo","Código","text",true,{max:50}),campo("nombre","Nombre del material","text",true,{max:150}),
+        select("grupo_flete","Grupo",ccGrupos),select("unidad","Unidad base",["M3","PZA","KG","TON","BULTO","VIAJE"]),
+        numero("costo_unitario","Costo por unidad base ($)","0.00000001"),numero("producto_id","ID del producto relacionado (opcional)","1",false,{min:"1"}),
+        numero("peso_unitario_kg","Kg por unidad base (opcional)","0.0001",false)]
+};
+esquemas.presentacion = {
+    titulo:"Presentaciones",coleccion:"presentaciones",
+    columnas:[["material_nombre","Material"],["codigo","Código"],["nombre","Presentación"],["factor_numerador","Numerador"],["factor_denominador","Denominador"]],
+    campos:[select("material_id","Material",[]),campo("codigo","Código","text",true,{max:25}),campo("nombre","Nombre","text",true,{max:100}),
+        numero("factor_numerador","Numerador","1",true,{min:"1"}),numero("factor_denominador","Denominador","1",true,{min:"1"}),
+        ...[["permite_entrada","Permite entrada"],["permite_venta","Permite venta"],["permite_mezcla","Permite mezcla"],["cantidad_entera","Cantidad entera"]].map(([k,v])=>select(k,v,[["1","Sí"],["0","No"]]))]
+};
+datos.presentaciones = [];
+let ccVistaComercial = "precios", ccVersionComercial = 0, ccTimerComercial = null, ccPeticionComercial = null;
+let ccPreciosActuales = [], ccFletesActuales = [], ccPublicando = false;
+const ccComercialApi = (operacion,d={}) => api({action:"operarCosteoComercial",operacion:operacion,datos:JSON.stringify(d)});
+
+function ccOpciones($select, filas, placeholder="Selecciona", anterior=null) {
+    const valor = anterior === null ? $select.val() : anterior;
+    $select.empty();
+    if (placeholder !== null) $select.append(new Option(placeholder,""));
+    filas.forEach(([id,nombre])=>$select.append(new Option(nombre,String(id))));
+    if (valor !== null && $select.find("option").filter((_,o)=>o.value===String(valor)).length) $select.val(String(valor));
+}
+
+function ccCampo(id,etiqueta,tipo="select",extra="") {
+    return `<div class="csc-field"><label for="${id}" class="form-label">${etiqueta}</label>${tipo==="select" ? `<select id="${id}" class="form-select" ${extra}></select>` : `<input id="${id}" class="form-control" type="${tipo}" ${extra}>`}</div>`;
+}
+
+function renderCotizadorCosteo(vista=ccVistaComercial) {
+    if (!window.CSM_ES_ADMIN) return;
+    ccVistaComercial = vista;
+    const version = ++ccVersionComercial;
+    clearTimeout(ccTimerComercial);
+    if (ccPeticionComercial) {ccPeticionComercial.abort(); ccPeticionComercial=null;}
+    const pestanas = [["precios","tags","Precios"],["fletes","geo-alt","Fletes por comunidad"],["cotizar","calculator","Cotizar entrega"],["traslado","truck","Costeo de traslado"]];
+    const barra = `<div class="csc-nav mb-3">${pestanas.map(([id,icono,nombre])=>`<button type="button" data-vista="${id}" class="btn btn-sm ${id===vista?"btn-success":"btn-outline-secondary"} csc-tab" aria-pressed="${id===vista}"><i class="bi bi-${icono} me-1"></i>${nombre}</button>`).join("")}</div>`;
+    if (vista === "traslado") {
+        renderCotizadorCosteoAnterior();
+        $("#contenidoModulo").prepend(barra);
+        return;
+    }
+    $("#contenidoModulo").html(`${barra}<div id="ccComercial"><div class="d-flex justify-content-end mb-3 gap-2 flex-wrap"><button class="btn btn-sm btn-outline-success" type="button" id="btnCatalogosDesdeCotizador"><i class="bi bi-sliders2 me-1"></i>Catálogos</button><button class="btn btn-sm btn-outline-secondary csc-recargar" type="button"><i class="bi bi-arrow-clockwise me-1"></i>Actualizar</button></div><div id="cscPanel" class="text-secondary py-3">Cargando materiales y precios…</div></div>`);
+    consultarCatalogos(function() {
+        if (version!==ccVersionComercial || !$("#cscPanel").length) return;
+        ccComercialApi("consultar").done(function(r) {
+            if (version!==ccVersionComercial || !$("#cscPanel").length) return;
+            if (r.status!=="ok") return $("#cscPanel").text(r.answer);
+            ccPreciosActuales = r.results.precios || [];
+            ccFletesActuales = r.results.fletes || [];
+            $("#cscPanel").removeClass("text-secondary py-3");
+            if (vista==="precios") ccRenderPrecios();
+            else if (vista==="fletes") ccRenderFletes();
+            else ccRenderCotizar();
+        }).fail(function(xhr) {
+            if (version===ccVersionComercial && $("#cscPanel").length) $("#cscPanel").text(errorApi(xhr));
+        });
+    });
+}
+
+function ccLlenarSelects(prefijo) {
+    ccOpciones($("#"+prefijo+"Material"),activos("materiales").map(m=>[m.id,m.nombre]));
+    ccOpciones($("#"+prefijo+"Lista"),activos("listas").map(m=>[m.id,m.nombre]));
+    ccOpciones($("#"+prefijo+"Destino"),[[0,"Recoger en patio"],...activos("destinos").map(m=>[m.id,m.nombre])],null,"0");
+    ccOpciones($("#"+prefijo+"Vehiculo"),[[0,"Sin asignar"],...activos("vehiculos").map(m=>[m.id,`${m.nombre} · ${m.capacidad} ${m.unidad_capacidad}`])],null,"0");
+}
+
+function ccPresentaciones(prefijo) {
+    const material = $("#"+prefijo+"Material").val();
+    ccOpciones($("#"+prefijo+"Presentacion"),activos("presentaciones").filter(p=>String(p.material_id)===String(material) && Number(p.permite_venta)===1).map(p=>[p.id,p.nombre]));
+}
+
+function ccRenderPrecios() {
+    $("#cscPanel").html(`<div class="csc-layout"><section class="csc-card"><div class="csc-heading"><i class="bi bi-tags"></i><div><h2>Publicar precio</h2><p>Configura una presentación, una lista y su precio vigente.</p></div></div><form id="cscPrecioForm"><div class="csc-fields">
+        ${ccCampo("cspMaterial","Material")}${ccCampo("cspPresentacion","Presentación")}${ccCampo("cspLista","Lista de precios")}${ccCampo("cspDestino","Precio aplicable en")}
+        ${ccCampo("cspRecargo","Incremento sobre costo (%)","number",'min="0" max="200" step="0.0001" value="0" required')}${ccCampo("cspAdicional","Incremento fijo ($)","number",'min="0" step="0.01" value="0" required')}
+        ${ccCampo("cspManual","Precio manual (opcional)","number",'min="0.01" step="0.01" placeholder="Automático"')}${ccCampo("cspObs","Motivo u observaciones","text",'maxlength="255"')}
+        </div><div class="csc-pres-tools"><button type="button" id="cspGenerar" class="btn btn-sm btn-outline-success"><i class="bi bi-plus-circle me-1"></i>Generar equivalencias del material</button></div>
+        <div class="csc-estimate" aria-live="polite"><div><small>Costo de la presentación</small><strong id="cspCosto">—</strong></div><div><small>Precio calculado</small><strong id="cspCalculado">—</strong></div><div><small>Precio que se publicará</small><strong id="cspFinal">—</strong></div></div>
+        <p class="small text-secondary mt-2">Un precio por comunidad ya incluye entrega; el cotizador no volverá a sumarle flete. El servidor recalcula al publicar.</p><button type="submit" class="btn btn-success w-100" id="cspPublicar"><i class="bi bi-check2-circle me-2"></i>Publicar nueva versión</button></form></section>
+        <section class="csc-card"><div class="csc-heading"><i class="bi bi-clock-history"></i><div><h2>Precios vigentes</h2><p>Selecciona un registro para consultar su historial.</p></div></div><input id="cscBuscarPrecios" class="form-control mb-3" placeholder="Buscar material, lista o destino" aria-label="Buscar precio"><div class="csc-table table-responsive"><table class="table table-sm align-middle"><thead><tr><th>Material / presentación</th><th>Lista / destino</th><th class="text-end">Precio</th><th></th></tr></thead><tbody id="cscPreciosBody"></tbody></table></div></section></div>`);
+    ccLlenarSelects("csp");
+    $("#cspMaterial,#cspPresentacion,#cspLista").prop("required",true);
+    ccPresentaciones("csp"); ccActualizarPrecio(); ccTablaComercial("precios");
+}
+
+function ccActualizarPrecio() {
+    const material = activos("materiales").find(m=>String(m.id)===$("#cspMaterial").val());
+    const p = activos("presentaciones").find(m=>String(m.id)===$("#cspPresentacion").val());
+    const lista = $("#cspLista").val();
+    const valido = material && p && lista && Number(p.factor_denominador)>0 && Number(material.costo_unitario)>0;
+    const costo = valido ? Number(material.costo_unitario)*Number(p.factor_numerador)/Number(p.factor_denominador) : 0;
+    const calculado = costo*(1+Number($("#cspRecargo").val())/100)+Number($("#cspAdicional").val());
+    const final = $("#cspManual").val()==="" ? calculado : Number($("#cspManual").val());
+    $("#cspCosto").text(valido?mxn(costo):"—"); $("#cspCalculado").text(valido?mxn(calculado):"—"); $("#cspFinal").text(valido?mxn(final):"—");
+    $("#cspPublicar").prop("disabled",ccPublicando || !valido || final<=0 || !Number.isFinite(final));
+    $("#cspGenerar").prop("disabled",!material);
+}
+
+function ccRecargoSugerido() {
+    const t=activos("tarifas").find(r=>String(r.material_id)===$("#cspMaterial").val() && String(r.lista_id)===$("#cspLista").val());
+    $("#cspRecargo").val(t?.recargo_pct ?? "0"); ccActualizarPrecio();
+}
+
+function ccRenderFletes() {
+    $("#cscPanel").html(`<div class="csc-layout"><section class="csc-card"><div class="csc-heading"><i class="bi bi-truck"></i><div><h2>Tarifa de distribución</h2><p>Define cuánto se cobra y cómo se compone cada tarifa.</p></div></div><form id="cscFleteForm"><div class="csc-fields">
+        ${ccCampo("csfDestino","Comunidad")}${ccCampo("csfGrupo","Grupo de material")}${ccCampo("csfPresentacion","Presentación")}${ccCampo("csfUnidad","Forma de cobro")}</div><div class="d-flex justify-content-between align-items-center mt-3 mb-2 gap-2"><h3 class="h6 mb-0">Conceptos incluidos</h3><button type="button" class="btn btn-sm btn-outline-success" id="csfAgregar"><i class="bi bi-plus-lg me-1"></i>Agregar</button></div><div id="csfConceptos"></div>
+        <div class="csc-estimate csc-estimate-single" aria-live="polite"><div><small>Tarifa total por unidad de cobro</small><strong id="csfTotal">$0.00</strong></div></div><div class="mt-3">${ccCampo("csfObs","Observaciones","text",'maxlength="255" placeholder="Aclaraciones de la tarifa"')}</div>
+        <button class="btn btn-success w-100 mt-3" type="submit"><i class="bi bi-check2-circle me-2"></i>Publicar tarifa</button></form></section><section class="csc-card"><div class="csc-heading"><i class="bi bi-map"></i><div><h2>Fletes vigentes</h2><p>Las tarifas no configuradas no se consideran gratuitas.</p></div></div><input id="cscBuscarFletes" class="form-control mb-3" placeholder="Buscar comunidad o grupo" aria-label="Buscar flete"><div class="csc-table table-responsive"><table class="table table-sm align-middle"><thead><tr><th>Comunidad / grupo</th><th>Presentación / cobro</th><th class="text-end">Tarifa</th><th></th></tr></thead><tbody id="cscFletesBody"></tbody></table></div></section></div>`);
+    ccOpciones($("#csfDestino"),activos("destinos").map(m=>[m.id,m.nombre]));
+    ccOpciones($("#csfGrupo"),ccGrupos); ccOpciones($("#csfUnidad"),ccUnidadesCobro);
+    $("#csfDestino,#csfGrupo,#csfPresentacion,#csfUnidad").prop("required",true);
+    ccOpcionesFlete(); ccAgregarConcepto(); ccTablaComercial("fletes");
+}
+
+function ccOpcionesFlete() {
+    const grupo=$("#csfGrupo").val();
+    const ids=new Set(activos("materiales").filter(m=>m.grupo_flete===grupo).map(m=>String(m.id)));
+    const unicos=new Map(activos("presentaciones").filter(p=>ids.has(String(p.material_id)) && Number(p.permite_venta)===1).map(p=>[p.codigo,p.nombre]));
+    ccOpciones($("#csfPresentacion"),[["TODAS","Todas las presentaciones del grupo"],...unicos.entries()],null);
+}
+
+function ccAgregarConcepto(nombre="",cantidad="1",precio="") {
+    if ($("#csfConceptos .csc-concepto").length>=30) return;
+    const $r=$(`<div class="csc-concepto"><div><label class="form-label">Concepto</label><input class="form-control csf-nombre" maxlength="100" placeholder="Ej. Flete, ayudante" required></div><div><label class="form-label">Cantidad</label><input class="form-control csf-cantidad" type="number" min="0.01" max="1000" step="0.01" required></div><div><label class="form-label">Precio ($)</label><input class="form-control csf-precio" type="number" min="0" max="1000000" step="0.01" required></div><div class="csc-importe"><small>Importe</small><strong>$0.00</strong></div><button type="button" class="btn btn-sm btn-outline-danger csf-quitar" aria-label="Quitar concepto"><i class="bi bi-x-lg"></i></button></div>`);
+    $r.find(".csf-nombre").val(nombre); $r.find(".csf-cantidad").val(cantidad); $r.find(".csf-precio").val(precio);
+    $("#csfConceptos").append($r); ccTotalFlete();
+}
+
+function ccTotalFlete() {
+    let total=0;
+    $("#csfConceptos .csc-concepto").each(function() {
+        const n=Math.round(Number($(this).find(".csf-cantidad").val())*100), p=Math.round(Number($(this).find(".csf-precio").val())*100);
+        const importe=Math.floor((Math.max(0,n||0)*Math.max(0,p||0)+50)/100);
+        total+=importe; $(this).find(".csc-importe strong").text(mxn(importe/100));
+    });
+    $("#csfTotal").text(mxn(total/100));
+}
+
+function ccTablaComercial(tipo) {
+    const esPrecio=tipo==="precios", filas=esPrecio?ccPreciosActuales:ccFletesActuales;
+    const filtro=String($(esPrecio?"#cscBuscarPrecios":"#cscBuscarFletes").val()||"").toLocaleLowerCase("es-MX");
+    const $body=$(esPrecio?"#cscPreciosBody":"#cscFletesBody").empty();
+    filas.filter(r=>[r.material,r.presentacion,r.lista,r.destino,r.grupo_flete,r.unidad_cobro].some(v=>String(v??"").toLocaleLowerCase("es-MX").includes(filtro))).forEach(function(r) {
+        const celda=(a,b)=>$("<td>").append($("<strong>",{class:"d-block",text:a}),$("<small>",{class:"text-secondary",text:b}));
+        const $tr=$("<tr>").append(celda(esPrecio?r.material:r.destino,esPrecio?r.presentacion:r.grupo_flete),celda(esPrecio?r.lista:r.presentacion,esPrecio?r.destino:r.unidad_cobro),$("<td>",{class:"text-end fw-semibold text-success",text:mxn(esPrecio?r.precio:r.importe)}));
+        $tr.append($("<td>").append($("<button>",{type:"button",class:"btn btn-sm btn-outline-success csc-historial",title:"Ver historial", "aria-label":"Ver historial",html:'<i class="bi bi-clock-history"></i>'}).attr({"data-id":r.id,"data-tipo":esPrecio?"precio":"flete"}))).appendTo($body);
+    });
+    if (!$body.children().length) $body.append($("<tr>").append($("<td>",{colspan:4,class:"text-center text-secondary py-4",text:"No hay precios o tarifas que coincidan."})));
+}
+
+function ccRenderCotizar() {
+    $("#cscPanel").html(`<div class="csc-layout"><section class="csc-card"><div class="csc-heading"><i class="bi bi-cart3"></i><div><h2>Armar cotización</h2><p>Elige la presentación y el destino. Los precios se consultan en el servidor.</p></div></div><form id="cscCotizarForm"><div class="csc-fields">${ccCampo("csqMaterial","Material principal")}${ccCampo("csqPresentacion","Presentación")}${ccCampo("csqLista","Lista de precios")}${ccCampo("csqCantidad","Cantidad de presentaciones","number",'value="1" min="0.01" max="100000" step="0.01" required')}${ccCampo("csqDestino","Destino")}${ccCampo("csqVehiculo","Vehículo (para flete por viaje)")}</div><div id="csqMezclaWrap" class="d-none mt-3"><div class="form-check form-switch"><input type="checkbox" id="csqMezcla" class="form-check-input"><label for="csqMezcla" class="form-check-label fw-semibold">Combinar materiales en la misma carga</label></div><div id="csqComponentesWrap" class="d-none"><p class="small text-secondary mt-2 mb-1">Captura los m³ de cada material por una sola carga. Se repetirán por la cantidad de cargas.</p><div id="csqComponentes"></div><div class="csc-capacity"><div id="csqBarra" class="csc-capacity-fill"></div></div><div class="small text-secondary mt-1" id="csqCapacidad" aria-live="polite"></div><button type="button" id="csqAgregar" class="btn btn-sm btn-outline-success mt-2"><i class="bi bi-plus-lg me-1"></i>Otro material</button></div></div><button type="submit" class="btn btn-success w-100 mt-3"><i class="bi bi-calculator me-2"></i>Calcular precio</button></form></section><aside class="csc-card csc-resumen"><div class="csc-heading"><i class="bi bi-receipt"></i><div><h2>Resultado de cotización</h2><p>Precio final con entrega cuando corresponda.</p></div></div><div id="csqResultado" aria-live="polite" class="text-secondary">Completa los datos para calcular.</div><p class="small text-secondary mb-0 mt-3">Vista previa comercial. No registra una venta, no mueve inventario ni guarda una cotización definitiva.</p></aside></div>`);
+    ccLlenarSelects("csq"); $("#csqMaterial,#csqPresentacion,#csqLista").prop("required",true); ccPresentaciones("csq");
+}
+
+function ccPresentacionCotizada() {return activos("presentaciones").find(p=>String(p.id)===$("#csqPresentacion").val());}
+function ccCambiarPresentacionCotizada() {
+    const p=ccPresentacionCotizada();
+    $("#csqCantidad").attr({step:p && Number(p.cantidad_entera)?"1":"0.01",min:p && Number(p.cantidad_entera)?"1":"0.01"});
+    $("#csqMezclaWrap").toggleClass("d-none",!p || !Number(p.permite_mezcla));
+    $("#csqMezcla").prop("checked",false); $("#csqComponentesWrap").addClass("d-none"); $("#csqComponentes").empty();
+    ccProgramarCotizacion();
+}
+
+function ccAgregarComponente(id="",cantidad="") {
+    if ($("#csqComponentes .csc-componente").length>=10) return;
+    const $r=$(`<div class="csc-componente"><div><label class="form-label">Material</label><select class="form-select csq-mat"></select></div><div><label class="form-label">m³ por carga</label><input class="form-control csq-vol" type="number" min="0.01" step="0.01"></div><button type="button" class="btn btn-sm btn-outline-danger csq-quitar" aria-label="Quitar material"><i class="bi bi-x-lg"></i></button></div>`);
+    ccOpciones($r.find(".csq-mat"),activos("materiales").filter(m=>m.grupo_flete==="PETREO" && m.unidad==="M3").map(m=>[m.id,m.nombre]),"Material",id);
+    $r.find(".csq-vol").val(cantidad); $("#csqComponentes").append($r); ccCapacidad();
+}
+
+function ccCapacidad() {
+    const p=ccPresentacionCotizada();
+    const cap=p?Number(p.factor_numerador)/Number(p.factor_denominador):0;
+    let volumen=0; $("#csqComponentes .csq-vol").each(function(){volumen+=Number(this.value)||0;});
+    const exceso=volumen>cap+0.000001;
+    $("#csqBarra").css("width",Math.min(100,cap?100*volumen/cap:0)+"%").toggleClass("csc-exceso",exceso);
+    $("#csqCapacidad").text(`${volumen.toFixed(2)} de ${cap.toFixed(2)} m³ · ${exceso?"Excede capacidad":Math.abs(cap-volumen)<0.000001?"Carga completa":"Falta completar"}`).toggleClass("text-danger",exceso);
+    return cap>0 && Math.abs(cap-volumen)<0.000001;
+}
+
+function ccProgramarCotizacion(inmediata=false) {
+    clearTimeout(ccTimerComercial);
+    if (ccPeticionComercial) {ccPeticionComercial.abort(); ccPeticionComercial=null;}
+    if (!$("#cscCotizarForm").length) return;
+    const $r=$("#csqResultado").empty().text("Completa los datos para calcular.");
+    if (!$("#cscCotizarForm")[0].checkValidity()) return;
+    const d={material_id:$("#csqMaterial").val(),presentacion_id:$("#csqPresentacion").val(),lista_id:$("#csqLista").val(),cantidad:$("#csqCantidad").val(),destino_id:$("#csqDestino").val(),vehiculo_id:$("#csqVehiculo").val(),componentes:[]};
+    if ($("#csqMezcla").is(":checked")) {
+        if (!ccCapacidad()) return $r.text("Completa el volumen de la carga mixta.");
+        $("#csqComponentes .csc-componente").each(function(){d.componentes.push({material_id:$(this).find(".csq-mat").val(),cantidad:$(this).find(".csq-vol").val()});});
+        if (d.componentes.length<2 || d.componentes.some(c=>!c.material_id || !c.cantidad)) return $r.text("Selecciona al menos dos materiales y su volumen.");
+    }
+    const version=ccVersionComercial;
+    $r.text("Calculando…");
+    ccTimerComercial=setTimeout(function() {
+        const peticion=ccComercialApi("cotizar",d); ccPeticionComercial=peticion;
+        peticion.done(function(r) {
+            if (version!==ccVersionComercial || ccPeticionComercial!==peticion || !$r[0]?.isConnected) return;
+            if (r.status!=="ok") return $r.text(r.answer);
+            const v=r.results; $r.empty();
+            v.componentes.forEach(c=>$r.append($("<div>",{class:"csc-result-row"}).append($("<div>").append($("<strong>",{class:"d-block",text:c.material}),$("<small>",{text:`${c.cantidad} ${c.unidad} · ${mxn(c.precio)}`})),$("<strong>",{text:mxn(c.importe)}))));
+            $r.append($("<div>",{class:"csc-result-row"}).append($("<span>",{text:v.precio_destino?"Entrega incluida":"Flete adicional"}),$("<strong>",{text:v.precio_destino?"Incluido":mxn(v.flete)})));
+            if (v.viajes!==null) $r.append($("<div>",{class:"csc-result-row"}).append($("<span>",{text:"Viajes"}),$("<strong>",{text:v.viajes})));
+            $r.append($("<div>",{class:"csc-total"}).append($("<small>",{text:"TOTAL DE COTIZACIÓN"}),$("<strong>",{text:mxn(v.total)})));
+            (v.avisos||[]).forEach(a=>$r.append($("<p>",{class:"small text-secondary mt-2 mb-0",text:a})));
+        }).fail(function(xhr,estado){if (estado!=="abort" && version===ccVersionComercial && ccPeticionComercial===peticion && $r[0]?.isConnected) $r.text(errorApi(xhr));}).always(function(){if(ccPeticionComercial===peticion) ccPeticionComercial=null;});
+    },inmediata?0:350);
+}
+
+function ccPublicar(operacion,d,$boton) {
+    if (ccPublicando || $boton.prop("disabled")) return;
+    ccPublicando=true;
+    $boton.prop("disabled",true);
+    const version=ccVersionComercial;
+    ccComercialApi(operacion,d).done(function(r){
+        if (r.status!=="ok") return Swal.fire("Revisa los datos",r.answer,"warning");
+        if (version===ccVersionComercial && $("#ccComercial").length) renderCotizadorCosteo();
+        Swal.fire({icon:"success",title:r.answer,timer:1800,showConfirmButton:false});
+    }).fail(xhr=>Swal.fire("No se pudo guardar",errorApi(xhr),"error")).always(()=>{ccPublicando=false; $boton.prop("disabled",false); if($("#cscPrecioForm").length)ccActualizarPrecio();});
+}
+
+function bindComercialCosteo() {
+    $(document).on("click",".csc-tab",function(){renderCotizadorCosteo(this.dataset.vista);});
+    $(document).on("click",".csc-recargar",function(){renderCotizadorCosteo();});
+    $(document).on("hidden.bs.modal","#ccModalCatalogos",function(){if($("#ccComercial").length) renderCotizadorCosteo();});
+    $(document).on("change","#cspMaterial",function(){ccPresentaciones("csp");ccRecargoSugerido();});
+    $(document).on("change","#cspLista",ccRecargoSugerido);
+    $(document).on("input change","#cscPrecioForm :input",ccActualizarPrecio);
+    $(document).on("input","#cscBuscarPrecios",()=>ccTablaComercial("precios"));
+    $(document).on("input","#cscBuscarFletes",()=>ccTablaComercial("fletes"));
+    $(document).on("submit","#cscPrecioForm",function(e){e.preventDefault();if(!this.reportValidity())return;ccPublicar("publicar_precio",{material_id:$("#cspMaterial").val(),presentacion_id:$("#cspPresentacion").val(),lista_id:$("#cspLista").val(),destino_id:$("#cspDestino").val(),recargo_pct:$("#cspRecargo").val(),adicional:$("#cspAdicional").val(),precio_manual:$("#cspManual").val(),observaciones:$("#cspObs").val()},$(this).find("button[type=submit]"));});
+    $(document).on("click","#cspGenerar",function(){
+        const m=activos("materiales").find(r=>String(r.id)===$("#cspMaterial").val()); if(!m)return;
+        const $b=$(this);
+        if(m.grupo_flete==="CEMENTO") Swal.fire({title:"Peso del bulto",input:"select",inputOptions:{25:"25 kg",50:"50 kg"},showCancelButton:true,inputValidator:v=>!v?"Selecciona el peso":undefined}).then(r=>{if(r.isConfirmed)ccPublicar("generar_presentaciones",{material_id:m.id,kg_bulto:r.value},$b);});
+        else ccPublicar("generar_presentaciones",{material_id:m.id},$b);
+    });
+    $(document).on("change","#csfGrupo",ccOpcionesFlete);
+    $(document).on("click","#csfAgregar",()=>ccAgregarConcepto());
+    $(document).on("click",".csf-quitar",function(){if($("#csfConceptos .csc-concepto").length>1)$(this).closest(".csc-concepto").remove();ccTotalFlete();});
+    $(document).on("input","#csfConceptos input",ccTotalFlete);
+    $(document).on("submit","#cscFleteForm",function(e){e.preventDefault();if(!this.reportValidity())return;const conceptos=[];$("#csfConceptos .csc-concepto").each(function(){conceptos.push({concepto:$(this).find(".csf-nombre").val(),cantidad:$(this).find(".csf-cantidad").val(),precio:$(this).find(".csf-precio").val()});});ccPublicar("publicar_flete",{destino_id:$("#csfDestino").val(),grupo_flete:$("#csfGrupo").val(),presentacion:$("#csfPresentacion").val(),unidad_cobro:$("#csfUnidad").val(),observaciones:$("#csfObs").val(),conceptos},$(this).find("button[type=submit]"));});
+    $(document).on("click",".csc-historial",function(){
+        const tipo=this.dataset.tipo, id=this.dataset.id;
+        ccComercialApi("historial_"+tipo,{id}).done(function(r){if(r.status!=="ok")return Swal.fire("Aviso",r.answer,"warning");
+            const $tabla=$("<div>",{class:"table-responsive"}).append($("<table>",{class:"table table-sm text-start"}).append('<thead><tr><th>Vigencia</th><th>Importe</th><th>Estado</th><th>Observaciones</th></tr></thead>'));
+            const $body=$("<tbody>").appendTo($tabla.find("table"));
+            (r.results||[]).forEach(v=>$body.append($("<tr>").append($("<td>",{text:v.fecha_vigencia}),$("<td>",{text:mxn(tipo==="precio"?v.precio:v.importe)}),$("<td>",{text:Number(v.eliminado)?"Eliminado":Number(v.activo)?"Registrado":"Inactivo"}),$("<td>",{text:v.observaciones||"—"}))));
+            Swal.fire({title:"Historial de "+tipo,html:$tabla[0],width:800,confirmButtonText:"Cerrar",confirmButtonColor:"#086b47"});
+        }).fail(xhr=>Swal.fire("Error",errorApi(xhr),"error"));
+    });
+    $(document).on("change","#csqMaterial",function(){ccPresentaciones("csq");ccCambiarPresentacionCotizada();});
+    $(document).on("change","#csqPresentacion",ccCambiarPresentacionCotizada);
+    $(document).on("change","#csqMezcla",function(){const activo=this.checked,p=ccPresentacionCotizada();$("#csqComponentesWrap").toggleClass("d-none",!activo);$("#csqComponentes").empty();if(activo && p){const mitad=Number(p.factor_numerador)/Number(p.factor_denominador)/2;ccAgregarComponente($("#csqMaterial").val(),mitad.toFixed(2));ccAgregarComponente("",mitad.toFixed(2));}ccProgramarCotizacion();});
+    $(document).on("click","#csqAgregar",function(){ccAgregarComponente();ccProgramarCotizacion();});
+    $(document).on("click",".csq-quitar",function(){if($("#csqComponentes .csc-componente").length>2)$(this).closest(".csc-componente").remove();ccCapacidad();ccProgramarCotizacion();});
+    $(document).on("input change","#csqCantidad,#csqLista,#csqDestino,#csqVehiculo,#csqComponentes :input",function(){ccCapacidad();ccProgramarCotizacion();});
+    $(document).on("submit","#cscCotizarForm",function(e){e.preventDefault();ccProgramarCotizacion(true);});
+}
+
 
 function verMapaDestino(indice) {
     const registro = datos.destinos[indice];
@@ -1386,6 +1662,8 @@ function verMapaDestino(indice) {
 }
 
 function bindCosteo() {
+    bindComercialCosteo();
+
     $(document).on("click", ".cc-tab", function() {
         elegirCatalogo(this.dataset.tipo);
     });
