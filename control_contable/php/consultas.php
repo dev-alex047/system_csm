@@ -1181,14 +1181,11 @@ if ($saldoCentavos > 0) {
 $stmt = $this->ejecutarSqlVenta(
     "INSERT INTO receivables (
         sale_id, client_id, client_name, user_id,
-        total_amount, paid_amount, pending_amount,
-        status, due_date, created_at, updated_at,
-        description, document_reference, request_token
-    ) VALUES (
-        ?,?,?,?,?,?,?,
-        'PENDIENTE',NULL,?,?,?,?,?
-    )",
-    "iisissssssss",
+        total_amount, paid_amount, status, due_date,
+        created_at, updated_at, description,
+        document_reference, request_token
+    ) VALUES (?,?,?,?,?,?,'PENDIENTE',NULL,?,?,?,?,?)",
+    "iisisssssss",
     [
         $idVenta,
         $clienteId,
@@ -1196,7 +1193,6 @@ $stmt = $this->ejecutarSqlVenta(
         $this->usuarioOperador,
         $total,
         $pagado,
-        $saldo,
         $fechaOperacion,
         $fecha,
         $descripcionCuenta,
@@ -2901,32 +2897,28 @@ public function crearCuenta($data) {
 
                 
                 $sql = "INSERT INTO `$tabla`
-                    ($relacion, `$nombreCol`, user_id,
-                     total_amount, paid_amount, pending_amount,
-                     status, due_date, created_at, updated_at,
-                     description, document_reference, request_token)
-                    VALUES (
-                        NULL, ?, ?, ?, ?, 0, ?,
-                        'PENDIENTE', ?, ?, ?, ?, ?, ?
-                    )";
+    ($relacion, `$nombreCol`, user_id,
+     total_amount, paid_amount, status, due_date,
+     created_at, updated_at, description,
+     document_reference, request_token)
+    VALUES (NULL,?,?,?,?,0,'PENDIENTE',?,?,?,?,?,?)";
 
-                $stmt = $this->ejecutarSqlVenta(
-                    $sql,
-                    "isissssssss",
-                    [
-                        $idRelacionado,
-                        $nombre,
-                        $this->usuarioOperador,
-                        $monto,
-                        $monto,
-                        $fechaVence,
-                        $fechaOperacion,
-                        $ahora,
-                        $concepto,
-                        $referencia,
-                        $token
-                    ]
-                );
+$stmt = $this->ejecutarSqlVenta(
+    $sql,
+    "isisssssss",
+    [
+        $idRelacionado,
+        $nombre,
+        $this->usuarioOperador,
+        $monto,
+        $fechaVence,
+        $fechaOperacion,
+        $ahora,
+        $concepto,
+        $referencia,
+        $token
+    ]
+);
 
 
 
@@ -3147,22 +3139,11 @@ public function registrarAbonoCuenta($data) {
                 
 
                 $stmt = $this->ejecutarSqlVenta(
-                    "UPDATE `$tabla`
-                     SET paid_amount = ?,
-                         pending_amount = ?,
-                         status = ?,
-                         updated_at = ?
-                     WHERE id = ?
-                       AND status = 'PENDIENTE'",
-                    "ssssi",
-                    [
-                        $pagadoNuevo,
-                        $saldoNuevo,
-                        $estadoNuevo,
-                        $ahora,
-                        $id
-                    ]
-                );
+    "UPDATE `$tabla`
+     SET paid_amount = ?, status = ?, updated_at = ?
+     WHERE id = ? AND status = 'PENDIENTE'",
+    "sssi", [$pagadoNuevo, $estadoNuevo, $ahora, $id]
+);
 
 
                 
@@ -3867,29 +3848,20 @@ AND (
                 $stmt->close();
 
                 $stmt = $this->ejecutarSqlVenta(
-                    "UPDATE receivables
-                     SET paid_amount = ?,
-                         pending_amount = ?,
-                         status = ?,
-                         updated_at = ?
-                     WHERE id = ?
-                       AND client_id = ?
-                       AND status = 'PENDIENTE'
-                       AND pending_amount = ?",
-                    "ssssiis",
-                    [
-                        $pagadoNuevo,
-                        $saldoNuevo,
-                        $estadoNuevo,
-                        $ahora,
-                        $aplicacion["id"],
-                        $clienteId,
-                        number_format(
-                            $aplicacion["anterior"] / 100,
-                            2, ".", ""
-                        )
-                    ]
-                );
+    "UPDATE receivables
+     SET paid_amount = ?, status = ?, updated_at = ?
+     WHERE id = ? AND client_id = ?
+       AND status = 'PENDIENTE' AND pending_amount = ?",
+    "sssiis",
+    [
+        $pagadoNuevo,
+        $estadoNuevo,
+        $ahora,
+        $aplicacion["id"],
+        $clienteId,
+        number_format($aplicacion["anterior"] / 100, 2, ".", "")
+    ]
+);
 
                 if ($stmt->affected_rows !== 1) {
                     throw new RuntimeException(
