@@ -1104,9 +1104,9 @@ function actualizarCondiciones() {
     });
 
     if (!vehiculo) {
-        $("#ccCondiciones").text(
+        /*$("#ccCondiciones").text(
             "El precio final incluye material y logística; no se muestra un flete adicional al cliente."
-        );
+        );*/
         return;
     }
 

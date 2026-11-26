@@ -3,6 +3,7 @@
 date_default_timezone_set('America/Mexico_City');
 //define("DEBUG_NOTA_PDF", true);
 define("DEBUG_NOTA_PDF", false);
+define("DEBUG_ABONOS", true);
 
 header("Content-Type: application/json; charset=utf-8");
 

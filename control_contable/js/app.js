@@ -140,7 +140,6 @@ function bindNavigation() {
     renderAdminCosteo();
 });
 
-
 $(document).on("submit", "#formFiltroResumen", function(e) {
     e.preventDefault();
     const inicio = $("#resumenFechaInicio").val();
@@ -148,7 +147,6 @@ $(document).on("submit", "#formFiltroResumen", function(e) {
     if (!inicio || !fin) return;
     getResumenInicial(inicio, fin);
 });
-
 
 $(document).on("submit", "#formBuscarVentas", function(e) {
     e.preventDefault();

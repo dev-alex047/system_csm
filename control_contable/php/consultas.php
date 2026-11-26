@@ -3202,22 +3202,63 @@ public function registrarAbonoCuenta($data) {
             if ($transaccion) $this->conn->rollback();
             $json["status"]="warning"; $json["answer"]=$e->getMessage(); $json["code"]=400;
         } catch (Throwable $e) {
-            if ($transaccion) $this->conn->rollback();
-            
-            $json["status"]="error"; $json["answer"]="No fue posible confirmar el pago. Reintenta con el mismo identificador para evitar duplicados."; $json["code"]=500;
-            if ((int)$e->getCode()===1062 && $token!=="") {
-                try {
-                    $stmt = $this->ejecutarSqlVenta("SELECT id,account_type,account_id FROM account_settlements WHERE request_token=? LIMIT 1","s",[$token]);
-                    $repetido = $stmt->get_result()->fetch_assoc(); $stmt->close();
-                    if ($repetido && $repetido["account_type"]===$tipo && (int)$repetido["account_id"]===$id) {
-                        $json["status"]="ok"; $json["answer"]="El pago ya estaba registrado; no se duplicó.";
-                        $json["results"]=["id"=>(int)$repetido["id"],"duplicado"=>true]; $json["code"]=200;
-                    }
-                } catch (Throwable $otroError) {
-                    
-                }
+    if ($transaccion) $this->conn->rollback();
+
+    $json["status"] = "error";
+    $json["answer"] = "No fue posible confirmar el pago. Reintenta con el mismo identificador para evitar duplicados.";
+    $json["code"] = 500;
+
+    if ((int)$e->getCode() === 1062 && $token !== "") {
+        try {
+            $stmt = $this->ejecutarSqlVenta(
+                "SELECT id, account_type, account_id
+                 FROM account_settlements
+                 WHERE request_token = ?
+                 LIMIT 1",
+                "s", [$token]
+            );
+
+            $repetido = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if ($repetido && $repetido["account_type"] === $tipo &&
+                (int)$repetido["account_id"] === $id) {
+                $json["status"] = "ok";
+                $json["answer"] = "El pago ya estaba registrado; no se duplicó.";
+                $json["results"] = [
+                    "id" => (int)$repetido["id"],
+                    "duplicado" => true
+                ];
+                $json["code"] = 200;
+            }
+        } catch (Throwable $otroError) {
+            // Se conserva la excepción original.
+        }
+    }
+
+    if ($json["code"] === 500 &&
+        defined("DEBUG_ABONOS") && DEBUG_ABONOS &&
+        (int)($_SESSION["csm_role_id"] ?? 0) === 1) {
+
+        $json["debug"] = [
+            "funcion" => "registrarAbonoCuenta",
+            "mensaje" => $e->getMessage(),
+            "codigo" => $e->getCode(),
+            "excepcion" => get_class($e),
+            "archivo" => basename($e->getFile()),
+            "linea" => $e->getLine(),
+            "cuenta_id" => $id ?? null,
+            "solicitud_id" => $token
+        ];
+
+        foreach ($e->getTrace() as $paso) {
+            if (($paso["function"] ?? "") === "ejecutarSqlVenta") {
+                $json["debug"]["linea_consulta"] = $paso["line"] ?? null;
+                break;
             }
         }
+    }
+}
     }
     return $json;
 }
@@ -3997,18 +4038,40 @@ AND (
             ];
 
         } catch (Throwable $e) {
-            if ($transaccion) {
-                $this->conn->rollback();
-            }
+    if ($transaccion) {
+        $this->conn->rollback();
+    }
 
-            return [
-                "status" => "error",
-                "code" => 500,
-                "answer" => "No se pudo confirmar el abono global. " .
-                    "Reintenta con el mismo identificador " .
-                    "para evitar duplicados."
-            ];
+    $json = [
+        "status" => "error",
+        "code" => 500,
+        "answer" => "No se pudo confirmar el abono global. Reintenta con el mismo identificador para evitar duplicados."
+    ];
+
+    if (defined("DEBUG_ABONOS") && DEBUG_ABONOS &&
+        (int)($_SESSION["csm_role_id"] ?? 0) === 1) {
+
+        $json["debug"] = [
+            "funcion" => "registrarAbonoGlobalCliente",
+            "mensaje" => $e->getMessage(),
+            "codigo" => $e->getCode(),
+            "excepcion" => get_class($e),
+            "archivo" => basename($e->getFile()),
+            "linea" => $e->getLine(),
+            "cliente_id" => $clienteId ?? null,
+            "solicitud_id" => $token ?? ""
+        ];
+
+        foreach ($e->getTrace() as $paso) {
+            if (($paso["function"] ?? "") === "ejecutarSqlVenta") {
+                $json["debug"]["linea_consulta"] = $paso["line"] ?? null;
+                break;
+            }
         }
+    }
+
+    return $json;
+}
     }
 
 
@@ -6280,11 +6343,8 @@ public function cambiarEstadoCatalogoCosteo(array $data): array {
             $stmt->close();
         }
 
-    
         $json['status'] = 'ok';
-        $json['answer'] = $eliminado
-            ? 'Registro eliminado correctamente.'
-            : 'Registro restaurado correctamente.';
+        $json['answer'] = $eliminado ? 'Registro eliminado correctamente.' : 'Registro restaurado correctamente.';
         $json['results'] = [
             'tipo' => $tipo,
             'eliminado' => $eliminado,
@@ -6311,9 +6371,6 @@ public function cambiarEstadoCatalogoCosteo(array $data): array {
     return $json;
 }
 
-
-
-
     private function corpClientes_old(): string {
         $corp = isset($_SESSION['csm_corp_id'])
             ? trim((string)$_SESSION['csm_corp_id']) : '1';
@@ -6326,14 +6383,14 @@ public function cambiarEstadoCatalogoCosteo(array $data): array {
     }
 
     private function corpClientes(): string {
-    $corp = trim((string)($_SESSION['csm_corp_id'] ?? ''));
-
-    if ($corp === '' || strlen($corp) > 150) {
-        throw new RuntimeException('Corporativo no válido.');
+        $corp = trim((string)($_SESSION['csm_corp_id'] ?? ''));
+        
+        if ($corp === '' || strlen($corp) > 150) {
+            throw new RuntimeException('Corporativo no válido.');
+        }
+        
+        return $corp;
     }
-
-    return $corp;
-}
 
     private function exigirAdminClientes(): void {
         $stmt = $this->ejecutarSqlVenta(
