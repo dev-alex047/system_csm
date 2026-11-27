@@ -6,10 +6,24 @@ const modulos = {
 ventas: {
     nombre: "Ventas",
     items: [
-        {id:"listado",nombre:"Listado",icono:"list-ul",descripcion:"Consulta tus ventas registradas, notas y comprobantes."},
-        {id:"nota",nombre:"Ventas con nota",icono:"receipt",descripcion:"Registra notas foleadas, clientes, artículos y formas de pago."},
-        {id:"rapida",nombre:"Venta rápida",icono:"cart3",descripcion:"Registra ventas de mostrador sin datos de cliente."},
-        {id:"cotizador",nombre:"Cotizador",icono:"calculator",descripcion:"Administra materiales especiales, precios, fletes y cotizaciones de entrega."}
+        {
+            id: "listado",
+            nombre: "Ventas",
+            icono: "receipt",
+            descripcion: "Consulta y administra las ventas de tu negocio."
+        },
+        {
+            id: "captura",
+            nombre: "Nueva venta",
+            icono: "cart-plus",
+            descripcion: "Agrega artículos y registra una nueva operación."
+        },
+        {
+            id: "cotizador",
+            nombre: "Cotizador",
+            icono: "calculator",
+            descripcion: "Materiales especiales, precios y fletes."
+        }
     ]
 },
 
@@ -43,7 +57,6 @@ const state = {
     versionVista: 0
 };
 state.ventaNota = crearBorradorVentaNota();
-state.ventaRapida = crearBorradorVentaRapida();
 state.filtrosVentas = {buscar:"",tipo:"TODAS",inicio:"",fin:""};
 state.peticionVentas = 0;
 
@@ -70,6 +83,11 @@ $("#btnClientes").toggleClass("d-none", !window.CSM_ES_ADMIN);
 $("#btnColaboradores").toggleClass("d-none", !window.CSM_ES_ADMIN);
 
 $("#btnTasasFinanciamiento").toggleClass(
+    "d-none",
+    !window.CSM_ES_ADMIN
+);
+
+$("#btnAbrirCotizador").toggleClass(
     "d-none",
     !window.CSM_ES_ADMIN
 );
@@ -103,7 +121,6 @@ $("#menuUsuarioActual").text(nombreUsuario + " · " + nombreRol);
         // INICIALIZAR EL SISTEMA DESPUÉS DE VALIDAR LA SESIÓN
         bindNavigation();
         bindVentaNota();
-        bindVentaRapida();
         bindUnidadesVenta();
         bindCajaEgresos();
         bindCuentas();
@@ -174,14 +191,34 @@ $(document).on("click", ".js-pagina-ventas", function() {
 });
 
 $(document).on("click", ".js-nueva-venta", function() {
-    const tipo = $(this).attr("data-tipo");
-    if (tipo === "nota" || tipo === "rapida") mostrarSubmodulo(tipo);
+
+    mostrarSubmodulo("captura");
+
+    window.scrollTo({
+        top: 0,
+        behavior: "instant"
+    });
+
+});
+
+$(document).on("click", "#btnAbrirCotizador", function() {
+
+    if (!window.CSM_ES_ADMIN) return;
+
+    abrirModulo("ventas", "cotizador");
+
 });
 
 $(document).on("click", "#btnVolverListadoVentas", function() {
-    mostrarSubmodulo("listado");
-});
 
+    mostrarSubmodulo("listado");
+
+    window.scrollTo({
+        top: 0,
+        behavior: "instant"
+    });
+
+});
 $(document).on("click", ".js-pdf-venta", function() {
     const id = Number($(this).attr("data-id"));
     if (Number.isInteger(id) && id > 0) generarPdfNotaVenta(id);
@@ -210,7 +247,7 @@ function mostrarInicio() {
     window.scrollTo(0, 0);
 }
 
-function abrirModulo(id) {
+function abrirModulo(id, submoduloInicial = null) {
     if (!Object.prototype.hasOwnProperty.call(modulos, id)) return;
 
     state.moduloActual = id;
@@ -221,7 +258,11 @@ function abrirModulo(id) {
     const $nav = $("#navSubmodulos").empty().removeClass("d-none");
 
    const itemsVisibles = modulos[id].items.filter(function(item) {
-    return item.id !== "cotizador" || window.CSM_ES_ADMIN;
+     if (id === "ventas") {
+        return item.id === "listado";
+    }
+
+    return true;
 });
 
 itemsVisibles.forEach(function(item) {
@@ -229,7 +270,9 @@ itemsVisibles.forEach(function(item) {
         .attr("data-submodulo", item.id).appendTo($nav);
 });
 
-mostrarSubmodulo(itemsVisibles[0].id);
+mostrarSubmodulo(
+    submoduloInicial || itemsVisibles[0].id
+);
 
     window.scrollTo(0, 0);
 }
@@ -254,9 +297,19 @@ function mostrarSubmodulo(id) {
 
     $(".tab-modulo").removeClass("active").removeAttr("aria-current");
     $(".tab-modulo").filter(function() {
-        return $(this).data("submodulo") === id;
+        const activo = state.moduloActual === "ventas" &&
+    id === "captura"
+        ? "listado"
+        : id;
+
+return $(this).data("submodulo") === activo;
     }).addClass("active").attr("aria-current", "page");
 
+    $("#vistaModulo").toggleClass(
+    "ventas-unificadas",
+    state.moduloActual === "ventas" &&
+    ["listado", "captura"].includes(id)
+);
     cargarContenidoModulo(state.moduloActual, id, item);
 }
 
@@ -266,13 +319,8 @@ function cargarContenidoModulo(modulo, submodulo, item) {
     renderListadoVentas();
     return;
 }
-    if (modulo === "ventas" && submodulo === "nota") {
+    if (modulo === "ventas" && submodulo === "captura") {
     renderVentaConNota();
-    return;
-}
-
-if (modulo === "ventas" && submodulo === "rapida") {
-    renderVentaRapida();
     return;
 }
 if (modulo === "caja" && submodulo === "arqueo") { renderControlCaja(); return; }
@@ -301,9 +349,12 @@ if (modulo === "ventas" && submodulo === "cotizador") {
 //if (modulo === "cuentas" && submodulo === "cobrar") { renderCuentas("COBRAR"); return; }
 //if (modulo === "cuentas" && submodulo === "pagar") { renderCuentas("PAGAR"); return; }
 
-function crearBorradorVentaNota() {
-    
+function crearBorradorVentaNota(tipo = "rapida") {
+
     return {
+        tipo: tipo === "nota" ? "nota" : "rapida",
+        tipoBloqueado: false,
+        datosEnviados: null,
         solicitud_id: generarIdSolicitudVenta(),
         caja_id: "",
         fecha_operacion: "",
@@ -323,9 +374,71 @@ function crearBorradorVentaNota() {
         items: [],
         siguienteId: 1
     };
+
 }
 
 function bindVentaNota() {
+    $(document).on("click", ".js-tipo-venta", function() {
+
+    const tipo = $(this).attr("data-tipo");
+    const venta = state.ventaNota;
+
+    if (!["nota", "rapida"].includes(tipo)) return;
+
+    if (venta.tipo === tipo) return;
+
+    if (
+        venta.tipoBloqueado ||
+        state.guardandoVentaNota ||
+        state.guardandoVentaRapida
+    ) {
+        return;
+    }
+
+    const requiereNota = [
+        "CREDITO",
+        "PARCIALIDADES"
+    ].includes(venta.forma_pago);
+
+    if (tipo === "rapida" && requiereNota) {
+
+        Swal.fire({
+            icon: "question",
+            title: "¿Cambiar a venta rápida?",
+            text: "Las ventas rápidas no admiten crédito. " +
+                  "La forma de pago cambiará a efectivo.",
+            showCancelButton: true,
+            confirmButtonText: "Cambiar modalidad",
+            cancelButtonText: "Cancelar",
+            confirmButtonColor: "#086b47"
+        }).then(function(r) {
+
+            if (!r.isConfirmed) return;
+
+            if (state.ventaNota !== venta) return;
+
+            venta.forma_pago = "EFECTIVO";
+            venta.abono = "";
+            venta.referencia_abono = "";
+
+            $("#notaAbono").val("");
+            $("#notaRefAbono").val("");
+
+            venta.tipo = tipo;
+
+            actualizarModoVenta();
+
+        });
+
+        return;
+
+    }
+
+    venta.tipo = tipo;
+
+    actualizarModoVenta();
+
+});
     $(document).on("click","#btnAgregarItemNota",function(){agregarItemVentaNota();});
 
     $(document).on("click",".btnEliminarItemNota",function(){
@@ -358,37 +471,164 @@ function bindVentaNota() {
         revisarVentaNota();
     });
 
-    $(document).on("click","#btnLimpiarVentaNota",function(){
-        Swal.fire({title:"¿Descartar este borrador?",text:"Se perderán los datos capturados.",icon:"question",showCancelButton:true,confirmButtonText:"Descartar",cancelButtonText:"Continuar editando",confirmButtonColor:"#086b47"}).then(function(r){
-            if (r.isConfirmed) {
-                state.ventaNota = crearBorradorVentaNota();
-                renderVentaConNota();
-            }
-        });
+    $(document).on("click", "#btnLimpiarVentaNota", function() {
+
+    if (
+        state.guardandoVentaNota ||
+        state.guardandoVentaRapida
+    ) return;
+
+    const venta = state.ventaNota;
+
+    Swal.fire({
+        title: venta.tipoBloqueado
+            ? "¿Descartar la solicitud?"
+            : "¿Limpiar la captura?",
+
+        text: venta.tipoBloqueado
+            ? "Verifica primero en el historial que esta venta " +
+              "no se haya registrado. Al limpiar se generará " +
+              "un nuevo identificador de operación."
+            : "Se eliminarán los artículos y datos capturados.",
+
+        icon: venta.tipoBloqueado
+            ? "warning"
+            : "question",
+
+        showCancelButton: true,
+
+        confirmButtonText: "Limpiar captura",
+        cancelButtonText: "Continuar editando",
+        confirmButtonColor: "#086b47",
+        reverseButtons: true
+
+    }).then(function(r) {
+
+        if (!r.isConfirmed) return;
+
+        if (
+            state.ventaNota !== venta ||
+            state.submoduloActual !== "captura" ||
+            state.guardandoVentaNota ||
+            state.guardandoVentaRapida
+        ) return;
+
+        state.ventaNota = crearBorradorVentaNota(
+            venta.tipo
+        );
+
+        renderVentaConNota();
+
     });
+
+});
 }
 
 function renderVentaConNota() {
+
     const template = document.getElementById("tplVentaNota");
-    if (!template) {console.error("No existe tplVentaNota en index.html");return;}
-    $("#contenidoModulo").empty().append(template.content.cloneNode(true));
-    $("#contenidoModulo").prepend('<div class="mb-3"><button id="btnVolverListadoVentas" type="button" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-2"></i>Volver al listado</button></div>');
+
+    if (!template) {
+        console.error("No existe tplVentaNota");
+        return;
+    }
+
+    $("#contenidoModulo")
+        .empty()
+        .append(template.content.cloneNode(true));
+
     prepararFechasAdmin();
 
-    $("#formVentaNota [data-campo-nota]").each(function(){
-        $(this).val(state.ventaNota[$(this).attr("data-campo-nota")]);
+    const venta = state.ventaNota;
+
+    if (!venta.vendedor) {
+        venta.vendedor = window.CSM_NOMBRE_OPERADOR || "";
+    }
+
+    $("#formVentaNota [data-campo-nota]").each(function() {
+
+        const campo = $(this).attr("data-campo-nota");
+
+        $(this).val(venta[campo] ?? "");
+
     });
 
-    if (!state.ventaNota.items.length) agregarItemVentaNota();
-    else state.ventaNota.items.forEach(insertarFilaVentaNota);
-    alternarCamposPagoNota();
-    actualizarTotalesVentaNota();
+    if (!venta.items.length) {
+        agregarItemVentaNota(false);
+    } else {
+        venta.items.forEach(insertarFilaVentaNota);
+    }
+ iniciarSelectorNotaClientesLibre();
+    actualizarModoVenta();
+
     getCajasVenta();
-    //iniciarSelectorNotaClientes();
-    iniciarSelectorNotaClientesLibre();
+
+   
+
 }
 
-function agregarItemVentaNota() {
+function actualizarModoVenta() {
+
+    const venta = state.ventaNota;
+    const esNota = venta.tipo === "nota";
+
+    $(".js-tipo-venta").each(function() {
+
+        const activo = $(this).attr("data-tipo") === venta.tipo;
+
+        $(this)
+            .toggleClass("active", activo)
+            .attr("aria-pressed", activo ? "true" : "false")
+            .prop("disabled", venta.tipoBloqueado);
+
+    });
+
+    $(".js-solo-nota")
+        .toggleClass("d-none", !esNota)
+        .find(":input")
+        .prop("disabled", !esNota);
+
+    $("#ventaDescripcionTipo").text(
+        esNota
+            ? "Registra una venta con nota, cliente y opciones de crédito."
+            : "Registra una venta de mostrador sin datos de cliente."
+    );
+
+    $("#ventaDatosDescripcion").text(
+        esNota
+            ? "Fecha, cliente y responsable de la operación."
+            : "Fecha en la que se realizó la operación."
+    );
+
+    $("#ventaAyudaFecha").text(
+    esNota
+        ? "Deja ambos campos vacíos para usar la fecha actual. " +
+          "Si solo seleccionas la fecha, la hora será automática."
+        : "Deja ambos campos vacíos para usar la fecha actual, " +
+          "o selecciona una fecha y una hora."
+);
+
+    $("#notaFormaPago option").each(function() {
+
+        const requiereNota = [
+            "CREDITO",
+            "PARCIALIDADES"
+        ].includes(this.value);
+
+        $(this)
+            .prop("disabled", requiereNota && !esNota)
+            .prop("hidden", requiereNota && !esNota);
+
+    });
+
+    $("#notaFormaPago").val(venta.forma_pago);
+
+    alternarCamposPagoNota();
+    actualizarTotalesVentaNota();
+
+}
+
+function agregarItemVentaNota(enfocar = true) {
     const item = {
         id:state.ventaNota.siguienteId++,
         origen:"MANUAL",
@@ -403,7 +643,10 @@ function agregarItemVentaNota() {
     state.ventaNota.items.push(item);
     insertarFilaVentaNota(item);
     actualizarTotalesVentaNota();
-    $("#detalleVentaNota tr:last [data-item-campo='nombre']").trigger("focus");
+   if (enfocar) {
+    $("#detalleVentaNota tr:last [data-item-campo='nombre']")
+        .trigger("focus");
+}
 }
 
 function insertarFilaVentaNota(item) {
@@ -414,7 +657,32 @@ function insertarFilaVentaNota(item) {
         $(this).val(item[$(this).attr("data-item-campo")]);
     });
     $("#detalleVentaNota").append(fila);
-    $(fila).find('[data-item-campo="unidad"]').val(item.unidad || "");
+    //$(fila).find('[data-item-campo="unidad"]').val(item.unidad || "");
+    const $unidad = $(fila).find('[data-item-campo="unidad"]');
+
+const valorUnidad = String(item.unidad || "");
+
+if (valorUnidad) {
+
+    const existe = $unidad.find("option").filter(function() {
+        return this.value === valorUnidad;
+    }).length > 0;
+
+    if (!existe) {
+        $unidad.append(
+            new Option(valorUnidad, valorUnidad)
+        );
+    }
+
+}
+
+$unidad.val(valorUnidad)
+    .prop("disabled", Boolean(item.unidadCatalogo));
+    $(fila).find(".unidad-info").text(
+    item.unidadCatalogo
+        ? "Unidad del catálogo"
+        : ""
+);
     if (item.codigo) consultarUnidadArticulo(fila);
 
     activarAutocompleteProducto(fila);
@@ -428,10 +696,30 @@ function numeroNotaValido(texto,minimo,maximo) {
 }
 
 function importeItemVentaNota(item) {
-    const cantidad = numeroNotaValido(item.cantidad,0.01,100000);
-    const precio = numeroNotaValido(item.precio,0,1000000);
-    if (cantidad === null || precio === null) return null;
-    return Math.round(cantidad * Math.round(precio * 100));
+
+    const cantidad = numeroNotaValido(
+        item.cantidad,
+        0.01,
+        100000
+    );
+
+    const precio = numeroNotaValido(
+        item.precio,
+        0,
+        1000000
+    );
+
+    if (cantidad === null || precio === null) {
+        return null;
+    }
+
+    const cantidad100 = Math.round(cantidad * 100);
+    const precioCentavos = Math.round(precio * 100);
+
+    return Math.floor(
+        (cantidad100 * precioCentavos + 50) / 100
+    );
+
 }
 
 function obtenerImportesVentaNota() {
@@ -454,16 +742,44 @@ function obtenerImportesVentaNota() {
 }
 
 function alternarCamposPagoNota() {
-    const parcial = state.ventaNota.forma_pago === "PARCIALIDADES";
-    $("#notaReferenciaBox").toggleClass("d-none",state.ventaNota.forma_pago !== "TRANSFERENCIA");
-    $("#notaParcialidadBox").toggleClass("d-none",!parcial);
-    $("#notaRefAbonoBox").toggleClass("d-none",!parcial || state.ventaNota.metodo_abono !== "TRANSFERENCIA");
 
+    const venta = state.ventaNota;
 
-const pagaEfectivo = state.ventaNota.forma_pago === "EFECTIVO" ||
-    (state.ventaNota.forma_pago === "PARCIALIDADES" && state.ventaNota.metodo_abono === "EFECTIVO");
+    const parcial = venta.forma_pago === "PARCIALIDADES";
 
-$("#notaCajaBox").toggleClass("d-none", !pagaEfectivo);
+    const transferencia =
+        venta.forma_pago === "TRANSFERENCIA";
+
+    const credito = venta.forma_pago === "CREDITO";
+
+    const pagaEfectivo =
+        venta.forma_pago === "EFECTIVO" ||
+        (parcial && venta.metodo_abono === "EFECTIVO");
+
+    $("#notaReferenciaBox")
+        .toggleClass("d-none", !transferencia);
+
+    $("#notaParcialidadBox")
+        .toggleClass("d-none", !parcial);
+
+    $("#notaRefAbonoBox").toggleClass(
+        "d-none",
+        !parcial || venta.metodo_abono !== "TRANSFERENCIA"
+    );
+
+    $("#notaCajaBox")
+        .toggleClass("d-none", !pagaEfectivo);
+
+    $("#ventaEtiquetaCliente").text(
+        credito || parcial
+            ? "Cliente *"
+            : "Cliente (opcional)"
+    );
+
+    $("#notaCliente").attr(
+        "aria-required",
+        credito || parcial ? "true" : "false"
+    );
 
 }
 
@@ -480,187 +796,451 @@ function actualizarTotalesVentaNota() {
     $("#notaTotal").text(monedaMXN(total.totalCentavos / 100));
     $("#notaAbonado").text(monedaMXN(total.abonadoCentavos / 100));
     $("#notaSaldo").text(monedaMXN(total.saldoCentavos / 100));
+
+    const nombresPago = {
+    EFECTIVO: "Efectivo",
+    TRANSFERENCIA: "Transferencia",
+    CREDITO: "Crédito",
+    PARCIALIDADES: "Parcialidades"
+};
+
+const conceptos = state.ventaNota.items.filter(function(item) {
+    return String(item.nombre || "").trim() !== "";
+}).length;
+
+$("#ventaCantidadArticulos").text(conceptos);
+
+$("#ventaMetodoResumen").text(
+    nombresPago[state.ventaNota.forma_pago] || "Sin definir"
+);
+
+$("#notaSaldo").toggleClass(
+    "venta-saldo-pendiente",
+    total.saldoCentavos > 0
+);
 }
 
 function errorVentaNota(mensaje,selector) {
     if (selector) $(selector).addClass("is-invalid").trigger("focus");
-    Swal.fire({icon:"warning",title:"Revisa la nota",text:mensaje,confirmButtonColor:"#086b47"});
+    Swal.fire({icon:"warning",title:"Revisa la venta",text:mensaje,confirmButtonColor:"#086b47"});
     return false;
 }
 
 function validarVentaNota() {
-    const venta = state.ventaNota;
 
-    if (venta.folio.trim().length > 50) return errorVentaNota("El folio puede tener hasta 50 caracteres.","#notaFolio");
-    
-    /*if (!Number.isSafeInteger(Number(venta.cliente_id)) ||
-        Number(venta.cliente_id) <= 0) {
+    const venta = state.ventaNota;
+    const esNota = venta.tipo === "nota";
+
+    const formasPermitidas = esNota
+        ? ["EFECTIVO", "TRANSFERENCIA", "CREDITO", "PARCIALIDADES"]
+        : ["EFECTIVO", "TRANSFERENCIA"];
+
+    if (!formasPermitidas.includes(venta.forma_pago)) {
         return errorVentaNota(
-            "Debes seleccionar un cliente registrado del catálogo.",
-            "#notaCliente"
+            "Selecciona una forma de pago válida.",
+            "#notaFormaPago"
         );
     }
 
-    if (!venta.cliente.trim()) {
+    // VALIDACIONES EXCLUSIVAS DE NOTA
+
+    if (esNota) {
+
+        const folio = String(venta.folio || "").trim();
+
+        if (
+            folio &&
+            !/^[A-Za-z0-9][A-Za-z0-9._/-]{0,49}$/.test(folio)
+        ) {
+            return errorVentaNota(
+                "El folio contiene caracteres no permitidos.",
+                "#notaFolio"
+            );
+        }
+
+        const cliente = String(venta.cliente || "").trim();
+
+        const requiereCliente = [
+            "CREDITO",
+            "PARCIALIDADES"
+        ].includes(venta.forma_pago);
+
+        if (cliente.length > 100) {
+            return errorVentaNota(
+                "El nombre del cliente es demasiado largo.",
+                "#notaCliente"
+            );
+        }
+
+        if (requiereCliente && !cliente) {
+            return errorVentaNota(
+                "Indica el cliente para registrar el saldo pendiente.",
+                "#notaCliente"
+            );
+        }
+
+        if (!cliente) {
+            venta.cliente_id = null;
+        }
+
+        if (!String(venta.vendedor || "").trim()) {
+            return errorVentaNota(
+                "Indica el nombre del vendedor.",
+                "#notaVendedor"
+            );
+        }
+
+    }
+
+    // VALIDAR ARTÍCULOS
+
+    if (!venta.items.length || venta.items.length > 100) {
         return errorVentaNota(
-            "Selecciona un cliente registrado.",
-            "#notaCliente"
+            "Agrega entre 1 y 100 artículos."
         );
-    }*/
-
-    const nombreCliente = String(venta.cliente || "").trim();
-
-if (nombreCliente.length > 100) {
-    return errorVentaNota(
-        "El nombre del cliente puede tener hasta 100 caracteres.",
-        "#notaCliente"
-    );
-}
-
-const requiereCliente = venta.forma_pago === "CREDITO" ||
-    venta.forma_pago === "PARCIALIDADES";
-
-if (requiereCliente && !nombreCliente) {
-    return errorVentaNota(
-        "Para una venta con saldo pendiente, escribe o selecciona el nombre del cliente.",
-        "#notaCliente"
-    );
-}
-
-if (!nombreCliente) {
-    venta.cliente_id = null;
-}
-
-    if (!venta.vendedor.trim()) return errorVentaNota("Captura el nombre del vendedor.","#notaVendedor");
-    if (!venta.items.length) return errorVentaNota("Agrega al menos un artículo.");
+    }
 
     for (let i = 0; i < venta.items.length; i++) {
+
         const item = venta.items[i];
-        const fila = '#detalleVentaNota tr[data-item-id="' + item.id + '"]';
-        if (!item.nombre.trim()) return errorVentaNota("El artículo " + (i+1) + " necesita una descripción.",fila+' [data-item-campo="nombre"]');
-        if (numeroNotaValido(item.cantidad,0.01,100000) === null) return errorVentaNota("Revisa la cantidad del artículo " + (i+1) + ".",fila+' [data-item-campo="cantidad"]');
-        if (numeroNotaValido(item.precio,0,1000000) === null) return errorVentaNota("Revisa el precio del artículo " + (i+1) + ".",fila+' [data-item-campo="precio"]');
+
+        const fila =
+            '#detalleVentaNota tr[data-item-id="' +
+            item.id + '"]';
+
+        if (!String(item.nombre || "").trim()) {
+            return errorVentaNota(
+                "Captura la descripción del artículo " + (i + 1) + ".",
+                fila + ' [data-item-campo="nombre"]'
+            );
+        }
+
+        if (numeroNotaValido(item.cantidad, 0.01, 100000) === null) {
+            return errorVentaNota(
+                "Revisa la cantidad del artículo " + (i + 1) + ".",
+                fila + ' [data-item-campo="cantidad"]'
+            );
+        }
+
         if (!item.unidad) {
-              return errorVentaNota(
+            return errorVentaNota(
                 "Selecciona la unidad del artículo " + (i + 1) + ".",
                 fila + ' [data-item-campo="unidad"]'
             );
         }
+
+        if (numeroNotaValido(item.precio, 0, 1000000) === null) {
+            return errorVentaNota(
+                "Revisa el precio del artículo " + (i + 1) + ".",
+                fila + ' [data-item-campo="precio"]'
+            );
+        }
+
     }
+
+    // VALIDAR IMPORTES
 
     const importes = obtenerImportesVentaNota();
-    if (importes.totalCentavos <= 0 || importes.totalCentavos > 9999999999) return errorVentaNota("El total debe ser mayor que cero y no exceder $99,999,999.99.");
 
-    if (!["EFECTIVO","TRANSFERENCIA","CREDITO","PARCIALIDADES"].includes(venta.forma_pago)) return errorVentaNota("Selecciona una forma de pago válida.","#notaFormaPago");
-
-    if (venta.forma_pago === "PARCIALIDADES") {
-        const abono = numeroNotaValido(venta.abono,0.01,99999999.99);
-        if (abono === null || Math.round(abono * 100) >= importes.totalCentavos) return errorVentaNota("El abono debe ser mayor que cero y menor que el total. Para pagar todo selecciona efectivo o transferencia.","#notaAbono");
-        if (!["EFECTIVO","TRANSFERENCIA"].includes(venta.metodo_abono)) return errorVentaNota("Selecciona cómo se recibió el abono.","#notaMetodoAbono");
+    if (
+        importes.totalCentavos <= 0 ||
+        importes.totalCentavos > 9999999999
+    ) {
+        return errorVentaNota(
+            "El total de la venta no es válido."
+        );
     }
 
+    // VALIDAR PARCIALIDADES
 
-const requiereCaja = venta.forma_pago === "EFECTIVO" ||
-    (venta.forma_pago === "PARCIALIDADES" && venta.metodo_abono === "EFECTIVO");
+    if (venta.forma_pago === "PARCIALIDADES") {
 
-if (requiereCaja && (!Number.isInteger(Number(venta.caja_id)) || Number(venta.caja_id) <= 0)) {
-    return errorVentaNota("Selecciona la caja donde recibirás el efectivo.", "#notaCaja");
-}
+        const abono = numeroNotaValido(
+            venta.abono,
+            0.01,
+            99999999.99
+        );
 
+        if (
+            abono === null ||
+            Math.round(abono * 100) >= importes.totalCentavos
+        ) {
+            return errorVentaNota(
+                "El abono debe ser mayor que cero y menor que el total.",
+                "#notaAbono"
+            );
+        }
+
+        if (!["EFECTIVO", "TRANSFERENCIA"].includes(venta.metodo_abono)) {
+            return errorVentaNota(
+                "Selecciona el método del abono.",
+                "#notaMetodoAbono"
+            );
+        }
+
+    }
+
+    // VALIDAR CAJA
+
+    const requiereCaja =
+        venta.forma_pago === "EFECTIVO" ||
+        (
+            venta.forma_pago === "PARCIALIDADES" &&
+            venta.metodo_abono === "EFECTIVO"
+        );
+
+    if (
+        requiereCaja &&
+        (
+            $("#notaCaja").prop("disabled") ||
+            !Number.isInteger(Number(venta.caja_id)) ||
+            Number(venta.caja_id) <= 0 ||
+            String($("#notaCaja").val()) !== String(venta.caja_id)
+        )
+    ) {
+        return errorVentaNota(
+            "Selecciona una caja disponible para recibir el efectivo.",
+            "#notaCaja"
+        );
+    }
 
     return true;
+
 }
 
 function revisarVentaNota() {
+
     if (!validarVentaNota()) return;
 
+    if (
+        state.guardandoVentaNota ||
+        state.guardandoVentaRapida
+    ) return;
+
     const venta = state.ventaNota;
+    const esNota = venta.tipo === "nota";
 
-const fecha = window.CSM_ES_ADMIN
-    ? String($("#notaFechaOperacion").val() || "").trim()
-    : "";
+    const fecha = window.CSM_ES_ADMIN
+        ? String($("#notaFechaOperacion").val() || "").trim()
+        : "";
 
-const hora = window.CSM_ES_ADMIN
-    ? String($("#notaHoraOperacion").val() || "").trim()
-    : "";
+    const hora = window.CSM_ES_ADMIN
+        ? String($("#notaHoraOperacion").val() || "").trim()
+        : "";
 
-if (!fecha && hora) {
-    return errorVentaNota(
-        "Selecciona la fecha de la venta.",
-        "#notaFechaOperacion"
-    );
-}
+    if (!fecha && hora) {
+        return errorVentaNota(
+            "Selecciona la fecha de venta.",
+            "#notaFechaOperacion"
+        );
+    }
 
-const fechaSeleccionada = fecha
-    ? fecha + (hora ? "T" + hora : "")
-    : "";
+    if (!esNota && fecha && !hora) {
+        return errorVentaNota(
+            "Indica la hora de la venta rápida.",
+            "#notaHoraOperacion"
+        );
+    }
+
+    const fechaSeleccionada = fecha
+        ? fecha + (hora ? "T" + hora : "")
+        : "";
 
     const importes = obtenerImportesVentaNota();
-    const $resumen = $('<div class="text-start small"></div>');
 
-$resumen.append(
-    $("<p class='fw-semibold text-success'></p>").text(
-        "Fecha de venta: " +
-        (
-            fecha
-                ? fecha.split("-").reverse().join("/") +
-                    (hora ? " " + hora : " · Hora automática")
-                : "Automática al guardar"
-        )
-    )
-);
+    const $resumen = $('<div class="venta-confirmacion text-start"></div>');
 
+    const nombresPago = {
+        EFECTIVO: "Efectivo",
+        TRANSFERENCIA: "Transferencia",
+        CREDITO: "Crédito",
+        PARCIALIDADES: "Parcialidades"
+    };
 
-    //$resumen.append($('<p></p>').text("Cliente: "+venta.cliente.trim()+" · Vendedor: "+venta.vendedor.trim()));
+    function agregarDato(etiqueta, valor) {
 
-    const nombreCliente = String(venta.cliente || "").trim();
+        const $fila = $('<div class="venta-confirmacion-fila"></div>');
 
-$resumen.append(
-    $('<p></p>').text(
-        "Cliente: " + (nombreCliente || "Público general") +
-        " · Vendedor: " + venta.vendedor.trim()
-    )
-);
+        $("<span>").text(etiqueta).appendTo($fila);
+        $("<strong>").text(valor).appendTo($fila);
 
-if (nombreCliente && !venta.cliente_id) {
-    $resumen.append(
-        $('<div class="small text-secondary mb-3"></div>').text(
-            "Si el cliente no existe, se registrará automáticamente al guardar la venta."
-        )
+        $resumen.append($fila);
+
+    }
+
+    agregarDato(
+        "Modalidad",
+        esNota ? "Venta con nota" : "Venta rápida"
     );
+
+    agregarDato(
+        "Fecha",
+        fecha
+    ? fecha.split("-").reverse().join("/") +
+        (hora ? " " + hora : " · Hora automática")
+    : "Automática al guardar"
+    );
+
+    agregarDato(
+        "Cliente",
+        esNota
+            ? (venta.cliente.trim() || "Público general")
+            : "Mostrador"
+    );
+
+    if (esNota) {
+
+        agregarDato("Vendedor", venta.vendedor);
+
+        agregarDato(
+            "Folio",
+            venta.folio || "Automático"
+        );
+
+        if (venta.cliente.trim() && !venta.cliente_id) {
+
+            $resumen.append(
+                $('<p class="small text-secondary mt-2"></p>').text(
+                    "Si el cliente no existe, se registrará al guardar."
+                )
+            );
+
+        }
+
+    }
+
+    agregarDato(
+        "Forma de pago",
+        nombresPago[venta.forma_pago]
+    );
+
+    const requiereCaja =
+    venta.forma_pago === "EFECTIVO" ||
+    (
+        venta.forma_pago === "PARCIALIDADES" &&
+        venta.metodo_abono === "EFECTIVO"
+    );
+
+if (requiereCaja) {
+
+    agregarDato(
+        "Caja receptora",
+        $("#notaCaja option:selected").text()
+    );
+
 }
 
-    $resumen.append($('<p></p>').text("Folio: "+(venta.folio.trim() || "Automático al guardar")+" · Pago: "+venta.forma_pago));
+if (
+    venta.forma_pago === "TRANSFERENCIA" &&
+    venta.referencia.trim()
+) {
 
-    const $lista = $('<div class="border rounded-3 p-3 mb-3"></div>');
-    venta.items.forEach(function(item){
-        $lista.append($('<div class="py-1"></div>').text(item.cantidad+" × "+item.nombre.trim()+" · "+monedaMXN(importeItemVentaNota(item)/100)));
+    agregarDato(
+        "Referencia bancaria",
+        venta.referencia.trim()
+    );
+
+}
+
+if (venta.forma_pago === "PARCIALIDADES") {
+
+    agregarDato(
+        "Método del abono",
+        nombresPago[venta.metodo_abono]
+    );
+
+    if (
+        venta.metodo_abono === "TRANSFERENCIA" &&
+        venta.referencia_abono.trim()
+    ) {
+
+        agregarDato(
+            "Referencia del abono",
+            venta.referencia_abono.trim()
+        );
+
+    }
+
+}
+
+if (venta.observaciones.trim()) {
+
+    agregarDato(
+        "Observaciones",
+        venta.observaciones.trim()
+    );
+
+}
+
+    const $articulos = $('<div class="venta-confirmacion-items"></div>');
+
+    venta.items.forEach(function(item) {
+
+        const $fila = $('<div class="venta-confirmacion-fila"></div>');
+
+        $("<span>").text(
+            item.cantidad + " " +
+            item.unidad + " × " +
+            item.nombre
+        ).appendTo($fila);
+
+        $("<strong>").text(
+            monedaMXN(importeItemVentaNota(item) / 100)
+        ).appendTo($fila);
+
+        $articulos.append($fila);
+
     });
 
-    $resumen.append($lista);
-    $resumen.append($('<p class="fw-bold mb-1"></p>').text("Total: "+monedaMXN(importes.totalCentavos/100)));
-    $resumen.append($('<p class="mb-1"></p>').text("Recibido: "+monedaMXN(importes.abonadoCentavos/100)));
-    $resumen.append($('<p></p>').text("Saldo pendiente: "+monedaMXN(importes.saldoCentavos/100)));
+    $resumen.append($articulos);
 
+    agregarDato(
+        "Importe a recibir",
+        monedaMXN(importes.abonadoCentavos / 100)
+    );
 
-Swal.fire({
-    title:"Confirmar venta",
-    html:$resumen[0],
-    icon:"question",
-    showCancelButton:true,
-    confirmButtonText:"Guardar venta",
-    cancelButtonText:"Seguir editando",
-    confirmButtonColor:"#086b47",
-    width:"630px"
-}).then(function(resultado) {
-    //if (resultado.isConfirmed) guardarVentaNota();
-    
-    if (resultado.isConfirmed) guardarVentaNota(fechaSeleccionada);
-});
+    agregarDato(
+        "Saldo pendiente",
+        monedaMXN(importes.saldoCentavos / 100)
+    );
+
+    const $total = $('<div class="venta-confirmacion-total"></div>');
+
+    $("<small>").text("Total de la venta").appendTo($total);
+
+    $("<strong>").text(
+        monedaMXN(importes.totalCentavos / 100)
+    ).appendTo($total);
+
+    $resumen.append($total);
+
+    Swal.fire({
+        title: "Confirmar venta",
+        html: $resumen[0],
+        showCancelButton: true,
+        confirmButtonText: "Confirmar y registrar",
+        cancelButtonText: "Seguir editando",
+        confirmButtonColor: "#086b47",
+        reverseButtons: true,
+        width: "620px"
+    }).then(function(r) {
+
+        if (!r.isConfirmed) return;
+
+        if (
+            state.ventaNota !== venta ||
+            state.submoduloActual !== "captura"
+        ) return;
+
+        if (esNota) {
+            guardarVentaNota(fechaSeleccionada);
+        } else {
+            guardarVentaRapida(fechaSeleccionada);
+        }
+
+    });
 
 }
-
-
 
 function mostrarContenidoPendiente(nombre) {
     $("#contenidoModulo").html('<div class="estado-vacio"><i class="bi bi-ui-checks-grid"></i><h2 class="h5 mt-3">Área lista para desarrollar</h2><p class="texto-secundario mb-0"></p></div>');
@@ -776,265 +1356,51 @@ function mostrarErrorConsulta(mensaje) {
     Swal.fire({icon:"error",title:"Error de consulta",text:mensaje,confirmButtonColor:"#086b47"});
 }
 
+function protegerSolicitudVenta(venta, datos) {
 
-/* =========================
-   VENTAS RÁPIDAS
-========================= */
+    const contenido = JSON.stringify(datos);
 
+    if (
+        venta.datosEnviados !== null &&
+        venta.datosEnviados !== contenido
+    ) {
 
-function crearBorradorVentaRapida() {
-    return {
-        solicitud_id:generarIdSolicitudVenta(),
-        caja_id:"",
-        forma_pago:"EFECTIVO",
-        referencia:"",
-        observaciones:"",
-        items:[],
-        siguienteId:1
-    };
-}
-
-
-function bindVentaRapida() {
-    $(document).on("click","#btnAgregarItemRapida",function(){
-        agregarItemVentaRapida();
-    });
-
-    $(document).on("click",".btnEliminarItemRapida",function(){
-        const id = Number($(this).closest("tr").attr("data-item-id"));
-        state.ventaRapida.items = state.ventaRapida.items.filter(function(item){return item.id !== id;});
-        $(this).closest("tr").remove();
-        if (!state.ventaRapida.items.length) agregarItemVentaRapida();
-        actualizarTotalesVentaRapida();
-    });
-
-    $(document).on("input","#detalleVentaRapida [data-item-campo]",function(){
-        const id = Number($(this).closest("tr").attr("data-item-id"));
-        const item = state.ventaRapida.items.find(function(x){return x.id === id;});
-        if (!item) return;
-        item[$(this).attr("data-item-campo")] = this.value;
-        $(this).removeClass("is-invalid");
-        actualizarTotalesVentaRapida();
-    });
-
-    $(document).on("change","input[name='metodoVentaRapida']",function(){
-        state.ventaRapida.forma_pago = this.value;
-        alternarReferenciaVentaRapida();
-        actualizarTotalesVentaRapida();
-    });
-
-    $(document).on("input","#formVentaRapida [data-campo-rapida]",function(){
-        state.ventaRapida[$(this).attr("data-campo-rapida")] = this.value;
-    });
-
-    $(document).on("submit","#formVentaRapida",function(e){
-        e.preventDefault();
-        revisarVentaRapida();
-    });
-
-    $(document).on("click","#btnLimpiarVentaRapida",function(){
-        Swal.fire({title:"¿Iniciar una nueva venta?",text:"Se descartará la captura actual.",icon:"question",showCancelButton:true,confirmButtonText:"Sí, limpiar",cancelButtonText:"Cancelar",confirmButtonColor:"#086b47"}).then(function(r){
-            if (r.isConfirmed) {
-                state.ventaRapida = crearBorradorVentaRapida();
-                if (state.moduloActual === "ventas" && state.submoduloActual === "rapida") renderVentaRapida();
-            }
+        Swal.fire({
+            icon: "warning",
+            title: "Verifica la operación anterior",
+            text: "Esta venta ya se intentó registrar y los datos " +
+                  "fueron modificados. Verifica el historial antes " +
+                  "de generar otra operación.",
+            confirmButtonColor: "#086b47"
         });
-    });
 
+        return false;
 
-$(document).on("change","#rapidaCaja",function(){
-    state.ventaRapida.caja_id = this.value;
-    $(this).removeClass("is-invalid");
-});
-
-}
-
-function renderVentaRapida() {
-    const template = document.getElementById("tplVentaRapida");
-    if (!template) {console.error("No existe tplVentaRapida");return;}
-
-    $("#contenidoModulo").empty().append(template.content.cloneNode(true));
-    $("#contenidoModulo").prepend('<div class="mb-3"><button id="btnVolverListadoVentas" type="button" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-2"></i>Volver al listado</button></div>');
-    prepararFechasAdmin();
-
-    $("#formVentaRapida [data-campo-rapida]").each(function(){
-        $(this).val(state.ventaRapida[$(this).attr("data-campo-rapida")]);
-    });
-
-    $("input[name='metodoVentaRapida']").filter(function(){
-        return this.value === state.ventaRapida.forma_pago;
-    }).prop("checked",true);
-
-    if (!state.ventaRapida.items.length) agregarItemVentaRapida();
-    else state.ventaRapida.items.forEach(insertarFilaVentaRapida);
-
-    alternarReferenciaVentaRapida();
-    actualizarTotalesVentaRapida();
-    getCajasVentaRapida();
-}
-
-function agregarItemVentaRapida() {
-    const item = {
-        id:state.ventaRapida.siguienteId++,
-        origen:"MANUAL",
-        product_id:null,
-        codigo:"",
-        nombre:"",
-        cantidad:"1",
-        unidad:"",
-        unidadCatalogo:false,
-        precio:""
-    };
-    state.ventaRapida.items.push(item);
-    insertarFilaVentaRapida(item);
-    actualizarTotalesVentaRapida();
-    $("#detalleVentaRapida tr:last [data-item-campo='nombre']").trigger("focus");
-}
-
-function insertarFilaVentaRapida(item) {
-    const template = document.getElementById("tplFilaVentaNota");
-    if (!template) {console.error("No existe tplFilaVentaNota");return;}
-    const fila = template.content.firstElementChild.cloneNode(true);
-
-    $(fila).attr("data-item-id",item.id);
-    $(fila).find("[data-item-campo]").each(function(){
-        $(this).val(item[$(this).attr("data-item-campo")]);
-    });
-    $(fila).find(".btnEliminarItemNota").removeClass("btnEliminarItemNota").addClass("btnEliminarItemRapida");
-    $("#detalleVentaRapida").append(fila);
-    $(fila).find('[data-item-campo="unidad"]').val(item.unidad || "");
-    if (item.codigo) consultarUnidadArticulo(fila);
-
-    activarAutocompleteProducto(fila);
-}
-
-
-function alternarReferenciaVentaRapida() {
-    const efectivo = state.ventaRapida.forma_pago === "EFECTIVO";
-    $("#rapidaCajaBox").toggleClass("d-none",!efectivo);
-    $("#rapidaReferenciaBox").toggleClass("d-none",efectivo);
-}
-
-
-function obtenerTotalVentaRapida() {
-    let centavos = 0;
-    state.ventaRapida.items.forEach(function(item){
-        const importe = importeItemVentaNota(item);
-        if (importe !== null) centavos += importe;
-    });
-    return centavos;
-}
-
-function actualizarTotalesVentaRapida() {
-    if (!$("#formVentaRapida").length) return;
-
-    $("#detalleVentaRapida tr").each(function(){
-        const id = Number($(this).attr("data-item-id"));
-        const item = state.ventaRapida.items.find(function(x){return x.id === id;});
-        const importe = item ? importeItemVentaNota(item) : null;
-        $(this).find(".nota-importe-fila").text(importe === null ? "—" : monedaMXN(importe / 100));
-    });
-
-    const total = obtenerTotalVentaRapida();
-    const cantidad = state.ventaRapida.items.filter(function(x){return x.nombre.trim() !== "";}).length;
-
-    $("#rapidaTotal").text(monedaMXN(total / 100));
-    $("#rapidaCantidadItems").text(cantidad + (cantidad === 1 ? " artículo" : " artículos"));
-    $("#rapidaItemsResumen").text(cantidad);
-    $("#rapidaMetodoResumen").text(state.ventaRapida.forma_pago === "EFECTIVO" ? "Efectivo" : "Transferencia");
-}
-
-function errorVentaRapida(mensaje,selector) {
-    if (selector) $(selector).addClass("is-invalid").trigger("focus");
-    Swal.fire({icon:"warning",title:"Revisa la venta",text:mensaje,confirmButtonColor:"#086b47"});
-    return false;
-}
-
-function validarVentaRapida() {
-    const venta = state.ventaRapida;
-    if (!venta.items.length) return errorVentaRapida("Agrega al menos un artículo.");
-
-    for (let i = 0; i < venta.items.length; i++) {
-        const item = venta.items[i];
-        const fila = '#detalleVentaRapida tr[data-item-id="' + item.id + '"]';
-        if (!item.nombre.trim()) return errorVentaRapida("Captura la descripción del artículo " + (i+1) + ".",fila+' [data-item-campo="nombre"]');
-        if (!item.unidad) {
-            return errorVentaRapida(
-                "Selecciona la unidad del artículo " + (i + 1) + ".",
-                fila + ' [data-item-campo="unidad"]'
-            );
-        }
-
-        if (numeroNotaValido(item.cantidad,0.01,100000) === null) return errorVentaRapida("Cantidad inválida en el artículo " + (i+1) + ".",fila+' [data-item-campo="cantidad"]');
-        if (numeroNotaValido(item.precio,0,1000000) === null) return errorVentaRapida("Precio inválido en el artículo " + (i+1) + ".",fila+' [data-item-campo="precio"]');
     }
 
-    const total = obtenerTotalVentaRapida();
-    if (total <= 0 || total > 9999999999) return errorVentaRapida("El total debe ser mayor que cero y no exceder $99,999,999.99.");
-    
-if (!["EFECTIVO","TRANSFERENCIA"].includes(venta.forma_pago)) return errorVentaRapida("Selecciona efectivo o transferencia.");
-if (venta.forma_pago==="EFECTIVO" && (!Number.isInteger(Number(venta.caja_id)) || Number(venta.caja_id)<=0)) {
-    return errorVentaRapida("Selecciona una caja para recibir el efectivo.","#rapidaCaja");
-}
-return true;
+    venta.datosEnviados = contenido;
+    venta.tipoBloqueado = true;
 
+    return true;
 
 }
 
-function revisarVentaRapida() {
-    if (!validarVentaRapida()) return;
-
-    const venta = state.ventaRapida;
-    const fechaSeleccionada = window.CSM_ES_ADMIN
-    ? String($("#rapidaFechaOperacion").val() || "").trim()
-    : "";
-    const $resumen = $('<div class="text-start small"></div>');
-    $resumen.append(
-    $("<p class='fw-semibold text-success'></p>").text(
-        "Fecha de venta: " +
-        (fechaSeleccionada
-            ? fechaSeleccionada.replace("T", " ")
-            : "Automática al guardar")
-    )
-);
-    const $lista = $('<div class="border rounded-3 p-3 my-3"></div>');
-
-    venta.items.forEach(function(item){
-        $lista.append($('<div class="py-1"></div>').text(item.cantidad+" × "+item.nombre.trim()+" · "+monedaMXN(importeItemVentaNota(item)/100)));
-    });
-
-    $resumen.append($('<p class="mb-2"></p>').text("Forma de cobro: "+(venta.forma_pago === "EFECTIVO" ? "Efectivo" : "Transferencia")));
-    if (venta.forma_pago === "TRANSFERENCIA" && venta.referencia.trim()) {
-        $resumen.append($('<p></p>').text("Referencia: "+venta.referencia.trim()));
-    }
-    $resumen.append($lista);
-    $resumen.append($('<h3 class="h5 fw-bold text-success"></h3>').text("Total: "+monedaMXN(obtenerTotalVentaRapida()/100)));
-    //$resumen.append($('<p class="text-secondary mb-0"></p>').text("Esta es una vista previa. La venta todavía no se ha guardado en MySQL."));
-
-Swal.fire({
-    title:"Confirmar venta rápida",
-    html:$resumen[0],
-    icon:"question",
-    showCancelButton:true,
-    confirmButtonText:"Guardar y cobrar",
-    cancelButtonText:"Seguir editando",
-    confirmButtonColor:"#086b47",
-    width:"600px"
-}).then(function(resultado) {
-    //if (resultado.isConfirmed) guardarVentaRapida();
-    if (resultado.isConfirmed) guardarVentaRapida(fechaSeleccionada);
-});
-
-}
 
 function guardarVentaRapida(fechaSeleccionada = "") {
-    if (state.guardandoVentaRapida) return;
-    if (!validarVentaRapida()) return;
+    if (
+    state.guardandoVentaRapida ||
+    state.guardandoVentaNota
+) return;
 
-    const venta = state.ventaRapida;
+if (state.ventaNota.tipo !== "rapida") return;
+
+if (!validarVentaNota()) return;
+
+const venta = state.ventaNota;
     const datos = {
         solicitud_id:venta.solicitud_id,
-        caja_id:venta.caja_id,
+        //caja_id:venta.caja_id,
+        caja_id: venta.forma_pago === "EFECTIVO" ? venta.caja_id : "",
         forma_pago:venta.forma_pago,
         referencia:venta.forma_pago === "TRANSFERENCIA" ? venta.referencia : "",
         observaciones:venta.observaciones,
@@ -1056,7 +1422,15 @@ fecha_operacion: fechaSeleccionada,
         })
     };
 
-    state.guardandoVentaRapida = true;
+    /*state.guardandoVentaRapida = true;
+    venta.tipoBloqueado = true;
+actualizarModoVenta();*/
+
+if (!protegerSolicitudVenta(venta, datos)) return;
+
+state.guardandoVentaRapida = true;
+
+actualizarModoVenta();
 
     Swal.fire({
         title:"Registrando venta",
@@ -1090,9 +1464,10 @@ fecha_operacion: fechaSeleccionada,
         const referencia = resultado.referencia || "Registrada";
         const total = resultado.total || "0.00";
 
-        state.ventaRapida = crearBorradorVentaRapida();
+        //state.ventaRapida = crearBorradorVentaRapida();
+        state.ventaNota = crearBorradorVentaNota();
 
-        if (state.moduloActual === "ventas" && state.submoduloActual === "rapida") {
+        if (state.moduloActual === "ventas" && state.submoduloActual === "captura") {
             state.filtrosVentas = {buscar:"",tipo:"TODAS",inicio:"",fin:""};
     mostrarSubmodulo("listado");
         }
@@ -1151,9 +1526,9 @@ function getCajasVenta() {
         data:{action:"getCajasVenta"},
         dataType:"json"
     }).done(function(data) {
-        if (!$("#notaCaja").length) return;
+        if (!document.body.contains($select[0])) return;
 
-        const $caja = $("#notaCaja").empty();
+const $caja = $select.empty();
         $caja.append($("<option>",{value:"",text:"Selecciona una caja"}));
 
         if (!data || data.status !== "ok") {
@@ -1175,52 +1550,98 @@ function getCajasVenta() {
 
         if (!cajas.length) $caja.find("option:first").text("No hay cajas activas");
     }).fail(function(xhr) {
+        if (!document.body.contains($select[0])) return;
         const data = xhr.responseJSON || {};
         Swal.fire("Error",data.answer || "No fue posible consultar las cajas.","error");
     }).always(function(){
-        $("#notaCaja").prop("disabled",false);
+       if (document.body.contains($select[0])) {
+    $select.prop("disabled", false);
+}
     });
 }
 
 function guardarVentaNota(fechaSeleccionada = "") {
-    if (state.guardandoVentaNota) return;
+    
+    //if (state.guardandoVentaNota) return;
+    //if (!validarVentaNota()) return;
+
+    if (
+        state.guardandoVentaNota ||
+        state.guardandoVentaRapida
+    ) return;
+
+    if (state.ventaNota.tipo !== "nota") return;
+
     if (!validarVentaNota()) return;
+
 
     const venta = state.ventaNota;
     const datos = {
-        solicitud_id:venta.solicitud_id,
-        cliente_id: venta.cliente_id || null,
-        folio:venta.folio,
-        cliente:venta.cliente,
-        direccion:venta.direccion,
-        telefono:venta.telefono,
-        vendedor:venta.vendedor,
-        observaciones:venta.observaciones,
-        forma_pago:venta.forma_pago,
-        referencia:venta.referencia,
-        abono:venta.abono,
-        metodo_abono:venta.metodo_abono,
-        referencia_abono:venta.referencia_abono,
-        caja_id:venta.caja_id,
-        
-modo_fecha: window.CSM_ES_ADMIN && fechaSeleccionada
-    ? "MANUAL"
-    : "AUTOMATICA",
-fecha_operacion: fechaSeleccionada,
+    solicitud_id: venta.solicitud_id,
+    cliente_id: venta.cliente_id || null,
+    folio: venta.folio,
+    cliente: venta.cliente,
+    direccion: venta.direccion,
+    telefono: venta.telefono,
+    vendedor: venta.vendedor,
+    observaciones: venta.observaciones,
+    forma_pago: venta.forma_pago,
 
-        items:venta.items.map(function(item){
-            return {
-                origen:"MANUAL",
-                codigo:item.codigo,
-                nombre:item.nombre,
-                cantidad:item.cantidad,
-                unidad:item.unidad,
-                precio:item.precio
-            };
-        })
-    };
+    referencia: venta.forma_pago === "TRANSFERENCIA"
+        ? venta.referencia
+        : "",
 
-    state.guardandoVentaNota = true;
+    abono: venta.forma_pago === "PARCIALIDADES"
+        ? venta.abono
+        : "",
+
+    metodo_abono: venta.forma_pago === "PARCIALIDADES"
+        ? venta.metodo_abono
+        : "",
+
+    referencia_abono:
+        venta.forma_pago === "PARCIALIDADES" &&
+        venta.metodo_abono === "TRANSFERENCIA"
+            ? venta.referencia_abono
+            : "",
+
+    caja_id:
+        venta.forma_pago === "EFECTIVO" ||
+        (
+            venta.forma_pago === "PARCIALIDADES" &&
+            venta.metodo_abono === "EFECTIVO"
+        )
+            ? venta.caja_id
+            : "",
+
+    modo_fecha: window.CSM_ES_ADMIN && fechaSeleccionada
+        ? "MANUAL"
+        : "AUTOMATICA",
+
+    fecha_operacion: fechaSeleccionada,
+
+    items: venta.items.map(function(item) {
+        return {
+            origen: "MANUAL",
+            codigo: item.codigo,
+            nombre: item.nombre,
+            cantidad: item.cantidad,
+            unidad: item.unidad,
+            precio: item.precio
+        };
+    })
+};
+
+    /*venta.tipoBloqueado = true;
+actualizarModoVenta();
+
+    state.guardandoVentaNota = true;*/
+if (!protegerSolicitudVenta(venta, datos)) return;
+
+state.guardandoVentaNota = true;
+
+actualizarModoVenta();
+
 
     Swal.fire({
         title:"Registrando venta",
@@ -1250,10 +1671,19 @@ fecha_operacion: fechaSeleccionada,
 
         state.ventaNota = crearBorradorVentaNota();
 
-        if (state.moduloActual === "ventas" && state.submoduloActual === "nota") {
-              state.filtrosVentas = {buscar:"",tipo:"TODAS",inicio:"",fin:""};
+        if (
+    state.moduloActual === "ventas" &&
+    state.submoduloActual === "captura"
+) {
+    state.filtrosVentas = {
+        buscar: "",
+        tipo: "TODAS",
+        inicio: "",
+        fin: ""
+    };
+
     mostrarSubmodulo("listado");
-        }
+}
 
         
 Swal.fire({
@@ -1755,54 +2185,6 @@ function confirmarEgreso() {
     });
 }
 
-
-function getCajasVentaRapida() {
-    const $select = $("#rapidaCaja");
-    if (!$select.length) return;
-
-    $select.empty().append($("<option>",{value:"",text:"Consultando cajas..."})).prop("disabled",true);
-
-    $.ajax({
-        type:"POST",
-        url:"php/index.php",
-        data:{action:"getCajasVenta"},
-        dataType:"json"
-    }).done(function(data) {
-        if (!$("#rapidaCaja").length) return;
-
-        const $caja = $("#rapidaCaja").empty();
-        $caja.append($("<option>",{value:"",text:"Selecciona una caja"}));
-
-        if (!data || data.status !== "ok") {
-            Swal.fire("Aviso",data && data.answer ? data.answer : "No fue posible consultar las cajas.","warning");
-            return;
-        }
-
-        const cajas = Array.isArray(data.results) ? data.results : [];
-
-        cajas.forEach(function(item){
-            $caja.append($("<option>",{
-                value:String(item.id),
-                text:item.name+" · Caja #"+item.id
-            }));
-        });
-
-        const seleccionada = String(state.ventaRapida.caja_id);
-
-        if (cajas.some(function(item){return String(item.id) === seleccionada;})) {
-            $caja.val(seleccionada);
-        } else {
-            state.ventaRapida.caja_id = "";
-        }
-
-        if (!cajas.length) $caja.find("option:first").text("No hay cajas activas");
-    }).fail(function(xhr) {
-        const data = xhr.responseJSON || {};
-        Swal.fire("Error",data.answer || "No fue posible consultar las cajas.","error");
-    }).always(function(){
-        $("#rapidaCaja").prop("disabled",false);
-    });
-}
 
 
 state.tipoCuentaActual = null;
@@ -3591,9 +3973,54 @@ $(document).on("submit", "#formCierreCaja", function(e) {
     }, "¿Cerrar turno? Diferencia: " + monedaMXN(diferencia));
 });
 
+function actualizarBotonNuevaVenta() {
+
+    const venta = state.ventaNota;
+
+    const tieneBorrador =
+        venta.tipoBloqueado ||
+        venta.items.some(function(item) {
+
+            return String(item.nombre || "").trim() !== "" ||
+                   String(item.codigo || "").trim() !== "" ||
+                   String(item.precio || "").trim() !== "";
+
+        }) ||
+        [
+            venta.cliente,
+            venta.folio,
+            venta.observaciones,
+            venta.telefono,
+            venta.direccion,
+            venta.fecha_operacion,
+            venta.hora_operacion
+        ].some(function(valor) {
+
+            return String(valor || "").trim() !== "";
+
+        });
+
+    const $boton = $(".js-nueva-venta");
+
+    $boton.find("i").attr(
+        "class",
+        tieneBorrador
+            ? "bi bi-pencil-square"
+            : "bi bi-plus-lg"
+    );
+
+    $boton.find("span").text(
+        tieneBorrador
+            ? "Continuar venta"
+            : "Nueva venta"
+    );
+
+}
+
 function renderListadoVentas() {
     const tpl = document.getElementById("tplListadoVentas");
     $("#contenidoModulo").empty().append(tpl.content.cloneNode(true));
+    actualizarBotonNuevaVenta();
     prepararFechasAdmin();
     $("#ventasBuscar").val(state.filtrosVentas.buscar);
     $("#ventasTipo").val(state.filtrosVentas.tipo);
@@ -3917,13 +4344,13 @@ function prepararFechasAdmin(contenedor) {
 }
 
 function obtenerItemUnidad($fila) {
-    const id = Number($fila.attr("data-item-id"));
-    const nota = $fila.closest("#detalleVentaNota").length > 0;
-    const items = nota ? state.ventaNota.items : state.ventaRapida.items;
 
-    return items.find(function(item) {
+    const id = Number($fila.attr("data-item-id"));
+
+    return state.ventaNota.items.find(function(item) {
         return item.id === id;
     }) || null;
+
 }
 
 function consultarUnidadArticulo(fila) {
@@ -3985,19 +4412,16 @@ function consultarUnidadArticulo(fila) {
 
 function bindUnidadesVenta() {
     const selectorCodigo =
-        '#detalleVentaNota [data-item-campo="codigo"], ' +
-        '#detalleVentaRapida [data-item-campo="codigo"]';
+    '#detalleVentaNota [data-item-campo="codigo"]';
 
-    const selectorUnidad =
-        '#detalleVentaNota [data-item-campo="unidad"], ' +
-        '#detalleVentaRapida [data-item-campo="unidad"]';
+const selectorUnidad =
+    '#detalleVentaNota [data-item-campo="unidad"]';
 
-    
 const selectorNombre =
-    '#detalleVentaNota [data-item-campo="nombre"], ' +
-    '#detalleVentaRapida [data-item-campo="nombre"]';
+    '#detalleVentaNota [data-item-campo="nombre"]';
 
 $(document).on("input", selectorNombre, function() {
+
     const $fila = $(this).closest("tr");
     const item = obtenerItemUnidad($fila);
 
@@ -4006,9 +4430,12 @@ $(document).on("input", selectorNombre, function() {
     item.product_id = null;
     item.codigo = "";
     item.unidad = "";
+    item.precio = "";
     item.unidadCatalogo = false;
 
     $fila.find('[data-item-campo="codigo"]').val("");
+
+    $fila.find('[data-item-campo="precio"]').val("");
 
     $fila.find('[data-item-campo="unidad"]')
         .val("")
@@ -4017,38 +4444,42 @@ $(document).on("input", selectorNombre, function() {
     $fila.find(".unidad-info").text(
         "Producto manual: selecciona la unidad"
     );
+
+    actualizarTotalesVentaNota();
+
 });
 
+$(document).on("input", selectorCodigo, function() {
 
-    $(document).on("input", selectorCodigo, function() {
-        const $fila = $(this).closest("tr");
-        const item = obtenerItemUnidad($fila);
-        if (!item) return;
+    const $fila = $(this).closest("tr");
+    const item = obtenerItemUnidad($fila);
 
-        item.product_id = null;
-        item.unidad = "";
-        item.unidadCatalogo = false;
+    if (!item) return;
 
-        $fila.find('[data-item-campo="unidad"]')
-            .val("")
-            .prop("disabled", false);
+    const eraProductoCatalogo = Boolean(item.product_id);
 
-        $fila.find(".unidad-info").text("");
-    });
+    item.product_id = null;
+    item.unidad = "";
+    item.unidadCatalogo = false;
 
-    $(document).on("change", selectorCodigo, function() {
-        consultarUnidadArticulo($(this).closest("tr"));
-    });
+    if (eraProductoCatalogo) {
 
-    $(document).on("change", selectorUnidad, function() {
-        const item = obtenerItemUnidad($(this).closest("tr"));
+        item.precio = "";
 
-        if (item) {
-            item.unidad = this.value;
-        }
-    });
+        $fila.find('[data-item-campo="precio"]').val("");
+
+    }
+
+    $fila.find('[data-item-campo="unidad"]')
+        .val("")
+        .prop("disabled", false);
+
+    $fila.find(".unidad-info").text("");
+
+    actualizarTotalesVentaNota();
+
+});
 }
-
 
 
 function activarAutocompleteProducto(fila) {
@@ -4116,9 +4547,16 @@ function activarAutocompleteProducto(fila) {
             item.unidad = String(p.unidad || "").trim();
             item.unidadCatalogo = item.unidad !== "";
 
-            if (p.precio !== "") {
+            /*if (p.precio !== "") {
                 item.precio = String(p.precio);
-            }
+            }*/
+
+            item.precio =
+    p.precio !== "" &&
+    p.precio !== null &&
+    p.precio !== undefined
+        ? String(p.precio)
+        : "";
 
             $fila.find('[data-item-campo="codigo"]')
                 .val(item.codigo);
@@ -4154,11 +4592,7 @@ function activarAutocompleteProducto(fila) {
                     : "Selecciona la unidad"
             );
 
-            if ($fila.closest("#detalleVentaNota").length) {
-                actualizarTotalesVentaNota();
-            } else {
-                actualizarTotalesVentaRapida();
-            }
+            actualizarTotalesVentaNota();
 
             return false;
         }

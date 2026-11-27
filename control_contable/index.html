@@ -72,6 +72,15 @@
 
         <button type="button"
         class="dropdown-item menu-config-item d-none"
+        id="btnAbrirCotizador">
+
+    <i class="bi bi-calculator"></i>
+    <span>Cotizador de materiales</span>
+
+</button>
+
+        <button type="button"
+        class="dropdown-item menu-config-item d-none"
         id="btnCatalogosCosteo">
     <i class="bi bi-database-gear"></i>
     <span>Materiales, vehículos y tarifas</span>
@@ -221,20 +230,11 @@
                     <small>Consulta notas, ventas rápidas y sus comprobantes.</small>
                 </div>
             </div>
-            <div class="dropdown">
-                <button class="btn btn-success dropdown-toggle px-4 py-2" type="button"
-                        data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="bi bi-plus-lg me-2"></i>Nueva venta
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                    <li><button type="button" class="dropdown-item py-2 js-nueva-venta" data-tipo="nota">
-                        <i class="bi bi-receipt me-2 text-success"></i>Venta con nota
-                    </button></li>
-                    <li><button type="button" class="dropdown-item py-2 js-nueva-venta" data-tipo="rapida">
-                        <i class="bi bi-cart3 me-2 text-success"></i>Venta rápida
-                    </button></li>
-                </ul>
-            </div>
+            <button type="button"
+        class="btn btn-success btn-nueva-venta js-nueva-venta">
+    <i class="bi bi-plus-lg"></i>
+    <span>Nueva venta</span>
+</button>
         </div>
 
         <form id="formBuscarVentas" class="row g-3 align-items-end">
@@ -313,82 +313,60 @@
 <!-- VENTAS CON NOTA -->
 <template id="tplVentaNota">
 <form id="formVentaNota" novalidate>
-    <div class="row g-3">
-        <div class="col-xl-8">
+    <div class="venta-cabecera">
 
-            <section class="nota-bloque mb-3">
-                <div class="nota-seccion-titulo">
-                    <i class="bi bi-person-vcard"></i>
-                    <div><h2>Datos de la nota</h2><small>Cliente y responsable de la venta.</small></div>
-                </div>
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label" for="notaFolio">Número de nota</label>
-                        <input id="notaFolio" data-campo-nota="folio" class="form-control" maxlength="50" placeholder="Automático al guardar">
-                        <div class="form-text">Opcional. Puedes indicar un folio específico.</div>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label" for="notaVendedor">Vendedor *</label>
-                        <input id="notaVendedor" data-campo-nota="vendedor" class="form-control" maxlength="100" placeholder="Nombre del vendedor" required>
-                    </div>
-                    
-<div class="col-md-4">
+    <button type="button"
+            id="btnVolverListadoVentas"
+            class="venta-volver">
+        <i class="bi bi-arrow-left"></i>
+        <span>Volver al listado</span>
+    </button>
 
-    <div class="fecha-automatica">
-        <label class="form-label">Fecha y hora</label>
+    <div class="venta-cabecera-contenido">
 
-        <div class="form-control nota-solo-lectura">
-            Automática al guardar
-        </div>
-    </div>
+        <div class="venta-tipo-informacion">
+            <h2>Tipo de venta</h2>
 
-    <div class="fecha-admin d-none">
-        <div class="row g-2">
-
-            <div class="col-12 col-xxl-7">
-                <label for="notaFechaOperacion" class="form-label">
-                    Fecha de venta
-                </label>
-
-<input type="date"
-    id="notaFechaOperacion"
-    data-campo-nota="fecha_operacion"
-    class="form-control">
-            </div>
-
-            <div class="col-12 col-xxl-5">
-                <label for="notaHoraOperacion" class="form-label">
-                    Hora
-                </label>
-
-                <input type="time"
-    id="notaHoraOperacion"
-    data-campo-nota="hora_operacion"
-    class="form-control">
-            </div>
-
+            <p id="ventaDescripcionTipo"
+               aria-live="polite">
+                Registra una venta de mostrador.
+            </p>
         </div>
 
-       
+        <ul class="nav nav-pills venta-selector"
+            aria-label="Tipo de venta">
+
+            <li class="nav-item">
+                <button type="button"
+                        class="nav-link js-tipo-venta"
+                        data-tipo="rapida"
+                        aria-pressed="false">
+
+                    <i class="bi bi-lightning-charge"></i>
+                    <span>Venta rápida</span>
+
+                </button>
+            </li>
+
+            <li class="nav-item">
+                <button type="button"
+                        class="nav-link js-tipo-venta"
+                        data-tipo="nota"
+                        aria-pressed="false">
+
+                    <i class="bi bi-receipt"></i>
+                    <span>Venta con nota</span>
+
+                </button>
+            </li>
+
+        </ul>
+
     </div>
 
 </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label" for="notaCliente">Cliente *</label>
-                        <input id="notaCliente" data-campo-nota="cliente" class="form-control" maxlength="100" placeholder="Buscar cliente por nombre, alias o teléfono..."
-autocomplete="off">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label" for="notaTelefono">Teléfono (opcional)</label>
-                        <input id="notaTelefono" data-campo-nota="telefono" class="form-control" maxlength="50" inputmode="tel" placeholder="Número de contacto">
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label" for="notaDireccion">Dirección de entrega (opcional)</label>
-                        <input id="notaDireccion" data-campo-nota="direccion" class="form-control" maxlength="255" placeholder="Calle, número, colonia y referencias">
-                    </div>
-                </div>
-            </section>
+    <div class="row g-3">
+        <div class="col-xl-8">
 
             <section class="nota-bloque mb-3">
                 <div class="nota-seccion-titulo justify-content-between flex-wrap">
@@ -422,6 +400,154 @@ autocomplete="off">
             </section>
 
             <section class="nota-bloque mb-3">
+
+    <div class="nota-seccion-titulo">
+        <i class="bi bi-person-vcard"></i>
+
+        <div>
+            <h2>Datos de la venta</h2>
+            <small id="ventaDatosDescripcion">
+                Información general de la operación.
+            </small>
+        </div>
+    </div>
+
+    <div class="row g-3">
+
+        <!-- FECHA COMPARTIDA POR AMBOS TIPOS -->
+
+        <div class="col-12">
+
+            <div class="fecha-automatica">
+                <label class="form-label">Fecha y hora</label>
+
+                <div class="form-control nota-solo-lectura">
+                    <i class="bi bi-clock me-2"></i>
+                    Automática al guardar
+                </div>
+            </div>
+
+            <div class="fecha-admin d-none">
+
+                <div class="row g-3">
+
+                    <div class="col-md-6">
+                        <label for="notaFechaOperacion"
+                               class="form-label">
+                            Fecha de venta
+                        </label>
+
+                        <input type="date"
+                               id="notaFechaOperacion"
+                               data-campo-nota="fecha_operacion"
+                               class="form-control">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="notaHoraOperacion"
+                               class="form-label">
+                            Hora
+                        </label>
+
+                        <input type="time"
+                               id="notaHoraOperacion"
+                               data-campo-nota="hora_operacion"
+                               class="form-control">
+                    </div>
+
+                </div>
+
+                <div class="form-text" id="ventaAyudaFecha">
+                    Deja los campos vacíos para utilizar
+                    la fecha y hora actuales.
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- DATOS EXCLUSIVOS DE LA VENTA CON NOTA -->
+
+        <div class="col-md-6 js-solo-nota">
+
+            <label class="form-label" for="notaCliente"
+                   id="ventaEtiquetaCliente">
+                Cliente (opcional)
+            </label>
+
+            <input id="notaCliente"
+                   data-campo-nota="cliente"
+                   class="form-control"
+                   maxlength="100"
+                   autocomplete="off"
+                   placeholder="Buscar o escribir cliente...">
+
+        </div>
+
+        <div class="col-md-6 js-solo-nota">
+
+            <label class="form-label" for="notaVendedor">
+                Vendedor *
+            </label>
+
+            <input id="notaVendedor"
+                   data-campo-nota="vendedor"
+                   class="form-control"
+                   maxlength="100"
+                   placeholder="Nombre del vendedor">
+
+        </div>
+
+        <div class="col-md-6 js-solo-nota">
+
+            <label class="form-label" for="notaFolio">
+                Número de nota
+            </label>
+
+            <input id="notaFolio"
+                   data-campo-nota="folio"
+                   class="form-control"
+                   maxlength="50"
+                   placeholder="Automático al guardar">
+
+        </div>
+
+        <div class="col-md-6 js-solo-nota">
+
+            <label class="form-label" for="notaTelefono">
+                Teléfono (opcional)
+            </label>
+
+            <input id="notaTelefono"
+                   data-campo-nota="telefono"
+                   class="form-control"
+                   maxlength="50"
+                   inputmode="tel"
+                   placeholder="Número de contacto">
+
+        </div>
+
+        <div class="col-12 js-solo-nota">
+
+            <label class="form-label" for="notaDireccion">
+                Dirección de entrega (opcional)
+            </label>
+
+            <input id="notaDireccion"
+                   data-campo-nota="direccion"
+                   class="form-control"
+                   maxlength="255"
+                   placeholder="Calle, número, colonia y referencias">
+
+        </div>
+
+    </div>
+
+</section>
+
+            
+
+            <section class="nota-bloque mb-3">
                 <div class="nota-seccion-titulo">
                     <i class="bi bi-credit-card"></i>
                     <div><h2>Forma de pago</h2><small>Indica cómo se realizará el cobro.</small></div>
@@ -447,8 +573,11 @@ autocomplete="off">
 
                     <div class="col-md-6 d-none" id="notaReferenciaBox">
                         <label class="form-label" for="notaReferencia">Referencia bancaria (opcional)</label>
-                        <input id="notaReferencia" data-campo-nota="referencia" class="form-control" maxlength="100" placeholder="Número de comprobante">
-                    </div>
+<input id="notaReferencia"
+       data-campo-nota="referencia"
+       class="form-control"
+       maxlength="80"
+       placeholder="Número de comprobante">                    </div>
                     <div class="col-12 d-none" id="notaParcialidadBox">
                         <div class="row g-3">
                             <div class="col-md-6">
@@ -464,8 +593,11 @@ autocomplete="off">
                             </div>
                             <div class="col-12 d-none" id="notaRefAbonoBox">
                                 <label class="form-label" for="notaRefAbono">Referencia del abono (opcional)</label>
-                                <input id="notaRefAbono" data-campo-nota="referencia_abono" class="form-control" maxlength="100" placeholder="Referencia de transferencia">
-                            </div>
+<input id="notaRefAbono"
+       data-campo-nota="referencia_abono"
+       class="form-control"
+       maxlength="80"
+       placeholder="Referencia de transferencia">                            </div>
                         </div>
                     </div>
                     <div class="col-12">
@@ -477,29 +609,78 @@ autocomplete="off">
         </div>
 
         <div class="col-xl-4">
-            <aside class="nota-bloque nota-resumen">
-                <div class="nota-seccion-titulo">
-                    <i class="bi bi-calculator"></i>
-                    <div><h2>Resumen de venta</h2><small>Importes calculados automáticamente.</small></div>
-                </div>
-                <div class="d-flex justify-content-between mb-3">
-                    <span class="text-secondary">Total</span><strong id="notaTotal" aria-live="polite">$0.00</strong>
-                </div>
-                <div class="d-flex justify-content-between mb-3">
-                    <span class="text-secondary">Recibido</span><strong id="notaAbonado">$0.00</strong>
-                </div>
-                <hr>
-                <div class="d-flex justify-content-between align-items-center gap-2">
-                    <strong>Saldo pendiente</strong><strong class="nota-saldo" id="notaSaldo">$0.00</strong>
-                </div>
-                <div class="alert alert-light border small mt-4">
-                   
-                </div>
-                <button type="submit" class="btn btn-success w-100 py-2 fw-semibold">
-                    <i class="bi bi-clipboard-check me-2"></i>Revisar nota
-                </button>
-                <button type="button" id="btnLimpiarVentaNota" class="btn btn-outline-secondary w-100 mt-2">Limpiar formulario</button>
-            </aside>
+            <aside class="nota-bloque nota-resumen venta-resumen">
+
+    <div class="nota-seccion-titulo">
+        <i class="bi bi-calculator"></i>
+        <div>
+            <h2>Resumen de venta</h2>
+            <small>Detalle de la operación</small>
+        </div>
+    </div>
+
+    <div class="venta-total-principal">
+
+        <span>Total de la venta</span>
+
+        <strong id="notaTotal" aria-live="polite">
+            $0.00
+        </strong>
+
+        <small>MXN</small>
+
+    </div>
+
+    <div class="venta-resumen-detalles">
+
+        <div class="venta-resumen-fila">
+            <span>Conceptos</span>
+            <strong id="ventaCantidadArticulos">0</strong>
+        </div>
+
+        <div class="venta-resumen-fila">
+            <span>Forma de pago</span>
+            <strong id="ventaMetodoResumen">Efectivo</strong>
+        </div>
+
+        <div class="venta-resumen-fila">
+            <span>Importe a recibir</span>
+            <strong id="notaAbonado">$0.00</strong>
+        </div>
+
+    </div>
+
+    <div class="venta-resumen-saldo">
+        <strong>Saldo pendiente</strong>
+        <strong id="notaSaldo">$0.00</strong>
+    </div>
+
+    <button type="submit"
+            class="btn btn-success venta-btn-confirmar">
+
+        <i class="bi bi-check2-circle"></i>
+        Revisar venta
+
+    </button>
+
+    <button type="button"
+            id="btnLimpiarVentaNota"
+            class="venta-btn-limpiar">
+
+        <i class="bi bi-arrow-counterclockwise"></i>
+        Limpiar captura
+
+    </button>
+
+    <div class="venta-resumen-aviso">
+        <i class="bi bi-shield-check"></i>
+        <span>
+            La operación se registrará después
+            de confirmar la venta.
+        </span>
+    </div>
+
+</aside>
         </div>
     </div>
 </form>
@@ -574,151 +755,6 @@ autocomplete="off">
     </tr>
 </template>
 
-
-<!-- VENTA RÁPIDA -->
-<template id="tplVentaRapida">
-<form id="formVentaRapida" novalidate>
-    <div class="row g-3">
-        <div class="col-xl-8">
-            <section class="nota-bloque mb-3">
-                <div class="nota-seccion-titulo justify-content-between flex-wrap">
-                    <div class="d-flex align-items-center gap-3">
-                        <i class="bi bi-cart3"></i>
-                        <div>
-                            <h2>Venta de mostrador</h2>
-                            <small>Captura los artículos y realiza el cobro.</small>
-                        </div>
-                    </div>
-                    <span class="badge rounded-pill text-success bg-success-subtle border border-success-subtle px-3 py-2">Sin nota</span>
-                </div>
-                
-<div class="alert alert-light border rounded-3 small mb-0 fecha-automatica">
-    <i class="bi bi-clock me-2 text-success"></i>
-    La fecha y hora se asignarán automáticamente al guardar la venta.
-</div>
-<div class="fecha-admin d-none">
-    <label class="form-label" for="rapidaFechaOperacion">Fecha y hora de venta</label>
-    <input type="datetime-local" id="rapidaFechaOperacion" class="form-control">
-    <div class="form-text">Selecciona la fecha real en que se realizó esta venta.</div>
-</div>
-
-            </section>
-
-            <section class="nota-bloque mb-3">
-                <div class="nota-seccion-titulo justify-content-between flex-wrap">
-                    <div class="d-flex align-items-center gap-3">
-                        <i class="bi bi-basket"></i>
-                        <div>
-                            <h2>Artículos de la venta</h2>
-                            <small>Ingresa código, descripción, cantidad y precio.</small>
-                        </div>
-                    </div>
-                    <button type="button" id="btnAgregarItemRapida" class="btn btn-success btn-sm">
-                        <i class="bi bi-plus-lg me-1"></i>Agregar artículo
-                    </button>
-                </div>
-                <div class="table-responsive">
-                    <table class="table nota-tabla align-middle mb-0">
-                        <thead>
-                            <tr>
-                                <th>Código</th>
-                                <th>Descripción</th>
-                                <th>Cantidad</th>
-                                <th>Unidad</th>
-                                <th>Precio unitario</th>
-                                <th>Importe</th>
-                                <th>Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody id="detalleVentaRapida"></tbody>
-                    </table>
-                </div>
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-3">
-                    <small class="text-secondary"><i class="bi bi-info-circle me-1"></i>Los artículos manuales no afectan inventario.</small>
-                    <span class="small fw-semibold" id="rapidaCantidadItems">0 artículos</span>
-                </div>
-            </section>
-
-            <section class="nota-bloque mb-3">
-                <div class="nota-seccion-titulo">
-                    <i class="bi bi-credit-card"></i>
-                    <div>
-                        <h2>Forma de cobro</h2>
-                        <small>Selecciona cómo recibes el pago.</small>
-                    </div>
-                </div>
-
-                <div class="row g-3">
-                    <div class="col-sm-6">
-                        <input type="radio" class="btn-check rapida-pago-input" name="metodoVentaRapida" id="rapidaPagoEfectivo" value="EFECTIVO" checked>
-                        <label class="rapida-pago-label" for="rapidaPagoEfectivo">
-                            <i class="bi bi-cash-stack"></i>
-                            <span><strong>Efectivo</strong><small>Pago en caja</small></span>
-                            <i class="bi bi-check-circle-fill rapida-pago-check"></i>
-                        </label>
-                    </div>
-                    <div class="col-sm-6">
-                        <input type="radio" class="btn-check rapida-pago-input" name="metodoVentaRapida" id="rapidaPagoTransferencia" value="TRANSFERENCIA">
-                        <label class="rapida-pago-label" for="rapidaPagoTransferencia">
-                            <i class="bi bi-bank"></i>
-                            <span><strong>Transferencia</strong><small>Pago bancario</small></span>
-                            <i class="bi bi-check-circle-fill rapida-pago-check"></i>
-                        </label>
-                    </div>
-
-<div class="col-12 d-none" id="rapidaCajaBox">
-    <label class="form-label" for="rapidaCaja">Caja donde se recibirá el efectivo *</label>
-    <select id="rapidaCaja" class="form-select">
-        <option value="">Consultando cajas...</option>
-    </select>
-    <div class="form-text">El importe se sumará al saldo de la caja seleccionada.</div>
-</div>
-
-                    <div class="col-12 d-none" id="rapidaReferenciaBox">
-                        <label class="form-label" for="rapidaReferencia">Referencia bancaria (opcional)</label>
-                        <input class="form-control" id="rapidaReferencia" data-campo-rapida="referencia" maxlength="100" placeholder="Número de operación o comprobante">
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label" for="rapidaObservaciones">Observaciones (opcional)</label>
-                        <textarea class="form-control" id="rapidaObservaciones" data-campo-rapida="observaciones" rows="2" maxlength="500" placeholder="Comentarios adicionales"></textarea>
-                    </div>
-                </div>
-            </section>
-        </div>
-
-        <div class="col-xl-4">
-            <aside class="nota-bloque nota-resumen">
-                <div class="nota-seccion-titulo">
-                    <i class="bi bi-calculator"></i>
-                    <div><h2>Resumen de cobro</h2><small>Importe calculado automáticamente.</small></div>
-                </div>
-                <div class="rapida-total-box mb-4">
-                    <small>Total a cobrar</small>
-                    <strong id="rapidaTotal" aria-live="polite">$0.00</strong>
-                </div>
-                <div class="d-flex justify-content-between mb-3 gap-2">
-                    <span class="text-secondary small">Artículos</span>
-                    <strong id="rapidaItemsResumen">0</strong>
-                </div>
-                <div class="d-flex justify-content-between mb-3 gap-2">
-                    <span class="text-secondary small">Método</span>
-                    <strong id="rapidaMetodoResumen">Efectivo</strong>
-                </div>
-                <hr>
-                <div class="d-flex justify-content-between align-items-center gap-2 mb-4">
-                    <span class="fw-semibold">Saldo pendiente</span>
-                    <strong class="text-success">$0.00</strong>
-                </div>
-                <button type="submit" class="btn btn-success w-100 py-2 fw-semibold">
-                    <i class="bi bi-check2-circle me-2"></i>Revisar venta
-                </button>
-                <button type="button" id="btnLimpiarVentaRapida" class="btn btn-outline-secondary w-100 mt-2">Nueva venta / Limpiar</button>
-                <p class="text-secondary small text-center mt-3 mb-0">Vista previa. Todavía no se guarda en MySQL.</p>
-            </aside>
-        </div>
-    </div>
-</form>
-</template>
 
 <template id="tplControlCaja">
     <section class="nota-bloque mb-3">

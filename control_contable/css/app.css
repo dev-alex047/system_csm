@@ -554,3 +554,594 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--
         flex: 1 1 auto;
     }
 }
+
+
+/* =========================================
+   VENTAS - INTERFAZ UNIFICADA
+========================================= */
+
+.ventas-unificadas {
+    --venta-verde: #086b47;
+    --venta-verde-hover: #07583c;
+    --venta-suave: #e7f2eb;
+    --venta-fondo: #f4f7f5;
+    --venta-borde: #dce6df;
+    --venta-texto: #23352b;
+    --venta-muted: #718078;
+}
+
+
+/* ENCABEZADO PRINCIPAL */
+
+.ventas-unificadas .encabezado-modulo {
+    padding: 18px 24px;
+    margin-bottom: 16px;
+    border-radius: 18px;
+}
+
+.ventas-unificadas .encabezado-icono {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+}
+
+.ventas-unificadas #tituloPantalla {
+    font-size: 1.45rem;
+    letter-spacing: -.035em;
+}
+
+.ventas-unificadas #descripcionPantalla {
+    font-size: .88rem;
+}
+
+
+/* CONTENEDOR PRINCIPAL */
+
+.ventas-unificadas .contenido-modulo {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+    min-width: 0;
+}
+
+.ventas-unificadas .nota-bloque {
+    background: #fff;
+    border: 1px solid var(--venta-borde);
+    border-radius: 18px;
+    padding: 22px;
+    box-shadow: none;
+}
+
+
+/* BOTÓN NUEVA VENTA */
+
+.btn-nueva-venta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    background: #086b47;
+    border-color: #086b47;
+    border-radius: 10px;
+    font-weight: 600;
+    padding: 11px 20px;
+    min-height: 44px;
+}
+
+.btn-nueva-venta:hover {
+    background: #07583c;
+    border-color: #07583c;
+}
+
+
+/* CABECERA DE CAPTURA */
+
+.venta-cabecera {
+    background: #fff;
+    border: 1px solid var(--venta-borde);
+    border-radius: 18px;
+    padding: 20px 24px;
+    margin-bottom: 18px;
+}
+
+.venta-volver {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    color: var(--venta-muted);
+    font-size: .85rem;
+    font-weight: 600;
+    margin-bottom: 18px;
+}
+
+.venta-volver:hover {
+    color: var(--venta-verde);
+}
+
+.venta-cabecera-contenido {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.venta-tipo-informacion h2 {
+    color: var(--venta-texto);
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin: 0 0 5px;
+}
+
+.venta-tipo-informacion p {
+    color: var(--venta-muted);
+    font-size: .85rem;
+    margin: 0;
+}
+
+
+/* SELECTOR DE MODALIDAD */
+
+.venta-selector {
+    display: inline-flex;
+    flex-wrap: nowrap;
+    gap: 5px;
+    padding: 5px;
+    margin: 0;
+    background: #edf3ef;
+    border: 1px solid #e2ebe5;
+    border-radius: 12px;
+    flex-shrink: 0;
+}
+
+.venta-selector .nav-item {
+    flex: 1;
+}
+
+.venta-selector .nav-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    white-space: nowrap;
+    width: 100%;
+    color: #53685b;
+    background: transparent;
+    border: 0;
+    border-radius: 8px;
+    padding: 11px 19px;
+    font-size: .9rem;
+    font-weight: 600;
+    transition:
+        background-color .15s ease,
+        color .15s ease,
+        box-shadow .15s ease;
+}
+
+.venta-selector .nav-link:hover:not(.active) {
+    background: #dfece3;
+    color: var(--venta-verde);
+}
+
+.venta-selector .nav-link.active {
+    background: var(--venta-verde);
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(8, 107, 71, .15);
+}
+
+.venta-selector .nav-link:disabled {
+    cursor: not-allowed;
+    opacity: .65;
+}
+
+
+/* SECCIONES DEL FORMULARIO */
+
+.ventas-unificadas .nota-seccion-titulo {
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.ventas-unificadas .nota-seccion-titulo h2 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--venta-texto);
+}
+
+.ventas-unificadas .nota-seccion-titulo small {
+    font-size: .8rem;
+    color: var(--venta-muted);
+}
+
+.ventas-unificadas .form-label {
+    font-size: .82rem;
+    font-weight: 600;
+    color: #42564a;
+    margin-bottom: 7px;
+}
+
+.ventas-unificadas .form-control,
+.ventas-unificadas .form-select {
+    min-height: 43px;
+    border-color: var(--venta-borde);
+    border-radius: 9px;
+    font-size: .87rem;
+}
+
+.ventas-unificadas .form-control:focus,
+.ventas-unificadas .form-select:focus {
+    border-color: #79b69a;
+    box-shadow: 0 0 0 3px rgba(8, 107, 71, .09);
+}
+
+
+/* TABLA DE ARTÍCULOS */
+
+.ventas-unificadas .nota-tabla thead th {
+    background: #edf4ef;
+    color: #42564a;
+    font-size: .78rem;
+    font-weight: 700;
+    border-bottom: 0;
+    padding: 13px 10px;
+}
+
+.ventas-unificadas .nota-tabla td {
+    padding: 12px 6px;
+    vertical-align: middle;
+}
+
+.ventas-unificadas .nota-tabla .form-control,
+.ventas-unificadas .nota-tabla .form-select {
+    min-height: 40px;
+    font-size: .82rem;
+}
+
+.ventas-unificadas .nota-importe-fila {
+    color: var(--venta-texto);
+    font-variant-numeric: tabular-nums;
+}
+
+.ventas-unificadas .unidad-info {
+    display: block;
+    font-size: .67rem;
+    margin-top: 4px;
+}
+
+
+/* RESUMEN DE VENTA */
+
+.venta-resumen {
+    position: sticky;
+    top: 90px;
+}
+
+.venta-total-principal {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    text-align: center;
+    background: var(--venta-suave);
+    border-radius: 14px;
+    padding: 26px 14px;
+    margin-bottom: 24px;
+}
+
+.venta-total-principal > span {
+    font-size: .88rem;
+    color: #52705e;
+    font-weight: 500;
+}
+
+.venta-total-principal > strong {
+    font-size: clamp(1.6rem, 2.5vw, 2.65rem);
+    line-height: 1.15;
+    font-weight: 800;
+    letter-spacing: -.055em;
+    color: var(--venta-verde);
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+.venta-total-principal > small {
+    color: #668372;
+    font-size: .65rem;
+    font-weight: 600;
+    letter-spacing: .12em;
+}
+
+.venta-resumen-detalles {
+    display: grid;
+    gap: 17px;
+}
+
+.venta-resumen-fila {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: .87rem;
+}
+
+.venta-resumen-fila > span {
+    color: var(--venta-muted);
+}
+
+.venta-resumen-fila > strong {
+    color: var(--venta-texto);
+    font-weight: 650;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.venta-resumen-saldo {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    border-top: 1px solid var(--venta-borde);
+    margin-top: 22px;
+    padding-top: 20px;
+    margin-bottom: 24px;
+    color: var(--venta-texto);
+}
+
+.venta-resumen-saldo #notaSaldo {
+    color: var(--venta-verde);
+    font-size: 1.3rem;
+}
+
+.venta-resumen-saldo #notaSaldo.venta-saldo-pendiente {
+    color: #a5680d;
+}
+
+
+/* BOTONES DEL RESUMEN */
+
+.venta-btn-confirmar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    min-height: 48px;
+    background: #086b47;
+    border-color: #086b47;
+    border-radius: 10px;
+    font-size: .95rem;
+    font-weight: 700;
+}
+
+.venta-btn-confirmar:hover {
+    background: #07583c;
+    border-color: #07583c;
+}
+
+.venta-btn-limpiar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 43px;
+    background: transparent;
+    border: 0;
+    border-radius: 9px;
+    color: #77847b;
+    font-size: .85rem;
+    margin-top: 8px;
+}
+
+.venta-btn-limpiar:hover {
+    color: #b42318;
+    background: #fff4f2;
+}
+
+.venta-resumen-aviso {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 7px;
+    color: #77847b;
+    text-align: center;
+    font-size: .73rem;
+    line-height: 1.5;
+    margin-top: 13px;
+}
+
+
+/* CONFIRMACIÓN SWEETALERT */
+
+.venta-confirmacion {
+    font-size: .87rem;
+}
+
+.venta-confirmacion-fila {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 15px;
+    padding: 7px 0;
+}
+
+.venta-confirmacion-fila > span {
+    color: #65756b;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.venta-confirmacion-fila > strong {
+    flex-shrink: 0;
+    max-width: 55%;
+    text-align: right;
+    color: #23352b;
+    overflow-wrap: anywhere;
+}
+
+.venta-confirmacion-items {
+    border: 1px solid #dce6df;
+    border-radius: 12px;
+    padding: 12px 15px;
+    margin: 17px 0;
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.venta-confirmacion-items .venta-confirmacion-fila
++ .venta-confirmacion-fila {
+    border-top: 1px solid #edf2ee;
+}
+
+.venta-confirmacion-total {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: #e7f2eb;
+    color: #086b47;
+    text-align: center;
+    padding: 18px;
+    margin-top: 15px;
+    border-radius: 12px;
+}
+
+.venta-confirmacion-total strong {
+    font-size: 1.9rem;
+    font-weight: 800;
+    letter-spacing: -.045em;
+}
+
+
+/* ACCESIBILIDAD */
+
+.venta-selector .nav-link:focus-visible,
+.venta-volver:focus-visible,
+.venta-btn-limpiar:focus-visible {
+    outline: 3px solid #79b69a;
+    outline-offset: 3px;
+}
+
+
+/* ADAPTACIÓN A TABLET Y CELULAR */
+
+@media (max-width: 1199.98px) {
+
+    .venta-resumen {
+        position: static;
+    }
+
+}
+
+@media (max-width: 767.98px) {
+
+    .venta-cabecera {
+        padding: 16px;
+    }
+
+    .venta-cabecera-contenido {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 15px;
+    }
+
+    .venta-selector {
+        display: flex;
+        width: 100%;
+    }
+
+    .venta-selector .nav-link {
+        padding: 11px 8px;
+        font-size: .8rem;
+    }
+
+    .ventas-unificadas .nota-bloque {
+        padding: 16px;
+        border-radius: 14px;
+    }
+
+    .ventas-unificadas .encabezado-modulo {
+        padding: 16px;
+    }
+
+    .venta-total-principal > strong {
+        font-size: 2.3rem;
+    }
+
+}
+
+/* HISTORIAL DE VENTAS */
+
+.ventas-unificadas #tablaVentasDiseno {
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: .85rem;
+}
+
+.ventas-unificadas #tablaVentasDiseno > thead > tr > th {
+    background: #f0f4f1;
+    color: #617268;
+    font-size: .73rem;
+    font-weight: 700;
+    letter-spacing: .045em;
+    padding: 15px 14px;
+    border-bottom: 1px solid #dce6df;
+}
+
+.ventas-unificadas #tablaVentasDiseno > tbody > tr > td {
+    padding: 18px 14px;
+    vertical-align: top;
+    background: #fff;
+    border-bottom: 1px solid #e5ebe7;
+}
+
+.ventas-unificadas #tablaVentasDiseno > tbody > tr:hover > td {
+    background: #f8faf8;
+}
+
+.ventas-unificadas .ventas-folio {
+    border-radius: 9px;
+    font-size: .82rem;
+    box-shadow: none;
+}
+
+.ventas-unificadas .ventas-fecha {
+    font-size: .76rem;
+    color: #65756b;
+    background: #f0f3f1;
+}
+
+.ventas-unificadas .ventas-total {
+    font-size: .95rem;
+    color: #086b47;
+    font-variant-numeric: tabular-nums;
+}
+
+.ventas-unificadas .ventas-mini-tabla {
+    border-radius: 9px;
+    overflow: hidden;
+    font-size: .79rem;
+}
+
+.ventas-unificadas .ventas-mini-tabla th {
+    background: #eef3ef;
+    padding: 9px;
+}
+
+.ventas-unificadas .ventas-mini-tabla td {
+    background: #f7f9f7;
+    padding: 10px 9px;
+}
+
+.ventas-unificadas .ventas-metodo {
+    border-radius: 8px;
+    font-size: .75rem;
+}
+
+.ventas-unificadas .ventas-estado {
+    font-size: .7rem;
+    letter-spacing: .035em;
+}

@@ -2920,8 +2920,6 @@ $stmt = $this->ejecutarSqlVenta(
     ]
 );
 
-
-
                 
                 $stmt->close();
                 $id = (int)$this->conn->insert_id;
